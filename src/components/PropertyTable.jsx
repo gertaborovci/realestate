@@ -2,7 +2,7 @@ import React from 'react';
 import { Edit, Trash2 } from 'lucide-react';
 
 const PropertyTable = ({ properties, onDelete, onEdit }) => {
-  // Funksion i vogël për të përcaktuar ngjyrën sipas statusit
+  
   const getStatusStyle = (status) => {
     switch (status) {
       case 'Sold':
@@ -16,7 +16,7 @@ const PropertyTable = ({ properties, onDelete, onEdit }) => {
     }
   };
 
-  // Funksion për të përkthyer statusin në shqip (opsionale)
+  
   const translateStatus = (status) => {
     const translations = {
       'Available': 'E Lirë',
@@ -51,7 +51,7 @@ const PropertyTable = ({ properties, onDelete, onEdit }) => {
                 </span>
               </td>
               <td className="p-6">
-                {/* STATUSI DINAMIK DHE ME NGJYRA */}
+               
                 <span className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-[0.15em] uppercase border ${getStatusStyle(property.status)}`}>
                   {translateStatus(property.status)}
                 </span>

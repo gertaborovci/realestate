@@ -12,27 +12,27 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
 
-  // --- 1. LOGJIKA PËR HISTORINË E BROWSER-IT ---
   
-  // Ky funksion bën dy gjëra: ndryshon faqen dhe i thotë browser-it ta mbajë mend
+  
+ 
   const navigateTo = (newView) => {
     setView(newView);
     window.history.pushState({ view: newView }, "", "");
   };
 
-  // Ky useEffect dëgjon kur ti klikon butonin "Back" të browser-it
+ 
   useEffect(() => {
     const handlePopState = (event) => {
       if (event.state && event.state.view) {
         setView(event.state.view);
       } else {
-        setView('hero'); // Kthehu në fillim nëse nuk ka histori
+        setView('hero'); 
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     
-    // Regjistrojmë faqen e parë (Hero) në histori sapo hapet faqja
+    
     if (!window.history.state) {
       window.history.replaceState({ view: 'hero' }, "", "");
     }
@@ -40,7 +40,7 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // --- FUNDI I LOGJIKËS SË NAVIGIMIT ---
+  
 
   const [properties, setProperties] = useState(() => {
     try {
@@ -76,7 +76,7 @@ function App() {
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
-      {/* Admin Button - TANI PËRDOR navigateTo */}
+     
       <button 
         onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
         className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
@@ -89,7 +89,7 @@ function App() {
         </span>
       </button>
 
-      {/* Faqet kryesore - TANI PËRDORIN navigateTo */}
+      
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
       
       {view === 'properties' && (

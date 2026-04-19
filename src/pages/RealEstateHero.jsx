@@ -19,12 +19,12 @@ const RealEstateHero = ({ onNavigate }) => {
   return (
     <div className="h-screen w-full bg-black overflow-y-scroll snap-y snap-mandatory scroll-smooth hide-scrollbar text-white">
       
-      {/* --- STICKY DOUBLE BUBBLE NAVIGATION --- */}
+      
       <nav className="fixed top-10 left-1/2 -translate-x-1/2 w-[95%] flex items-center justify-between z-[100] pointer-events-none">
         
-        {/* Left Side Bubble: Nav Links */}
+        
         <div className="pointer-events-auto flex items-center gap-2 bg-white/10 backdrop-blur-x4 border border-white/20 p-2 rounded-full px-4 shadow-5xl">
-          <div className="p-2 bg-white/20 rounded-full cursor-pointer hover:bg-white/50 transition">
+          <div className="p-2 bg-white/20 rounded-full cursor-pointer hover:bg-white/30 transition">
             <User size={18} className="text-white" />
           </div>
           {navLinks.map((item) => (
@@ -38,12 +38,12 @@ const RealEstateHero = ({ onNavigate }) => {
           ))}
         </div>
 
-        {/* Center Logo */}
+       
         <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 cursor-pointer group" onClick={() => onNavigate('hero')}>
             <span className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none group-hover:opacity-70 transition-opacity drop-shadow-lg">Find Home</span>
         </div>
 
-        {/* Right Side Bubble: Search & Login */}
+       
         <div className="pointer-events-auto flex items-center gap-4 bg-white/10 backdrop-blur-xl border border-white/20 p-2 rounded-full pl-6 pr-2 shadow-2xl">
           <div className="flex items-center gap-2">
             <input 
@@ -62,7 +62,7 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </nav>
 
-      {/* --- SECTION 1: HERO --- */}
+      
       <section className="h-screen w-full snap-start relative p-4 pt-0">
         <div className="h-full w-full rounded-[56px] bg-cover bg-center overflow-hidden relative shadow-2xl" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
           <div className="absolute inset-0 bg-black/20"></div>
@@ -74,7 +74,7 @@ designing and growing modern consumer brands. We call that platforms for growth<
         </div>
       </section>
 
-      {/* --- SECTION 2: SERVICES --- */}
+    
       <section className="min-h-screen w-full snap-start bg-white text-black p-24 flex items-center">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           {[
@@ -93,7 +93,7 @@ designing and growing modern consumer brands. We call that platforms for growth<
         </div>
       </section>
 
-      {/* --- SECTION 3: CITIES --- */}
+     
       <section className="min-h-screen w-full snap-start bg-[#050505] p-24 flex flex-col justify-center text-white">
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex justify-between items-end mb-20">
@@ -114,7 +114,6 @@ designing and growing modern consumer brands. We call that platforms for growth<
         </div>
       </section>
 
-      {/* --- SECTION 4: AGENTS --- */}
       <section className="min-h-screen w-full snap-start bg-white text-black p-24 flex flex-col items-center justify-center">
         <div className="max-w-3xl text-center space-y-8 mb-24">
           <h2 className="text-6xl font-black tracking-tighter uppercase italic leading-[0.9]">Let us narrow the field for you</h2>
@@ -138,7 +137,7 @@ designing and growing modern consumer brands. We call that platforms for growth<
         </button>
       </section>
 
-      {/* --- SECTION 5: FOOTER --- */}
+      
       <section className="min-h-screen w-full snap-end bg-[#050505] text-white p-24 flex flex-col justify-between rounded-t-[80px]">
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-40 py-10">
           <div className="space-y-12">
