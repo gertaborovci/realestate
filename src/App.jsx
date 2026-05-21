@@ -6,13 +6,13 @@ import StatCard from './components/StatCard';
 import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
 
-// IMPORTET E REJA DHE TË SAKTA NGA FOLDERI PAGES
 import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
 
 import { Home, Users, DollarSign, Clock, Shield, X } from 'lucide-react';
 
 function App() {
-  const [view, setView] = useState('hero'); // Fillon nga faqja kryesore
+  const [view, setView] = useState('hero');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
 
