@@ -5,22 +5,22 @@ import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
 import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
+
+// IMPORTET E REJA DHE TË SAKTA NGA FOLDERI PAGES
+import SignIn from './pages/SignIn';
+
 import { Home, Users, DollarSign, Clock, Shield, X } from 'lucide-react';
 
 function App() {
-  const [view, setView] = useState('hero');
+  const [view, setView] = useState('hero'); // Fillon nga faqja kryesore
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
 
-  
-  
- 
   const navigateTo = (newView) => {
     setView(newView);
     window.history.pushState({ view: newView }, "", "");
   };
 
- 
   useEffect(() => {
     const handlePopState = (event) => {
       if (event.state && event.state.view) {
@@ -29,18 +29,12 @@ function App() {
         setView('hero'); 
       }
     };
-
     window.addEventListener('popstate', handlePopState);
-    
-    
     if (!window.history.state) {
       window.history.replaceState({ view: 'hero' }, "", "");
     }
-
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-
-  
 
   const [properties, setProperties] = useState(() => {
     try {
@@ -76,21 +70,24 @@ function App() {
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
-     
-      <button 
-        onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
-        className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
-      >
-        <div className="bg-white p-2 rounded-full text-black">
-          {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
-        </div>
-        <span className="font-bold text-[10px] tracking-widest pr-2">
-          {view === 'dashboard' ? "KTHEHU" : "ADMIN PANEL"}
-        </span>
-      </button>
-
       
+      {view !== 'signin' && view !== 'signup' && (
+        <button 
+          onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
+          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
+        >
+          <div className="bg-white p-2 rounded-full text-black">
+            {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
+          </div>
+          <span className="font-bold text-[10px] tracking-widest pr-2">
+            {view === 'dashboard' ? "KTHEHU" : "ADMIN PANEL"}
+          </span>
+        </button>
+      )}
+
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
+      {view === 'signin' && <SignIn onNavigate={navigateTo} />}
+      {view === 'signup' && <SignUp onNavigate={navigateTo} />}
       
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">

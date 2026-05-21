@@ -53,9 +53,12 @@ const RealEstateHero = ({ onNavigate }) => {
             />
             <Search size={16} className="text-white opacity-70" />
           </div>
-          <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-5 py-2 rounded-full transition font-bold uppercase">
-            Login
-          </button>
+          <button 
+             onClick={() => onNavigate('signin')}
+  className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-5 py-2 rounded-full transition font-bold uppercase"
+          >
+             Login
+<         /button>
           <div className="p-2 cursor-pointer text-white">
             <Menu size={20} />
           </div>
