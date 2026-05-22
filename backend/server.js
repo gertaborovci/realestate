@@ -30,9 +30,9 @@ db.connect((err) => {
     });
 });
 
-// --- API ROUTES ---
+//API ROUTES 
 
-// 1. GET ALL (READ)
+// GET ALL (READ)
 app.get('/api/properties', (req, res) => {
     const sqlQuery = "SELECT * FROM properties";
     db.query(sqlQuery, (err, results) => {
@@ -41,7 +41,7 @@ app.get('/api/properties', (req, res) => {
     });
 });
 
-// 2. CREATE NEW (POST)
+//CREATE NEW (POST)
 app.post('/api/properties', (req, res) => {
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
     const sqlQuery = `INSERT INTO properties (title, price, location, status, type, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -53,7 +53,7 @@ app.post('/api/properties', (req, res) => {
     });
 });
 
-// 3. DELETE (DELETE)
+//DELETE (DELETE)
 app.delete('/api/properties/:id', (req, res) => {
     const propertyId = req.params.id;
     const sqlQuery = "DELETE FROM properties WHERE id = ?";
@@ -63,7 +63,7 @@ app.delete('/api/properties/:id', (req, res) => {
     });
 });
 
-// 4. UPDATE (PUT) - Kjo ishte ajo që ktheu 404!
+//UPDATE (PUT)
 app.put('/api/properties/:id', (req, res) => {
     const propertyId = req.params.id;
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
