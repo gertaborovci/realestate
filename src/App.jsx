@@ -5,16 +5,15 @@ import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
 import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
-
-import SignIn from './pages/SignIn';
-import SignUp from './pages/SignUp';
-
-import { Home, Users, DollarSign, Clock, Shield, X } from 'lucide-react';
+import Signin from './pages/signin';
+import Signup from './pages/signup';
+import { Home, Shield, X } from 'lucide-react';
 
 function App() {
   const [view, setView] = useState('hero');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
+  const [properties, setProperties] = useState([]);
 
   const navigateTo = (newView) => {
     setView(newView);
@@ -26,7 +25,7 @@ function App() {
       if (event.state && event.state.view) {
         setView(event.state.view);
       } else {
-        setView('hero'); 
+        setView('hero');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -36,62 +35,56 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const [properties, setProperties] = useState(() => {
-    try {
-      const saved = localStorage.getItem('my_properties');
-      return saved ? JSON.parse(saved) : [
-        { id: 1, title: "Modern Villa", price: "450000", status: "Available", type: "BUY", location: "Prishtinë", image: "/photos/property1.jpg", beds: 5, baths: 3, area: 350 }
-      ];
-    } catch (e) {
-      console.error("LocalStorage error:", e);
-      return [];
-    }
-  });
+  const fetchProperties = () => {
+    fetch('http://localhost:5000/api/properties')
+      .then(response => response.json())
+      .then(data => setProperties(data))
+      .catch(error => console.error("Gabim:", error));
+  };
 
   useEffect(() => {
-    localStorage.setItem('my_properties', JSON.stringify(properties));
-  }, [properties]);
+    fetchProperties();
+  }, []);
 
-  const deleteProperty = (id) => {
+  const deleteProperty = async (id) => {
     if (window.confirm("⚠️ A jeni të sigurt?")) {
-      setProperties(prev => prev.filter(p => p.id !== id));
+      const response = await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
+      if (response.ok) setProperties(prev => prev.filter(p => p.id !== id));
     }
   };
 
-  const saveProperty = (formData) => {
-    if (editingProperty) {
-      setProperties(prev => prev.map(p => p.id === editingProperty.id ? { ...formData, id: p.id } : p));
-    } else {
-      setProperties(prev => [{ ...formData, id: Date.now(), status: "Available" }, ...prev]);
-    }
+  const saveProperty = () => {
+    fetchProperties();
     setEditingProperty(null);
-    setActiveTab('properties'); 
+    setActiveTab('properties');
   };
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
       
-      {view !== 'signin' && view !== 'signup' && (
-        <button 
-          onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
-          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
-        >
-          <div className="bg-white p-2 rounded-full text-black">
-            {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
-          </div>
-          <span className="font-bold text-[10px] tracking-widest pr-2">
-            {view === 'dashboard' ? "KTHEHU" : "ADMIN PANEL"}
-          </span>
-        </button>
-      )}
+      {/* Butoni kryesor për Admin ose Kthim */}
+      <button 
+        onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
+        className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
+      >
+        <div className="bg-white p-2 rounded-full text-black">
+          {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
+        </div>
+        <span className="font-bold text-[10px] tracking-widest pr-2">
+          {view === 'dashboard' ? "KTHEHU" : "ADMIN PANEL"}
+        </span>
+      </button>
 
+      {/* Navigimi midis faqeve */}
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
-      {view === 'signin' && <SignIn onNavigate={navigateTo} />}
-      {view === 'signup' && <SignUp onNavigate={navigateTo} />}
+      
+      {view === 'signin' && <Signin onNavigate={navigateTo} />}
+      
+      {view === 'signup' && <Signup onNavigate={navigateTo} />}
       
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
-          <PublicProperties properties={properties} onBack={() => navigateTo('hero')} />
+          <PublicProperties onBack={() => navigateTo('hero')} />
         </div>
       )}
 
@@ -102,14 +95,16 @@ function App() {
             {activeTab === 'dashboard' && (
               <>
                 <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
-                <StatCard title="Total" value={properties.length} icon={<Home size={20} />} />
+                <StatCard title="Total Prona" value={properties.length} icon={<Home size={20} />} />
               </>
             )}
             {activeTab === 'properties' && (
               <>
                 <div className="flex justify-between mb-12">
                   <h1 className="text-5xl font-bold">PRONAT</h1>
-                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold">SHTO +</button>
+                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200">
+                    SHTO +
+                  </button>
                 </div>
                 <PropertyTable properties={properties} onDelete={deleteProperty} onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }} />
               </>
