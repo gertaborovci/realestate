@@ -18,9 +18,31 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
     if (editData) setFormData(editData);
   }, [editData]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onAdd(formData); 
+    
+    try {
+      const isEditing = Boolean(editData && editData.id);
+      const url = isEditing 
+        ? `http://localhost:5000/api/properties/${editData.id}` 
+        : 'http://localhost:5000/api/properties';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData), 
+      });
+
+      if (response.ok) {
+        console.log(`Prona u ${isEditing ? 'modifikua' : 'ruajt'} me sukses!`);
+        onAdd(); 
+      } else {
+        console.error("Gabim nga serveri.");
+      }
+    } catch (error) {
+      console.error("Gabim i rrjetit:", error);
+    }
   };
 
   return (
@@ -37,7 +59,7 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
       <form onSubmit={handleSubmit} className="space-y-10 bg-[#0A0A0A] border border-white/10 p-12 rounded-[40px] shadow-2xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           
-          {/* URL E FOTOS */}
+          
           <div className="space-y-3 md:col-span-2">
             <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">URL e Fotos</label>
             <div className="relative">
@@ -52,7 +74,7 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
             </div>
           </div>
 
-          {/* EMRI I PRONËS */}
+          
           <div className="space-y-3">
             <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Emri i Pronës</label>
             <input 
@@ -64,7 +86,7 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
             />
           </div>
 
-          {/* LOKACIONI */}
+          
           <div className="space-y-3">
             <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Lokacioni</label>
             <div className="relative">
@@ -79,7 +101,7 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
             </div>
           </div>
 
-          {/* ÇMIMI - ZGJIDHJA PËR INPUTIN PA SHIGJETA */}
+         
           <div className="space-y-3">
             <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Çmimi (€)</label>
             <div className="relative">
@@ -89,13 +111,12 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
                 value={formData.price}
                 onChange={(e) => setFormData({...formData, price: e.target.value})} 
                 placeholder="Shkruaj çmimin (p.sh. 250000)"
-                /* KLASAT POSHTË FISHEHIN SHIGJETAT E BROWSER-IT */
+                
                 className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-white focus:border-white/30 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
               />
             </div>
           </div>
 
-          {/* STATUSI */}
           <div className="space-y-3">
             <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Statusi</label>
             <div className="relative">
@@ -113,7 +134,7 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
             </div>
           </div>
 
-          {/* DETAJET: DHOMAT, BANJOT, SIPËRFAQJA */}
+         
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:col-span-2 pt-6 border-t border-white/5">
             <div className="space-y-3">
               <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Dhoma</label>

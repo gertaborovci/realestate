@@ -5,13 +5,19 @@ import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
 import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
-import UserDashboard from './pages/UserDashboard';
+import Signin from './pages/signin';
+import Signup from './pages/signup';
+import ManageAgents from './pages/ManageAgents';
+import ManageUsers from './pages/ManageUsers';
+import AgentProfile from './pages/AgentProfile';
 import { Home, Shield, X } from 'lucide-react';
 
 function App() {
   const [view, setView] = useState('hero');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
+  const [properties, setProperties] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState(null);
 
   const navigateTo = (newView) => {
     setView(newView);
@@ -20,78 +26,61 @@ function App() {
 
   useEffect(() => {
     const handlePopState = (event) => {
-      if (event.state && event.state.view) {
-        setView(event.state.view);
-      } else {
-        setView('hero');
-      }
+      if (event.state && event.state.view) setView(event.state.view);
+      else setView('hero');
     };
     window.addEventListener('popstate', handlePopState);
-    if (!window.history.state) {
-      window.history.replaceState({ view: 'hero' }, "", "");
-    }
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const [properties, setProperties] = useState(() => {
-    try {
-      const saved = localStorage.getItem('my_properties');
-      return saved ? JSON.parse(saved) : [
-        { id: 1, title: "Modern Villa", price: "450000", status: "Available", type: "BUY", location: "Prishtinë" }
-      ];
-    } catch (e) {
-      return [];
-    }
-  });
+  const fetchProperties = () => {
+    fetch('http://localhost:5000/api/properties')
+      .then(response => response.json())
+      .then(data => setProperties(data))
+      .catch(error => console.error("Error:", error));
+  };
 
   useEffect(() => {
-    localStorage.setItem('my_properties', JSON.stringify(properties));
-  }, [properties]);
+    fetchProperties();
+  }, []);
 
-  const deleteProperty = (id) => {
-    if (window.confirm("A jeni të sigurt?")) {
-      setProperties(prev => prev.filter(p => p.id !== id));
+  const deleteProperty = async (id) => {
+    if (window.confirm("⚠️ A jeni të sigurt?")) {
+      const response = await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
+      if (response.ok) setProperties(prev => prev.filter(p => p.id !== id));
     }
   };
 
-  const saveProperty = (formData) => {
-    if (editingProperty) {
-      setProperties(prev => prev.map(p => p.id === editingProperty.id ? { ...formData, id: p.id } : p));
-    } else {
-      setProperties(prev => [{ ...formData, id: Date.now(), status: "Available" }, ...prev]);
-    }
+  const saveProperty = () => {
+    fetchProperties();
     setEditingProperty(null);
     setActiveTab('properties');
   };
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
-      
-      {/* Butoni Admin (shfaqet vetëm kur jemi te Hero) */}
-      {view === 'hero' && (
-        <button
-          onClick={() => navigateTo('dashboard')}
-          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full text-white hover:bg-white/20 transition-all"
-        >
-          <div className="bg-white p-2 rounded-full text-black">
-            <Shield size={20} />
-          </div>
-          <span className="font-bold text-[10px] tracking-widest pr-2">ADMIN PANEL</span>
-        </button>
-      )}
+      {/* Floating Toggle Admin Button */}
+      <button 
+        onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
+        className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
+      >
+        <div className="bg-white p-2 rounded-full text-black">
+          {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
+        </div>
+        <span className="font-bold text-[10px] tracking-widest pr-2">
+          {view === 'dashboard' ? "KTHEHU" : "ADMIN PANEL"}
+        </span>
+      </button>
 
-      {/* Navigimi nëpër faqe */}
-      
+      {/* Pages Routing */}
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
-
+      {view === 'signin' && <Signin onNavigate={navigateTo} />}
+      {view === 'signup' && <Signup onNavigate={navigateTo} />}
+      
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
-          <PublicProperties properties={properties} onBack={() => navigateTo('hero')} />
+          <PublicProperties onBack={() => navigateTo('hero')} />
         </div>
-      )}
-
-      {view === 'user-dashboard' && (
-        <UserDashboard onBack={() => navigateTo('hero')} />
       )}
 
       {view === 'dashboard' && (
@@ -101,15 +90,15 @@ function App() {
             {activeTab === 'dashboard' && (
               <>
                 <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
-                <StatCard title="Total" value={properties.length} icon={<Home size={20} />} />
+                <StatCard title="Total Prona" value={properties.length} icon={<Home size={20} />} />
               </>
             )}
             {activeTab === 'properties' && (
               <>
                 <div className="flex justify-between mb-12">
                   <h1 className="text-5xl font-bold">PRONAT</h1>
-                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-6 py-2 rounded-lg font-bold">
-                    Shto Pronë
+                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200">
+                    SHTO +
                   </button>
                 </div>
                 <PropertyTable properties={properties} onDelete={deleteProperty} onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }} />
@@ -117,6 +106,13 @@ function App() {
             )}
             {activeTab === 'add' && (
               <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
+            )}
+            {activeTab === 'agents' && (
+              <ManageAgents onViewProfile={(id) => { setSelectedAgentId(id); setActiveTab('agent-profile'); }} />
+            )}
+            {activeTab === 'users' && <ManageUsers />}
+            {activeTab === 'agent-profile' && (
+              <AgentProfile agentId={selectedAgentId} onBack={() => setActiveTab('agents')} />
             )}
           </main>
         </div>
