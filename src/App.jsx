@@ -6,11 +6,14 @@ import StatCard from './components/StatCard';
 import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
 import { Home, Users, DollarSign, Clock, Shield, X } from 'lucide-react';
+import TransactionDashboard from './TransactionDashboard'; 
 
 function App() {
   const [view, setView] = useState('hero');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
+  
+  const [properties, setProperties] = useState([]);
 
   
   
@@ -40,6 +43,7 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+<<<<<<< Updated upstream
   
 
   const [properties, setProperties] = useState(() => {
@@ -53,11 +57,20 @@ function App() {
       return [];
     }
   });
+=======
+  const fetchProperties = () => {
+    fetch('http://localhost:5000/api/properties')
+      .then(response => response.json())
+      .then(data => setProperties(data))
+      .catch(error => console.error("Gabim në marrjen e të dhënave nga backend-i:", error));
+  };
+>>>>>>> Stashed changes
 
   useEffect(() => {
     localStorage.setItem('my_properties', JSON.stringify(properties));
   }, [properties]);
 
+<<<<<<< Updated upstream
   const deleteProperty = (id) => {
     if (window.confirm("⚠️ A jeni të sigurt?")) {
       setProperties(prev => prev.filter(p => p.id !== id));
@@ -70,6 +83,28 @@ function App() {
     } else {
       setProperties(prev => [{ ...formData, id: Date.now(), status: "Available" }, ...prev]);
     }
+=======
+  const deleteProperty = async (id) => {
+    if (window.confirm("⚠️ A jeni të sigurt që doni ta fshini këtë pronë?")) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/properties/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          setProperties(prev => prev.filter(p => p.id !== id));
+        } else {
+          console.error("Gabim nga serveri gjatë fshirjes.");
+        }
+      } catch (error) {
+        console.error("Gabim i rrjetit gjatë fshirjes:", error);
+      }
+    }
+  };
+
+  const saveProperty = () => {
+    fetchProperties(); 
+>>>>>>> Stashed changes
     setEditingProperty(null);
     setActiveTab('properties'); 
   };
@@ -94,7 +129,11 @@ function App() {
       
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
+<<<<<<< Updated upstream
           <PublicProperties properties={properties} onBack={() => navigateTo('hero')} />
+=======
+          <PublicProperties onBack={() => navigateTo('hero')} />
+>>>>>>> Stashed changes
         </div>
       )}
 
@@ -105,7 +144,11 @@ function App() {
             {activeTab === 'dashboard' && (
               <>
                 <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
+<<<<<<< Updated upstream
                 <StatCard title="Total" value={properties.length} icon={<Home size={20} />} />
+=======
+                <StatCard title="Total Prona" value={properties.length} icon={<Home size={20} />} />
+>>>>>>> Stashed changes
               </>
             )}
             {activeTab === 'properties' && (
@@ -120,6 +163,9 @@ function App() {
             {activeTab === 'add' && (
               <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
             )}
+{activeTab === 'transactions' && (
+  <TransactionDashboard />
+)}
           </main>
         </div>
       )}
