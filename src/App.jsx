@@ -7,6 +7,9 @@ import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
 import Signin from './pages/signin';
 import Signup from './pages/signup';
+import ManageAgents from './pages/ManageAgents';
+import ManageUsers from './pages/ManageUsers';
+import AgentProfile from './pages/AgentProfile';
 import { Home, Shield, X } from 'lucide-react';
 
 function App() {
@@ -14,6 +17,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
   const [properties, setProperties] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState(null);
 
   const navigateTo = (newView) => {
     setView(newView);
@@ -22,16 +26,10 @@ function App() {
 
   useEffect(() => {
     const handlePopState = (event) => {
-      if (event.state && event.state.view) {
-        setView(event.state.view);
-      } else {
-        setView('hero');
-      }
+      if (event.state && event.state.view) setView(event.state.view);
+      else setView('hero');
     };
     window.addEventListener('popstate', handlePopState);
-    if (!window.history.state) {
-      window.history.replaceState({ view: 'hero' }, "", "");
-    }
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
@@ -39,7 +37,7 @@ function App() {
     fetch('http://localhost:5000/api/properties')
       .then(response => response.json())
       .then(data => setProperties(data))
-      .catch(error => console.error("Gabim:", error));
+      .catch(error => console.error("Error:", error));
   };
 
   useEffect(() => {
@@ -61,8 +59,7 @@ function App() {
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
-      
-      {/* Butoni kryesor për Admin ose Kthim */}
+      {/* Floating Toggle Admin Button */}
       <button 
         onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
         className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
@@ -75,11 +72,9 @@ function App() {
         </span>
       </button>
 
-      {/* Navigimi midis faqeve */}
+      {/* Pages Routing */}
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
-      
       {view === 'signin' && <Signin onNavigate={navigateTo} />}
-      
       {view === 'signup' && <Signup onNavigate={navigateTo} />}
       
       {view === 'properties' && (
@@ -111,6 +106,13 @@ function App() {
             )}
             {activeTab === 'add' && (
               <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
+            )}
+            {activeTab === 'agents' && (
+              <ManageAgents onViewProfile={(id) => { setSelectedAgentId(id); setActiveTab('agent-profile'); }} />
+            )}
+            {activeTab === 'users' && <ManageUsers />}
+            {activeTab === 'agent-profile' && (
+              <AgentProfile agentId={selectedAgentId} onBack={() => setActiveTab('agents')} />
             )}
           </main>
         </div>
