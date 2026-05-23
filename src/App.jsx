@@ -7,6 +7,9 @@ import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
 import Signin from './pages/signin';
 import Signup from './pages/signup';
+import ManageAgents from './pages/ManageAgents';
+import ManageUsers from './pages/ManageUsers';
+import AgentProfile from './pages/AgentProfile';
 import { Home, Shield, X } from 'lucide-react';
 
 function App() {
@@ -14,6 +17,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
   const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true); // SHTESË: Kontroll për ngarkim
+  
+  const [selectedAgentId, setSelectedAgentId] = useState(null);
 
   const navigateTo = (newView) => {
     setView(newView);
@@ -35,11 +41,18 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const fetchProperties = () => {
-    fetch('http://localhost:5000/api/properties')
-      .then(response => response.json())
-      .then(data => setProperties(data))
-      .catch(error => console.error("Gabim:", error));
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/properties');
+      const data = await response.json();
+      setProperties(Array.isArray(data) ? data : []); 
+    } catch (error) {
+      console.error("Error:", error);
+      setProperties([]);
+    } finally {
+      setLoading(false); // SHTESË: Siguron që ngarkimi mbaron edhe nëse ka gabim
+    }
   };
 
   useEffect(() => {
@@ -47,7 +60,7 @@ function App() {
   }, []);
 
   const deleteProperty = async (id) => {
-    if (window.confirm("⚠️ A jeni të sigurt?")) {
+    if (window.confirm("⚠️ Are you sure?")) {
       const response = await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
       if (response.ok) setProperties(prev => prev.filter(p => p.id !== id));
     }
@@ -62,7 +75,7 @@ function App() {
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
       
-      {/* Butoni kryesor për Admin ose Kthim */}
+      {/* Floating Toggle Admin / Back Button */}
       <button 
         onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
         className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
@@ -71,11 +84,11 @@ function App() {
           {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
         </div>
         <span className="font-bold text-[10px] tracking-widest pr-2">
-          {view === 'dashboard' ? "KTHEHU" : "ADMIN PANEL"}
+          {view === 'dashboard' ? "GO BACK" : "ADMIN PANEL"}
         </span>
       </button>
 
-      {/* Navigimi midis faqeve */}
+      {/* View/Page Routing */}
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
       
       {view === 'signin' && <Signin onNavigate={navigateTo} />}
@@ -92,25 +105,49 @@ function App() {
         <div className="flex h-full bg-[#050505]">
           <Sidebar onTabChange={setActiveTab} activeTab={activeTab} />
           <main className="flex-1 p-12 overflow-y-auto">
-            {activeTab === 'dashboard' && (
+            {/* SHTESË: Kontrolli për gjendjen loading */}
+            {loading ? (
+              <div className="text-xl">Duke ngarkuar...</div>
+            ) : (
               <>
-                <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
-                <StatCard title="Total Prona" value={properties.length} icon={<Home size={20} />} />
+                {activeTab === 'dashboard' && (
+                  <>
+                    <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
+                    <StatCard title="Total Properties" value={properties.length} icon={<Home size={20} />} />
+                  </>
+                )}
+                {activeTab === 'properties' && (
+                  <>
+                    <div className="flex justify-between mb-12">
+                      <h1 className="text-5xl font-bold">PROPERTIES</h1>
+                      <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200">
+                        ADD NEW +
+                      </button>
+                    </div>
+                    <PropertyTable properties={properties} onDelete={deleteProperty} onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }} />
+                  </>
+                )}
+                {activeTab === 'add' && (
+                  <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
+                )}
+                
+                {activeTab === 'agents' && (
+                  <ManageAgents 
+                    onViewProfile={(id) => {
+                      setSelectedAgentId(id);
+                      setActiveTab('agent-profile');
+                    }} 
+                  />
+                )}
+
+                {activeTab === 'users' && (
+                  <ManageUsers />
+                )}
+
+                {activeTab === 'agent-profile' && (
+                  <AgentProfile agentId={selectedAgentId} onBack={() => setActiveTab('agents')} />
+                )}
               </>
-            )}
-            {activeTab === 'properties' && (
-              <>
-                <div className="flex justify-between mb-12">
-                  <h1 className="text-5xl font-bold">PRONAT</h1>
-                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200">
-                    SHTO +
-                  </button>
-                </div>
-                <PropertyTable properties={properties} onDelete={deleteProperty} onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }} />
-              </>
-            )}
-            {activeTab === 'add' && (
-              <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
             )}
           </main>
         </div>

@@ -1,11 +1,13 @@
 import React from 'react';
 
-import { LayoutDashboard, Building2, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Building2, Settings, LogOut, Users, UserCog } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
   const menuItems = [
     { id: 'dashboard', icon: <LayoutDashboard size={18} />, label: 'DASHBOARD' },
-    { id: 'properties', icon: <Building2 size={18} />, label: 'PRONAT' },
+    { id: 'properties', icon: <Building2 size={18} />, label: 'PROPERTIES' },
+    { id: 'agents', icon: <Users size={18} />, label: 'AGENTS' },
+    { id: 'users', icon: <UserCog size={18} />, label: 'USERS' },
   ];
 
   return (
@@ -39,10 +41,10 @@ const Sidebar = ({ onTabChange, activeTab }) => {
     
       <div className="p-6 border-t border-white/5 space-y-2">
         <button className="w-full flex items-center gap-4 px-4 py-3 text-[10px] font-bold tracking-[0.2em] text-white/40 hover:text-white transition-all">
-          <Settings size={18} /> CILËSIMET
+          <Settings size={18} /> SETTINGS
         </button>
         <button className="w-full flex items-center gap-4 px-4 py-3 text-[10px] font-bold tracking-[0.2em] text-red-500/60 hover:text-red-500 transition-all">
-          <LogOut size={18} /> DIL
+          <LogOut size={18} /> LOG OUT
         </button>
       </div>
     </div>

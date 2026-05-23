@@ -4,80 +4,63 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors()); 
-app.use(express.json()); 
+app.use(cors());
+app.use(express.json());
 
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',      
-    password: '',      
+    host: '127.0.0.1',
+    user: 'root',
+    password: '',
     database: 'findhome_db'
 });
 
 db.connect((err) => {
     if (err) {
-        console.error('Error connecting to MySQL database:', err);
+        console.error('❌ Lidhja me databazën dështoi:', err.message);
         return;
     }
-    console.log('✅ Successfully connected to the MySQL Database!');
-
-    // Shton automatikisht 'type' nëse mungon
-    const fixDatabaseQuery = "ALTER TABLE properties ADD COLUMN type VARCHAR(50) DEFAULT 'BUY'";
-    db.query(fixDatabaseQuery, (err) => {
-        if (!err || err.errno === 1060) {
-            console.log('✅ Database is ready!');
-        }
-    });
+    console.log('✅ Lidhja me databazën u realizua!');
 });
 
-//API ROUTES 
-
-// GET ALL (READ)
+// GET - Tani është i pastër
 app.get('/api/properties', (req, res) => {
-    const sqlQuery = "SELECT * FROM properties";
-    db.query(sqlQuery, (err, results) => {
-        if (err) return res.status(500).json({ error: "Failed to fetch." });
+    db.query("SELECT * FROM properties", (err, results) => {
+        if (err) {
+            console.error("❌ SQL Error (GET):", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.status(200).json(results);
     });
 });
 
-//CREATE NEW (POST)
+// POST - Hequr 'type' që të përputhet me tabelën
 app.post('/api/properties', (req, res) => {
-    const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-    const sqlQuery = `INSERT INTO properties (title, price, location, status, type, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const values = [title, price, location, status, type, image, rooms, bathrooms, area];
-
-    db.query(sqlQuery, values, (err, result) => {
-        if (err) return res.status(500).json({ error: "Failed to save." });
+    const { title, price, location, status, image, rooms, bathrooms, area } = req.body;
+    const sql = "INSERT INTO properties (title, price, location, status, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    db.query(sql, [title, price, location, status, image, rooms, bathrooms, area], (err, result) => {
+        if (err) {
+            console.error("❌ SQL Error (POST):", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.status(201).json({ id: result.insertId, ...req.body });
     });
 });
 
-//DELETE (DELETE)
-app.delete('/api/properties/:id', (req, res) => {
-    const propertyId = req.params.id;
-    const sqlQuery = "DELETE FROM properties WHERE id = ?";
-    db.query(sqlQuery, [propertyId], (err) => {
-        if (err) return res.status(500).json({ error: "Failed to delete." });
-        res.status(200).json({ message: "Deleted!" });
-    });
-});
-
-//UPDATE (PUT)
+// PUT - Hequr 'type'
 app.put('/api/properties/:id', (req, res) => {
-    const propertyId = req.params.id;
-    const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-
-    const sqlQuery = `UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = ?, bathrooms = ?, area = ? WHERE id = ?`;
-    const values = [title, price, location, status, type, image, rooms, bathrooms, area, propertyId];
-
-    db.query(sqlQuery, values, (err) => {
-        if (err) return res.status(500).json({ error: "Failed to update." });
-        res.status(200).json({ id: propertyId, ...req.body });
+    const { title, price, location, status, image, rooms, bathrooms, area } = req.body;
+    const sql = "UPDATE properties SET title = ?, price = ?, location = ?, status = ?, image = ?, rooms = ?, bathrooms = ?, area = ? WHERE id = ?";
+    db.query(sql, [title, price, location, status, image, rooms, bathrooms, area, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "U përditësua me sukses!" });
     });
 });
 
-const PORT = 5000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server started on http://localhost:${PORT}`);
+app.delete('/api/properties/:id', (req, res) => {
+    db.query("DELETE FROM properties WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "U fshi me sukses!" });
+    });
 });
+
+app.listen(5000, () => console.log('🚀 Serveri po punon në http://localhost:5000'));
