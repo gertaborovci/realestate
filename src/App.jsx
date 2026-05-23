@@ -5,51 +5,41 @@ import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
 import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
-import { Home, Users, DollarSign, Clock, Shield, X } from 'lucide-react';
+import UserDashboard from './pages/UserDashboard';
+import { Home, Shield, X } from 'lucide-react';
 
 function App() {
   const [view, setView] = useState('hero');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
 
-  
-  
- 
   const navigateTo = (newView) => {
     setView(newView);
     window.history.pushState({ view: newView }, "", "");
   };
 
- 
   useEffect(() => {
     const handlePopState = (event) => {
       if (event.state && event.state.view) {
         setView(event.state.view);
       } else {
-        setView('hero'); 
+        setView('hero');
       }
     };
-
     window.addEventListener('popstate', handlePopState);
-    
-    
     if (!window.history.state) {
       window.history.replaceState({ view: 'hero' }, "", "");
     }
-
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-
-  
 
   const [properties, setProperties] = useState(() => {
     try {
       const saved = localStorage.getItem('my_properties');
       return saved ? JSON.parse(saved) : [
-        { id: 1, title: "Modern Villa", price: "450000", status: "Available", type: "BUY", location: "Prishtinë", image: "/photos/property1.jpg", beds: 5, baths: 3, area: 350 }
+        { id: 1, title: "Modern Villa", price: "450000", status: "Available", type: "BUY", location: "Prishtinë" }
       ];
     } catch (e) {
-      console.error("LocalStorage error:", e);
       return [];
     }
   });
@@ -59,7 +49,7 @@ function App() {
   }, [properties]);
 
   const deleteProperty = (id) => {
-    if (window.confirm("⚠️ A jeni të sigurt?")) {
+    if (window.confirm("A jeni të sigurt?")) {
       setProperties(prev => prev.filter(p => p.id !== id));
     }
   };
@@ -71,31 +61,37 @@ function App() {
       setProperties(prev => [{ ...formData, id: Date.now(), status: "Available" }, ...prev]);
     }
     setEditingProperty(null);
-    setActiveTab('properties'); 
+    setActiveTab('properties');
   };
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
-     
-      <button 
-        onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
-        className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
-      >
-        <div className="bg-white p-2 rounded-full text-black">
-          {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
-        </div>
-        <span className="font-bold text-[10px] tracking-widest pr-2">
-          {view === 'dashboard' ? "KTHEHU" : "ADMIN PANEL"}
-        </span>
-      </button>
+      
+      {/* Butoni Admin (shfaqet vetëm kur jemi te Hero) */}
+      {view === 'hero' && (
+        <button
+          onClick={() => navigateTo('dashboard')}
+          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full text-white hover:bg-white/20 transition-all"
+        >
+          <div className="bg-white p-2 rounded-full text-black">
+            <Shield size={20} />
+          </div>
+          <span className="font-bold text-[10px] tracking-widest pr-2">ADMIN PANEL</span>
+        </button>
+      )}
 
+      {/* Navigimi nëpër faqe */}
       
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
-      
+
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
           <PublicProperties properties={properties} onBack={() => navigateTo('hero')} />
         </div>
+      )}
+
+      {view === 'user-dashboard' && (
+        <UserDashboard onBack={() => navigateTo('hero')} />
       )}
 
       {view === 'dashboard' && (
@@ -112,7 +108,9 @@ function App() {
               <>
                 <div className="flex justify-between mb-12">
                   <h1 className="text-5xl font-bold">PRONAT</h1>
-                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold">SHTO +</button>
+                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-6 py-2 rounded-lg font-bold">
+                    Shto Pronë
+                  </button>
                 </div>
                 <PropertyTable properties={properties} onDelete={deleteProperty} onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }} />
               </>
