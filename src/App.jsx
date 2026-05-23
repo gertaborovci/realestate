@@ -5,113 +5,62 @@ import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
 import PropertyTable from './components/PropertyTable';
 import AddProperty from './pages/AddProperty';
-import { Home, Users, DollarSign, Clock, Shield, X } from 'lucide-react';
+import Signin from './pages/signin';
+import Signup from './pages/signup';
+import ManageAgents from './pages/ManageAgents';
+import ManageUsers from './pages/ManageUsers';
+import AgentProfile from './pages/AgentProfile';
 import TransactionDashboard from './TransactionDashboard'; 
+import { Home, Shield, X, Users, DollarSign, Clock } from 'lucide-react';
 
 function App() {
   const [view, setView] = useState('hero');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
-  
   const [properties, setProperties] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState(null);
 
-  
-  
- 
   const navigateTo = (newView) => {
     setView(newView);
     window.history.pushState({ view: newView }, "", "");
   };
 
- 
   useEffect(() => {
     const handlePopState = (event) => {
-      if (event.state && event.state.view) {
-        setView(event.state.view);
-      } else {
-        setView('hero'); 
-      }
+      if (event.state && event.state.view) setView(event.state.view);
+      else setView('hero');
     };
-
     window.addEventListener('popstate', handlePopState);
-    
-    
-    if (!window.history.state) {
-      window.history.replaceState({ view: 'hero' }, "", "");
-    }
-
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-<<<<<<< Updated upstream
-  
-
-  const [properties, setProperties] = useState(() => {
-    try {
-      const saved = localStorage.getItem('my_properties');
-      return saved ? JSON.parse(saved) : [
-        { id: 1, title: "Modern Villa", price: "450000", status: "Available", type: "BUY", location: "Prishtinë", image: "/photos/property1.jpg", beds: 5, baths: 3, area: 350 }
-      ];
-    } catch (e) {
-      console.error("LocalStorage error:", e);
-      return [];
-    }
-  });
-=======
   const fetchProperties = () => {
     fetch('http://localhost:5000/api/properties')
       .then(response => response.json())
       .then(data => setProperties(data))
-      .catch(error => console.error("Gabim në marrjen e të dhënave nga backend-i:", error));
+      .catch(error => console.error("Error:", error));
   };
->>>>>>> Stashed changes
 
   useEffect(() => {
-    localStorage.setItem('my_properties', JSON.stringify(properties));
-  }, [properties]);
+    fetchProperties();
+  }, []);
 
-<<<<<<< Updated upstream
-  const deleteProperty = (id) => {
-    if (window.confirm("⚠️ A jeni të sigurt?")) {
-      setProperties(prev => prev.filter(p => p.id !== id));
-    }
-  };
-
-  const saveProperty = (formData) => {
-    if (editingProperty) {
-      setProperties(prev => prev.map(p => p.id === editingProperty.id ? { ...formData, id: p.id } : p));
-    } else {
-      setProperties(prev => [{ ...formData, id: Date.now(), status: "Available" }, ...prev]);
-    }
-=======
   const deleteProperty = async (id) => {
-    if (window.confirm("⚠️ A jeni të sigurt që doni ta fshini këtë pronë?")) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/properties/${id}`, {
-          method: 'DELETE'
-        });
-        
-        if (response.ok) {
-          setProperties(prev => prev.filter(p => p.id !== id));
-        } else {
-          console.error("Gabim nga serveri gjatë fshirjes.");
-        }
-      } catch (error) {
-        console.error("Gabim i rrjetit gjatë fshirjes:", error);
-      }
+    if (window.confirm("⚠️ A jeni të sigurt që doni ta fshini?")) {
+      const response = await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
+      if (response.ok) setProperties(prev => prev.filter(p => p.id !== id));
     }
   };
 
   const saveProperty = () => {
-    fetchProperties(); 
->>>>>>> Stashed changes
+    fetchProperties();
     setEditingProperty(null);
-    setActiveTab('properties'); 
+    setActiveTab('properties');
   };
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
-     
+      {/* Floating Toggle Admin Button */}
       <button 
         onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
         className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
@@ -124,16 +73,14 @@ function App() {
         </span>
       </button>
 
-      
+      {/* Pages Routing */}
       {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
+      {view === 'signin' && <Signin onNavigate={navigateTo} />}
+      {view === 'signup' && <Signup onNavigate={navigateTo} />}
       
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
-<<<<<<< Updated upstream
-          <PublicProperties properties={properties} onBack={() => navigateTo('hero')} />
-=======
           <PublicProperties onBack={() => navigateTo('hero')} />
->>>>>>> Stashed changes
         </div>
       )}
 
@@ -144,18 +91,16 @@ function App() {
             {activeTab === 'dashboard' && (
               <>
                 <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
-<<<<<<< Updated upstream
-                <StatCard title="Total" value={properties.length} icon={<Home size={20} />} />
-=======
                 <StatCard title="Total Prona" value={properties.length} icon={<Home size={20} />} />
->>>>>>> Stashed changes
               </>
             )}
             {activeTab === 'properties' && (
               <>
                 <div className="flex justify-between mb-12">
                   <h1 className="text-5xl font-bold">PRONAT</h1>
-                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold">SHTO +</button>
+                  <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200">
+                    SHTO +
+                  </button>
                 </div>
                 <PropertyTable properties={properties} onDelete={deleteProperty} onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }} />
               </>
@@ -163,9 +108,10 @@ function App() {
             {activeTab === 'add' && (
               <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
             )}
-{activeTab === 'transactions' && (
-  <TransactionDashboard />
-)}
+            {activeTab === 'transactions' && <TransactionDashboard />}
+            {activeTab === 'agents' && <ManageAgents onViewProfile={(id) => { setSelectedAgentId(id); setActiveTab('agent-profile'); }} />}
+            {activeTab === 'users' && <ManageUsers />}
+            {activeTab === 'agent-profile' && <AgentProfile agentId={selectedAgentId} onBack={() => setActiveTab('agents')} />}
           </main>
         </div>
       )}
