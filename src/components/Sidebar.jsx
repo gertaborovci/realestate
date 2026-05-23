@@ -6,6 +6,7 @@ const Sidebar = ({ onTabChange, activeTab }) => {
   const menuItems = [
     { id: 'dashboard', icon: <LayoutDashboard size={18} />, label: 'DASHBOARD' },
     { id: 'properties', icon: <Building2 size={18} />, label: 'PRONAT' },
+    { id: 'transactions', icon: <Building2 size={18} />, label: 'TRANSAKSIONET' },
   ];
 
   return (

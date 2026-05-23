@@ -10,7 +10,8 @@ import Signup from './pages/signup';
 import ManageAgents from './pages/ManageAgents';
 import ManageUsers from './pages/ManageUsers';
 import AgentProfile from './pages/AgentProfile';
-import { Home, Shield, X } from 'lucide-react';
+import TransactionDashboard from './TransactionDashboard'; 
+import { Home, Shield, X, Users, DollarSign, Clock } from 'lucide-react';
 
 function App() {
   const [view, setView] = useState('hero');
@@ -45,7 +46,7 @@ function App() {
   }, []);
 
   const deleteProperty = async (id) => {
-    if (window.confirm("⚠️ A jeni të sigurt?")) {
+    if (window.confirm("⚠️ A jeni të sigurt që doni ta fshini?")) {
       const response = await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
       if (response.ok) setProperties(prev => prev.filter(p => p.id !== id));
     }
@@ -107,13 +108,10 @@ function App() {
             {activeTab === 'add' && (
               <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
             )}
-            {activeTab === 'agents' && (
-              <ManageAgents onViewProfile={(id) => { setSelectedAgentId(id); setActiveTab('agent-profile'); }} />
-            )}
+            {activeTab === 'transactions' && <TransactionDashboard />}
+            {activeTab === 'agents' && <ManageAgents onViewProfile={(id) => { setSelectedAgentId(id); setActiveTab('agent-profile'); }} />}
             {activeTab === 'users' && <ManageUsers />}
-            {activeTab === 'agent-profile' && (
-              <AgentProfile agentId={selectedAgentId} onBack={() => setActiveTab('agents')} />
-            )}
+            {activeTab === 'agent-profile' && <AgentProfile agentId={selectedAgentId} onBack={() => setActiveTab('agents')} />}
           </main>
         </div>
       )}
