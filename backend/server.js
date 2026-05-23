@@ -3,24 +3,25 @@ const mysql = require('mysql2');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); 
-app.use(express.json()); 
+
+app.use(cors());
+app.use(express.json());
 
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',      
-    password: '',      
+    host: '127.0.0.1',
+    user: 'root',
+    password: '',
     database: 'findhome_db'
 });
 
 db.connect((err) => {
     if (err) {
-        console.error('Error connecting to MySQL database:', err);
+        console.error('❌ Lidhja me databazën dështoi:', err.message);
         return;
     }
-    console.log('✅ Successfully connected to the MySQL Database!');
-
-    // Sigurohemi që kolona 'type' ekziston pa shkaktuar probleme
+    console.log('✅ Lidhja me databazën u realizua!');
+    
+    // Pjesa nga 'main' për të siguruar kolonën 'type'
     const fixDatabaseQuery = "ALTER TABLE properties ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'BUY'";
     db.query(fixDatabaseQuery, (err) => {
         if (!err) console.log('✅ Database checked/updated!');
@@ -30,33 +31,39 @@ db.connect((err) => {
 // --- API ROUTES: PROPERTIES ---
 app.get('/api/properties', (req, res) => {
     db.query("SELECT * FROM properties", (err, results) => {
-        if (err) return res.status(500).json({ error: "Failed to fetch." });
+        if (err) {
+            console.error("❌ SQL Error (GET):", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.status(200).json(results);
     });
 });
 
 app.post('/api/properties', (req, res) => {
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-    const sql = `INSERT INTO properties (title, price, location, status, type, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = "INSERT INTO properties (title, price, location, status, type, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     db.query(sql, [title, price, location, status, type, image, rooms, bathrooms, area], (err, result) => {
-        if (err) return res.status(500).json({ error: "Failed to save." });
+        if (err) {
+            console.error("❌ SQL Error (POST):", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.status(201).json({ id: result.insertId, ...req.body });
-    });
-});
-
-app.delete('/api/properties/:id', (req, res) => {
-    db.query("DELETE FROM properties WHERE id = ?", [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: "Failed to delete." });
-        res.status(200).json({ message: "Deleted!" });
     });
 });
 
 app.put('/api/properties/:id', (req, res) => {
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-    const sql = `UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = ?, bathrooms = ?, area = ? WHERE id = ?`;
+    const sql = "UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = ?, bathrooms = ?, area = ? WHERE id = ?";
     db.query(sql, [title, price, location, status, type, image, rooms, bathrooms, area, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: "Failed to update." });
-        res.status(200).json({ id: req.params.id, ...req.body });
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "U përditësua me sukses!" });
+    });
+});
+
+app.delete('/api/properties/:id', (req, res) => {
+    db.query("DELETE FROM properties WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "U fshi me sukses!" });
     });
 });
 
@@ -102,7 +109,4 @@ app.post('/api/reviews', (req, res) => {
     });
 });
 
-const PORT = 5000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server started on http://localhost:${PORT}`);
-});
+app.listen(5000, () => console.log('🚀 Serveri po punon në http://localhost:5000'));
