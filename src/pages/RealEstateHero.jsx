@@ -121,7 +121,6 @@ const RealEstateHero = ({ onNavigate }) => {
             <div key={item.title} className="bg-[#fcfcfc] p-12 rounded-[50px] flex flex-col items-center text-center space-y-8 hover:shadow-2xl transition-all border border-black/[0.03]">
               <div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-md">{item.icon}</div>
               <h3 className="text-3xl font-black uppercase italic tracking-tighter">{item.title}</h3>
-              <p className="text-sm font-medium leading-relaxed opacity-50 px-2">{item.desc}</p>
               <button onClick={() => onNavigate('properties')} className="px-10 py-4 border-2 border-black rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all">{item.btn}</button>
             </div>
           ))}
@@ -131,11 +130,8 @@ const RealEstateHero = ({ onNavigate }) => {
       {/* Cities Section */}
       <section className="min-h-screen w-full bg-[#050505] p-16 md:p-24 flex flex-col justify-center text-white">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="flex justify-between items-end mb-20">
-            <h2 className="text-7xl font-black tracking-tighter uppercase italic leading-none">Popular<br/>Cities</h2>
-            <button onClick={() => onNavigate('properties')} className="text-[10px] font-black tracking-[0.4em] text-white/60 hover:text-white border-b border-white/20 pb-2 uppercase transition-all">Browse All</button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+           <h2 className="text-7xl font-black tracking-tighter uppercase italic mb-20">Popular Cities</h2>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {popularCities.map((city) => (
               <div key={city.name} className="group relative h-[500px] rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
                 <img src={city.img} onError={(e) => e.target.src = city.fallback} className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110 opacity-70" alt={city.name} />
@@ -145,7 +141,7 @@ const RealEstateHero = ({ onNavigate }) => {
                 </div>
               </div>
             ))}
-          </div>
+           </div>
         </div>
       </section>
       

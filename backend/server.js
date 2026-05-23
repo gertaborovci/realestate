@@ -7,8 +7,8 @@ const fs = require('fs');         // SHTUAR: Për të krijuar folderin automatik
 
 const app = express();
 
-app.use(cors()); 
-app.use(express.json()); 
+app.use(cors());
+app.use(express.json());
 
 // SHTUAR: Kjo lejon që React të shohë fotot që ruhen në folderin "uploads"
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -32,24 +32,23 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',      
-    password: '',      
+    host: '127.0.0.1',
+    user: 'root',
+    password: '',
     database: 'findhome_db'
 });
 
 db.connect((err) => {
     if (err) {
-        console.error('Error connecting to MySQL database:', err);
+        console.error('❌ Lidhja me databazën dështoi:', err.message);
         return;
     }
     console.log('✅ Successfully connected to the MySQL Database!');
 
-    const fixDatabaseQuery = "ALTER TABLE properties ADD COLUMN type VARCHAR(50) DEFAULT 'BUY'";
+    // Pjesa nga 'main' për të siguruar kolonën 'type'
+    const fixDatabaseQuery = "ALTER TABLE properties ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'BUY'";
     db.query(fixDatabaseQuery, (err) => {
-        if (!err || err.errno === 1060) {
-            console.log('✅ Properties table verified!');
-        }
+        if (!err) console.log('✅ Properties table verified!');
     });
 
     const createImagesTableQuery = `
@@ -72,9 +71,11 @@ db.connect((err) => {
 // ==========================================
 
 app.get('/api/properties', (req, res) => {
-    const sqlQuery = "SELECT * FROM properties";
-    db.query(sqlQuery, (err, results) => {
-        if (err) return res.status(500).json({ error: "Failed to fetch." });
+    db.query("SELECT * FROM properties", (err, results) => {
+        if (err) {
+            console.error("❌ SQL Error (GET):", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.status(200).json(results);
     });
 });
@@ -91,43 +92,36 @@ app.get('/api/properties/:id', (req, res) => {
 
 app.post('/api/properties', (req, res) => {
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-    const sqlQuery = `INSERT INTO properties (title, price, location, status, type, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const values = [title, price, location, status, type, image, rooms, bathrooms, area];
-
-    db.query(sqlQuery, values, (err, result) => {
-        if (err) return res.status(500).json({ error: "Failed to save." });
+    const sql = "INSERT INTO properties (title, price, location, status, type, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    db.query(sql, [title, price, location, status, type, image, rooms, bathrooms, area], (err, result) => {
+        if (err) {
+            console.error("❌ SQL Error (POST):", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.status(201).json({ id: result.insertId, ...req.body });
     });
 });
 
-app.delete('/api/properties/:id', (req, res) => {
-    const propertyId = req.params.id;
-    const sqlQuery = "DELETE FROM properties WHERE id = ?";
-    db.query(sqlQuery, [propertyId], (err) => {
-        if (err) return res.status(500).json({ error: "Failed to delete." });
-        res.status(200).json({ message: "Deleted!" });
-    });
-});
-
 app.put('/api/properties/:id', (req, res) => {
-    const propertyId = req.params.id;
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-
-    const sqlQuery = `UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = ?, bathrooms = ?, area = ? WHERE id = ?`;
-    const values = [title, price, location, status, type, image, rooms, bathrooms, area, propertyId];
-
-    db.query(sqlQuery, values, (err) => {
-        if (err) return res.status(500).json({ error: "Failed to update." });
-        res.status(200).json({ id: propertyId, ...req.body });
+    const sql = "UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = ?, bathrooms = ?, area = ? WHERE id = ?";
+    db.query(sql, [title, price, location, status, type, image, rooms, bathrooms, area, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "U përditësua me sukses!" });
     });
 });
+
+app.delete('/api/properties/:id', (req, res) => {
+    db.query("DELETE FROM properties WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "U fshi me sukses!" });
+    });
+});
+
 
 // ==========================================
 // 2. API ROUTES PËR IMAZHET (IMAGES CRUD ME MULTER)
 // ==========================================
-// SHTUAR: upload.single('image') e cila pranon file-in fizik nga React
-
-
 
 app.get('/api/properties/:id/images', (req, res) => {
     const propertyId = req.params.id;
@@ -142,20 +136,12 @@ app.get('/api/properties/:id/images', (req, res) => {
     });
 });
 
-
-
-
-
-
-
-
 app.post('/api/properties/:id/images', upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: "No image file provided." });
     }
 
     const propertyId = req.params.id;
-    // URL-ja që do ruhet në DB (psh: /uploads/167890123.jpg)
     const imageUrl = `/uploads/${req.file.filename}`; 
     const eshteKryesore = req.body.eshte_kryesore === 'true' || req.body.eshte_kryesore === true ? 1 : 0;
     
@@ -193,6 +179,50 @@ app.put('/api/properties/images/:image_id/set-main', (req, res) => {
             if (err) return res.status(500).json({ error: "Failed to set main image." });
             res.status(200).json({ message: "Main image updated successfully!" });
         });
+    });
+});
+
+
+// ==========================================
+// 3. API ROUTES: CLIENTS, FAVORITES, REVIEWS (Nga GitHub)
+// ==========================================
+
+app.get('/api/clients', (req, res) => {
+    db.query("SELECT * FROM clients", (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.json(results);
+    });
+});
+
+app.post('/api/clients', (req, res) => {
+    const { user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit } = req.body;
+    const sql = "INSERT INTO clients (user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    db.query(sql, [user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit], (err) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: "Client created successfully!" });
+    });
+});
+
+app.post('/api/favorites', (req, res) => {
+    const { client_id, property_id } = req.body;
+    db.query("INSERT INTO favorites (client_id, property_id) VALUES (?, ?)", [client_id, property_id], (err) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: "Favorite added!" });
+    });
+});
+
+app.get('/api/reviews/:agent_id', (req, res) => {
+    db.query("SELECT * FROM reviews WHERE agent_id = ?", [req.params.agent_id], (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.json(results);
+    });
+});
+
+app.post('/api/reviews', (req, res) => {
+    const { agent_id, client_id, vleresimi, komenti } = req.body;
+    db.query("INSERT INTO reviews (agent_id, client_id, vleresimi, komenti) VALUES (?, ?, ?, ?)", [agent_id, client_id, vleresimi, komenti], (err) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: "Review added successfully!" });
     });
 });
 
