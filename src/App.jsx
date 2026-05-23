@@ -10,15 +10,24 @@ import Signup from './pages/signup';
 import ManageAgents from './pages/ManageAgents';
 import ManageUsers from './pages/ManageUsers';
 import AgentProfile from './pages/AgentProfile';
-import { Home, Shield, X } from 'lucide-react';
+import TransactionDashboard from './TransactionDashboard';
+
+import {
+  Home,
+  Shield,
+  X,
+  Users,
+  DollarSign,
+  Clock
+} from 'lucide-react';
 
 function App() {
   const [view, setView] = useState('hero');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingProperty, setEditingProperty] = useState(null);
   const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true); // SHTESË: Kontroll për ngarkim
-  
+  const [loading, setLoading] = useState(true);
+
   const [selectedAgentId, setSelectedAgentId] = useState(null);
 
   const navigateTo = (newView) => {
@@ -34,24 +43,29 @@ function App() {
         setView('hero');
       }
     };
+
     window.addEventListener('popstate', handlePopState);
+
     if (!window.history.state) {
       window.history.replaceState({ view: 'hero' }, "", "");
     }
+
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const fetchProperties = async () => {
     try {
       setLoading(true);
+
       const response = await fetch('http://localhost:5000/api/properties');
       const data = await response.json();
-      setProperties(Array.isArray(data) ? data : []); 
+
+      setProperties(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error:", error);
       setProperties([]);
     } finally {
-      setLoading(false); // SHTESË: Siguron që ngarkimi mbaron edhe nëse ka gabim
+      setLoading(false);
     }
   };
 
@@ -61,8 +75,16 @@ function App() {
 
   const deleteProperty = async (id) => {
     if (window.confirm("⚠️ Are you sure?")) {
-      const response = await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
-      if (response.ok) setProperties(prev => prev.filter(p => p.id !== id));
+      const response = await fetch(
+        `http://localhost:5000/api/properties/${id}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      if (response.ok) {
+        setProperties(prev => prev.filter(p => p.id !== id));
+      }
     }
   };
 
@@ -74,27 +96,40 @@ function App() {
 
   return (
     <div className="h-screen bg-black overflow-hidden text-white">
-      
+
       {/* Floating Toggle Admin / Back Button */}
-      <button 
-        onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
+      <button
+        onClick={() =>
+          navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')
+        }
         className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
       >
         <div className="bg-white p-2 rounded-full text-black">
-          {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
+          {view === 'dashboard' ? (
+            <X size={20} />
+          ) : (
+            <Shield size={20} />
+          )}
         </div>
+
         <span className="font-bold text-[10px] tracking-widest pr-2">
           {view === 'dashboard' ? "GO BACK" : "ADMIN PANEL"}
         </span>
       </button>
 
       {/* View/Page Routing */}
-      {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
-      
-      {view === 'signin' && <Signin onNavigate={navigateTo} />}
-      
-      {view === 'signup' && <Signup onNavigate={navigateTo} />}
-      
+      {view === 'hero' && (
+        <RealEstateHero onNavigate={navigateTo} />
+      )}
+
+      {view === 'signin' && (
+        <Signin onNavigate={navigateTo} />
+      )}
+
+      {view === 'signup' && (
+        <Signup onNavigate={navigateTo} />
+      )}
+
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
           <PublicProperties onBack={() => navigateTo('hero')} />
@@ -103,40 +138,99 @@ function App() {
 
       {view === 'dashboard' && (
         <div className="flex h-full bg-[#050505]">
-          <Sidebar onTabChange={setActiveTab} activeTab={activeTab} />
+
+          <Sidebar
+            onTabChange={setActiveTab}
+            activeTab={activeTab}
+          />
+
           <main className="flex-1 p-12 overflow-y-auto">
-            {/* SHTESË: Kontrolli për gjendjen loading */}
+
             {loading ? (
               <div className="text-xl">Duke ngarkuar...</div>
             ) : (
               <>
                 {activeTab === 'dashboard' && (
                   <>
-                    <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
-                    <StatCard title="Total Properties" value={properties.length} icon={<Home size={20} />} />
+                    <h1 className="text-5xl font-bold mb-12">
+                      DASHBOARD
+                    </h1>
+
+                    <div className="flex flex-wrap gap-6">
+                      <StatCard
+                        title="Total Properties"
+                        value={properties.length}
+                        icon={<Home size={20} />}
+                      />
+
+                      <StatCard
+                        title="Agents"
+                        value="12"
+                        icon={<Users size={20} />}
+                      />
+
+                      <StatCard
+                        title="Revenue"
+                        value="$120K"
+                        icon={<DollarSign size={20} />}
+                      />
+
+                      <StatCard
+                        title="Pending"
+                        value="8"
+                        icon={<Clock size={20} />}
+                      />
+                    </div>
                   </>
                 )}
+
                 {activeTab === 'properties' && (
                   <>
                     <div className="flex justify-between mb-12">
-                      <h1 className="text-5xl font-bold">PROPERTIES</h1>
-                      <button onClick={() => { setEditingProperty(null); setActiveTab('add'); }} className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200">
+                      <h1 className="text-5xl font-bold">
+                        PROPERTIES
+                      </h1>
+
+                      <button
+                        onClick={() => {
+                          setEditingProperty(null);
+                          setActiveTab('add');
+                        }}
+                        className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200"
+                      >
                         ADD NEW +
                       </button>
                     </div>
-                    <PropertyTable properties={properties} onDelete={deleteProperty} onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }} />
+
+                    <PropertyTable
+                      properties={properties}
+                      onDelete={deleteProperty}
+                      onEdit={(p) => {
+                        setEditingProperty(p);
+                        setActiveTab('add');
+                      }}
+                    />
                   </>
                 )}
+
                 {activeTab === 'add' && (
-                  <AddProperty onBack={() => setActiveTab('properties')} onAdd={saveProperty} editData={editingProperty} />
+                  <AddProperty
+                    onBack={() => setActiveTab('properties')}
+                    onAdd={saveProperty}
+                    editData={editingProperty}
+                  />
                 )}
-                
+
+                {activeTab === 'transactions' && (
+                  <TransactionDashboard />
+                )}
+
                 {activeTab === 'agents' && (
-                  <ManageAgents 
+                  <ManageAgents
                     onViewProfile={(id) => {
                       setSelectedAgentId(id);
                       setActiveTab('agent-profile');
-                    }} 
+                    }}
                   />
                 )}
 
@@ -145,10 +239,14 @@ function App() {
                 )}
 
                 {activeTab === 'agent-profile' && (
-                  <AgentProfile agentId={selectedAgentId} onBack={() => setActiveTab('agents')} />
+                  <AgentProfile
+                    agentId={selectedAgentId}
+                    onBack={() => setActiveTab('agents')}
+                  />
                 )}
               </>
             )}
+
           </main>
         </div>
       )}
