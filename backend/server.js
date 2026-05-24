@@ -70,6 +70,13 @@ db.connect((err) => {
 // 1. API ROUTES PËR PRONAT (PROPERTIES CRUD)
 // ==========================================
 
+
+// IMPORTIMI I ROUTE-VE TË REJA
+const featureRoutes = require('./routes/featureRoutes.js')(db);
+app.use('/api/properties', featureRoutes);
+
+
+
 app.get('/api/properties', (req, res) => {
     db.query("SELECT * FROM properties", (err, results) => {
         if (err) {
