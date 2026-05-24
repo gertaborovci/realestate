@@ -8,6 +8,7 @@ import {
   Users,
   UserCog
 } from 'lucide-react';
+import { LayoutDashboard, Building2 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
 
@@ -85,11 +86,13 @@ const Sidebar = ({ onTabChange, activeTab }) => {
         <button className="w-full flex items-center gap-4 px-4 py-3 text-[10px] font-bold tracking-[0.2em] text-white/40 hover:text-white transition-all">
           <Settings size={18} />
           SETTINGS
+          CILËSIMET
         </button>
 
         <button className="w-full flex items-center gap-4 px-4 py-3 text-[10px] font-bold tracking-[0.2em] text-red-500/60 hover:text-red-500 transition-all">
           <LogOut size={18} />
           LOG OUT
+          DIL
         </button>
 
       </div>
@@ -97,4 +100,5 @@ const Sidebar = ({ onTabChange, activeTab }) => {
   );
 };
 
+export default Sidebar;
 export default Sidebar;
