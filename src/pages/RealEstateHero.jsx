@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
 
-// TEMPORARILY DISABLED: Teammate forgot to upload this file!
+// TEMPORARILY DISABLED: The file is missing from the repository!
 // import AgentDashboard from './AgentDashboard';
 
 const RealEstateHero = ({ onNavigate }) => {
@@ -9,7 +9,7 @@ const RealEstateHero = ({ onNavigate }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
 
-  // Smart Scroll Detector
+  // Smart Scroll Detector (Fixed for snap scrolling)
   useEffect(() => {
     const handleScroll = () => {
       if (scrollRef.current) {
@@ -38,13 +38,14 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'AGENTS', view: 'hero' }
   ];
 
+  // Updated to focus on Kosovo
   const popularCities = [
     { name: 'Prishtina', homes: '1,240', img: '/photos/hero_Pristina.avif', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' },
     { name: 'Prizren', homes: '850', img: 'https://images.unsplash.com/photo-1610012759972-e1c27e025f18?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1000' },
     { name: 'Peja', homes: '430', img: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' }
   ];
 
-  // TEMPORARILY DISABLED to prevent crash
+  // TEMPORARILY DISABLED to prevent crashes
   // if (showDashboard) {
   //   return <AgentDashboard onBack={() => setShowDashboard(false)} />;
   // }
@@ -55,13 +56,14 @@ const RealEstateHero = ({ onNavigate }) => {
       className="h-screen w-full bg-black overflow-y-auto scroll-smooth hide-scrollbar text-white"
     >
       
-      {/* Navbar */}
+      {/* Dynamic Navbar: Transparent at top, Black blur on scroll */}
       <nav className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-[100] transition-all duration-500 ${
         isScrolled 
           ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' 
           : 'bg-transparent py-8'
       }`}>
         
+        {/* Left: KosovaNest Logo */}
         <div 
           className="flex items-center gap-3 cursor-pointer group" 
           onClick={() => onNavigate('hero')}
@@ -73,6 +75,7 @@ const RealEstateHero = ({ onNavigate }) => {
           </div>
         </div>
 
+        {/* Center: Navigation Links */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((item) => (
             <button 
@@ -85,14 +88,14 @@ const RealEstateHero = ({ onNavigate }) => {
           ))}
         </div>
 
-        {/* Right: User Actions with Profile Navigation */}
+        {/* Right: User Actions */}
         <div className="flex items-center gap-6">
-          <button 
-            onClick={() => onNavigate('user-profile')} 
+          <div 
             className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
+            onClick={() => onNavigate('user-profile')}
           >
             <User size={20} className="text-white" />
-          </button>
+          </div>
           <button 
             onClick={() => onNavigate('signin')}
             className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase"
@@ -117,8 +120,11 @@ const RealEstateHero = ({ onNavigate }) => {
       <section className="h-screen w-full relative">
         <div className="h-full w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
           <div className="absolute inset-0 bg-black/40"></div>
+          
           <div className="absolute bottom-32 left-16 md:left-24">
-            <h1 className="text-white text-[6vw] font-bold tracking-tighter leading-[0.8] mb-8 uppercase">DREAM HOME</h1>
+            <h1 className="text-white text-[6vw] font-bold tracking-tighter leading-[0.8] mb-8 uppercase">
+              DREAM HOME
+            </h1>
             <p className="text-white/80 text-[10px] max-w-xl font-semibold tracking-[0.3em] uppercase opacity-80 leading-relaxed">
               KosovaNest is the premier real estate agency in the region, connecting clients with architectural excellence and modern living spaces across Kosovo.
             </p>
@@ -162,12 +168,72 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </section>
       
-      {/* Footer */}
-      <section className="w-full bg-[#050505] text-white p-16 md:p-24">
-        <div className="max-w-7xl mx-auto text-center border-t border-white/10 pt-16">
-           <p className="text-[10px] font-black tracking-[0.6em] uppercase opacity-40">© 2026 KosovaNest. All Rights Reserved.</p>
+      {/* "Let us narrow the field" Section */}
+      <section className="min-h-screen w-full bg-white text-black p-16 md:p-24 flex flex-col items-center justify-center">
+        <div className="max-w-3xl text-center space-y-8 mb-24">
+          <h2 className="text-6xl font-black tracking-tighter uppercase italic leading-[0.9]">Let us narrow the field for you</h2>
+          <p className="text-xl font-medium opacity-50 tracking-tight max-w-2xl mx-auto">We connect you with a dedicated team that understands your vision and the unique dynamics of the Kosovar real estate market.</p>
+        </div>
+        <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-3 gap-20 text-center">
+          {[
+            { title: 'Dedicated Team', desc: 'Tell us about your needs and a coordinator will help you find the right local agent.', icon: <Users size={40} /> },
+            { title: 'Local Expertise', desc: 'Tap into the expertise of top agents from brokerages across Kosovo.', icon: <Handshake size={40} /> },
+            { title: 'No Hidden Fees', desc: 'Get connected to an agent in minutes for free. No commitment required.', icon: <ShieldCheck size={40} /> }
+          ].map((feature) => (
+            <div key={feature.title} className="space-y-8 group">
+              <div className="flex justify-center text-black/20 group-hover:text-black transition-colors duration-500">{feature.icon}</div>
+              <h4 className="text-2xl font-black uppercase tracking-tight">{feature.title}</h4>
+              <p className="text-sm font-medium leading-relaxed opacity-50">{feature.desc}</p>
+            </div>
+          ))}
+        </div>
+        <button className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
+          Connect with an agent <ChevronRight size={18} />
+        </button>
+      </section>
+
+      {/* Footer Section */}
+      <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between">
+        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-20 py-10">
+          <div className="space-y-10">
+            <h2 className="text-6xl font-black tracking-tighter uppercase leading-[0.8]">About Us</h2>
+            <p className="text-2xl font-medium tracking-tight leading-relaxed max-w-lg opacity-60">
+              KosovaNest is the leading premium real estate network in Kosovo. We specialize in identifying architectural legacies and providing elite, transparent service to buyers, sellers, and investors across the region.
+            </p>
+            <div className="flex gap-10 pt-4">
+               <Globe className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+               <Mail className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+               <Phone className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-12 pt-4">
+            <div className="space-y-8">
+              <h4 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40">Operations</h4>
+              <ul className="space-y-4 text-[13px] font-bold uppercase tracking-widest opacity-80">
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Local Market</li>
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Portfolio</li>
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Press Room</li>
+              </ul>
+            </div>
+            <div className="space-y-8">
+              <h4 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40">Legal</h4>
+              <ul className="space-y-4 text-[13px] font-bold uppercase tracking-widest opacity-80">
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Privacy Policy</li>
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Terms of Service</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto w-full pt-16 mt-16 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] font-black tracking-[0.6em] uppercase opacity-40">
+          <span>© 2026 KosovaNest. All Rights Reserved.</span>
+          <div className="flex gap-8">
+            <span>Premium Properties</span>
+            <span>•</span>
+            <span>Elite Service</span>
+          </div>
         </div>
       </section>
+      
     </div>
   );
 };

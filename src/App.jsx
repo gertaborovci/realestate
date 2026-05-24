@@ -11,7 +11,6 @@ import ManageAgents from './pages/ManageAgents';
 import ManageUsers from './pages/ManageUsers';
 import AgentProfile from './pages/AgentProfile';
 import TransactionDashboard from './TransactionDashboard';
-
 import UserDashboard from './pages/UserDashboard'; 
 
 import {
@@ -36,7 +35,6 @@ function App() {
     window.history.pushState({ view: newView }, "", "");
   };
 
-  // ... (pjesa tjetër e useEffect dhe fetchProperties mbetet e njëjtë)
   useEffect(() => {
     const handlePopState = (event) => {
       if (event.state && event.state.view) {
@@ -90,12 +88,12 @@ function App() {
       {view !== 'user-profile' && (
         <button
           onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
-          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
+          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full hover:bg-white/20 transition-all shadow-2xl"
         >
           <div className="bg-white p-2 rounded-full text-black">
             {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
           </div>
-          <span className="font-bold text-[10px] tracking-widest pr-2">
+          <span className="font-bold text-[10px] tracking-widest pr-2 uppercase">
             {view === 'dashboard' ? "GO BACK" : "ADMIN PANEL"}
           </span>
         </button>
@@ -106,27 +104,90 @@ function App() {
       {view === 'signin' && <Signin onNavigate={navigateTo} />}
       {view === 'signup' && <Signup onNavigate={navigateTo} />}
       
-      {/* KETU ESHTE SHTESA PER DASHBOARDIN E PERDORUESIT */}
+      {/* User Dashboard */}
       {view === 'user-profile' && (
         <UserDashboard onBack={() => navigateTo('hero')} />
       )}
 
+      {/* Public Properties Gallery */}
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
           <PublicProperties onBack={() => navigateTo('hero')} />
         </div>
       )}
 
+      {/* ADMIN DASHBOARD ROUTING */}
       {view === 'dashboard' && (
         <div className="flex h-full bg-[#050505]">
           <Sidebar onTabChange={setActiveTab} activeTab={activeTab} />
+          
           <main className="flex-1 p-12 overflow-y-auto">
-            {/* ... (pjesa e brendshme e dashboard-it mbetet e njëjtë) */}
-            {loading ? <div className="text-xl">Duke ngarkuar...</div> : (
+            {loading ? <div className="text-xl animate-pulse">Duke ngarkuar...</div> : (
               <>
-                {/* Dashboard logic here... */}
-                {activeTab === 'dashboard' && <h1>DASHBOARD</h1>}
-                {/* ... shtoni pjesët e tjera siç i keni pasur ... */}
+                {/* 1. Main Dashboard View (Stat Cards) */}
+                {activeTab === 'dashboard' && (
+                  <div className="animate-in fade-in duration-500">
+                    <h1 className="text-5xl font-black tracking-tighter uppercase mb-10">DASHBOARD</h1>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <StatCard 
+                        title="Total Properties" 
+                        value={properties.length} 
+                        icon={<Home size={24} />} 
+                      />
+                      <StatCard 
+                        title="Active Agents" 
+                        value="8" 
+                        icon={<Users size={24} />} 
+                      />
+                      <StatCard 
+                        title="Pending Transactions" 
+                        value="12" 
+                        icon={<Clock size={24} />} 
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Properties View (Table & Add/Edit Form) */}
+                {activeTab === 'properties' && (
+                  <div className="animate-in fade-in duration-500">
+                    {!editingProperty ? (
+                      <>
+                        <div className="flex justify-between items-center mb-10">
+                          <h1 className="text-5xl font-black tracking-tighter uppercase">Properties</h1>
+                          <button 
+                            onClick={() => setEditingProperty('new')}
+                            className="bg-white text-black font-bold text-[11px] tracking-widest px-6 py-3 rounded-full uppercase hover:bg-gray-200 transition"
+                          >
+                            Shto +
+                          </button>
+                        </div>
+                        <PropertyTable 
+                          properties={properties} 
+                          onDelete={deleteProperty} 
+                          onEdit={(prop) => setEditingProperty(prop)} 
+                        />
+                      </>
+                    ) : (
+                      <AddProperty 
+                        onBack={() => setEditingProperty(null)} 
+                        onAdd={saveProperty} 
+                        editData={editingProperty !== 'new' ? editingProperty : null}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* 3. Other Sidebar Tabs */}
+                {activeTab === 'transactions' && <TransactionDashboard />}
+                
+                {activeTab === 'agents' && (
+                  selectedAgentId ? 
+                    <AgentProfile agentId={selectedAgentId} onBack={() => setSelectedAgentId(null)} /> : 
+                    <ManageAgents onSelectAgent={setSelectedAgentId} />
+                )}
+
+                {activeTab === 'users' && <ManageUsers />}
               </>
             )}
           </main>
