@@ -11,7 +11,8 @@ import ManageAgents from './pages/ManageAgents';
 import ManageUsers from './pages/ManageUsers';
 import AgentProfile from './pages/AgentProfile';
 import TransactionDashboard from './TransactionDashboard';
-import UserDashboard from './pages/UserDashboard'; // <--- SHTO KËTË
+
+import UserDashboard from './pages/UserDashboard'; 
 
 import {
   Home,
