@@ -81,7 +81,10 @@ const RealEstateHero = ({ onNavigate }) => {
 
         {/* Right: User Actions */}
         <div className="flex items-center gap-6">
-          <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition">
+          <div 
+            className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
+            onClick={() => onNavigate('user-dashboard')}
+          >
             <User size={20} className="text-white" />
           </div>
           <button 
