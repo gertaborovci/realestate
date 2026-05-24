@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
+import AgentDashboard from './AgentDashboard';
 
 const RealEstateHero = ({ onNavigate }) => {
+  const [showDashboard, setShowDashboard] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
 
@@ -41,6 +43,10 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'Peja', homes: '430', img: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' }
   ];
 
+  if (showDashboard) {
+    return <AgentDashboard onBack={() => setShowDashboard(false)} />;
+  }
+
   return (
     <div 
       ref={scrollRef}
@@ -61,8 +67,8 @@ const RealEstateHero = ({ onNavigate }) => {
         >
           <Building2 size={32} className="text-white group-hover:opacity-70 transition-opacity" />
           <div className="flex flex-col">
-             <span className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none group-hover:opacity-70 transition-opacity">KosovaNest</span>
-             <span className="text-white/80 text-[10px] font-bold tracking-[0.3em] uppercase leading-none mt-1">Real Estate Group</span>
+              <span className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none group-hover:opacity-70 transition-opacity">KosovaNest</span>
+              <span className="text-white/80 text-[10px] font-bold tracking-[0.3em] uppercase leading-none mt-1">Real Estate Group</span>
           </div>
         </div>
 
@@ -95,6 +101,17 @@ const RealEstateHero = ({ onNavigate }) => {
           </button>
         </div>
       </nav>
+
+      {/* AGENT PANEL BUTTON SHTUAR KETU */}
+      <div className="fixed bottom-8 left-8 z-[100]">
+        <button 
+          onClick={() => setShowDashboard(true)} 
+          className="bg-[#1f1f1f] border border-white/10 text-white px-8 py-4 rounded-full flex items-center gap-3 shadow-lg hover:bg-[#2a2a2a] transition-all"
+        >
+          <div className="bg-white text-black p-1.5 rounded-full"><ShieldCheck size={16} /></div>
+          <span className="font-bold tracking-widest text-[10px] uppercase">AGENT PANEL</span>
+        </button>
+      </div>
 
       {/* Hero Section: FULL SCREEN */}
       <section className="h-screen w-full relative">
