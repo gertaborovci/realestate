@@ -11,6 +11,7 @@ import ManageAgents from './pages/ManageAgents';
 import ManageUsers from './pages/ManageUsers';
 import AgentProfile from './pages/AgentProfile';
 import TransactionDashboard from './TransactionDashboard';
+import UserDashboard from './pages/UserDashboard'; // Shtuar
 
 import {
   Home,
@@ -120,6 +121,11 @@ function App() {
       {/* View/Page Routing */}
       {view === 'hero' && (
         <RealEstateHero onNavigate={navigateTo} />
+      )}
+
+      {/* Shtuar kjo rrugë */}
+      {view === 'user-dashboard' && (
+        <UserDashboard onBack={() => navigateTo('hero')} />
       )}
 
       {view === 'signin' && (
