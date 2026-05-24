@@ -1,8 +1,34 @@
-import React from 'react';
-import { Search, User, Menu, MapPin, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
+import AgentDashboard from './AgentDashboard';
 
 const RealEstateHero = ({ onNavigate }) => {
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const scrollRef = useRef(null);
+
+  // Smart Scroll Detector (Fixed for snap scrolling)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollRef.current) {
+        setIsScrolled(scrollRef.current.scrollTop > 50);
+      }
+    };
+    
+    const scrollContainer = scrollRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+    
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, []);
+
   const navLinks = [
+    { name: 'HOME', view: 'hero' },
     { name: 'BUY', view: 'properties' },
     { name: 'RENT', view: 'properties' },
     { name: 'SELL', view: 'hero' },
@@ -10,60 +36,107 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'AGENTS', view: 'hero' }
   ];
 
+  // Updated to focus on Kosovo
   const popularCities = [
-    { name: 'London', homes: '1,240', img: '/photos/hero_London.jpg', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' },
-    { name: 'Dubai', homes: '850', img: '/photos/hero_Dubai.jpg', fallback: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1000' },
-    { name: 'Prishtina', homes: '430', img: '/photos/hero_Pristina.avif' }
+    { name: 'Prishtina', homes: '1,240', img: '/photos/hero_Pristina.avif', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' },
+    { name: 'Prizren', homes: '850', img: 'https://images.unsplash.com/photo-1610012759972-e1c27e025f18?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1000' },
+    { name: 'Peja', homes: '430', img: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' }
   ];
 
+  if (showDashboard) {
+    return <AgentDashboard onBack={() => setShowDashboard(false)} />;
+  }
+
   return (
-    <div className="h-screen w-full bg-black overflow-y-scroll snap-y snap-mandatory scroll-smooth hide-scrollbar text-white">
+    <div 
+      ref={scrollRef}
+      className="h-screen w-full bg-black overflow-y-auto scroll-smooth hide-scrollbar text-white"
+    >
       
-      {/* Navigation */}
-      <nav className="fixed top-10 left-1/2 -translate-x-1/2 w-[95%] flex items-center justify-between z-[100] pointer-events-none">
-        <div className="pointer-events-auto flex items-center gap-2 bg-white/10 backdrop-blur-xl border border-white/20 p-2 rounded-full px-4 shadow-5xl">
-          <div onClick={() => onNavigate('user-dashboard')} className="p-2 bg-white/20 rounded-full cursor-pointer hover:bg-white/30 transition">
-            <User size={18} className="text-white" />
+      {/* Dynamic Navbar: Transparent at top, Black blur on scroll */}
+      <nav className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-[100] transition-all duration-500 ${
+        isScrolled 
+          ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' 
+          : 'bg-transparent py-8'
+      }`}>
+        
+        {/* Left: KosovaNest Logo */}
+        <div 
+          className="flex items-center gap-3 cursor-pointer group" 
+          onClick={() => onNavigate('hero')}
+        >
+          <Building2 size={32} className="text-white group-hover:opacity-70 transition-opacity" />
+          <div className="flex flex-col">
+              <span className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none group-hover:opacity-70 transition-opacity">KosovaNest</span>
+              <span className="text-white/80 text-[10px] font-bold tracking-[0.3em] uppercase leading-none mt-1">Real Estate Group</span>
           </div>
+        </div>
+
+        {/* Center: Navigation Links */}
+        <div className="hidden md:flex items-center gap-8">
           {navLinks.map((item) => (
-            <button key={item.name} onClick={() => onNavigate(item.view)} className="text-white text-[10px] font-bold tracking-widest px-3 transition-all uppercase opacity-60 hover:opacity-100">
+            <button 
+              key={item.name} 
+              onClick={() => onNavigate(item.view)}
+              className="text-white text-[10px] font-bold tracking-widest uppercase opacity-60 hover:opacity-100 transition-all"
+            >
               {item.name}
             </button>
           ))}
         </div>
 
-        <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 cursor-pointer group" onClick={() => onNavigate('hero')}>
-            <span className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none group-hover:opacity-70 transition-opacity drop-shadow-lg">Find Home</span>
-        </div>
-
-        <div className="pointer-events-auto flex items-center gap-4 bg-white/10 backdrop-blur-xl border border-white/20 p-2 rounded-full pl-6 pr-2 shadow-2xl">
-          <input type="text" placeholder="Search by Address or City" className="bg-transparent border-none outline-none text-white text-xs w-64 placeholder:text-white/40 font-medium" />
-          <Search size={16} className="text-white opacity-70" />
-          <button onClick={() => onNavigate('signin')} className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-5 py-2 rounded-full transition font-bold uppercase">
+        {/* Right: User Actions */}
+        <div className="flex items-center gap-6">
+          <div 
+            className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
+            onClick={() => onNavigate('user-dashboard')}
+          >
+            <User size={20} className="text-white" />
+          </div>
+          <button 
+            onClick={() => onNavigate('signin')}
+            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase"
+          >
             Login
           </button>
-          <div className="p-2 cursor-pointer text-white"><Menu size={20} /></div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="h-screen w-full snap-start relative p-4 pt-0">
-        <div className="h-full w-full rounded-[56px] bg-cover bg-center overflow-hidden relative shadow-2xl" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
-          <div className="absolute inset-0 bg-black/20"></div>
-          <div className="absolute bottom-20 left-16">
-            <h1 className="text-white text-[6vw] font-bold tracking-tighter leading-[0.8] mb-8 uppercase">DREAM HOME</h1>
+      {/* AGENT PANEL BUTTON SHTUAR KETU */}
+      <div className="fixed bottom-8 left-8 z-[100]">
+        <button 
+          onClick={() => setShowDashboard(true)} 
+          className="bg-[#1f1f1f] border border-white/10 text-white px-8 py-4 rounded-full flex items-center gap-3 shadow-lg hover:bg-[#2a2a2a] transition-all"
+        >
+          <div className="bg-white text-black p-1.5 rounded-full"><ShieldCheck size={16} /></div>
+          <span className="font-bold tracking-widest text-[10px] uppercase">AGENT PANEL</span>
+        </button>
+      </div>
+
+      {/* Hero Section: FULL SCREEN */}
+      <section className="h-screen w-full relative">
+        <div className="h-full w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
+          <div className="absolute inset-0 bg-black/40"></div>
+          
+          <div className="absolute bottom-32 left-16 md:left-24">
+            <h1 className="text-white text-[6vw] font-bold tracking-tighter leading-[0.8] mb-8 uppercase">
+              DREAM HOME
+            </h1>
+            <p className="text-white/80 text-[10px] max-w-xl font-semibold tracking-[0.3em] uppercase opacity-80 leading-relaxed">
+              KosovaNest is the premier real estate agency in the region, connecting clients with architectural excellence and modern living spaces across Kosovo.
+            </p>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="min-h-screen w-full snap-start bg-white text-black p-24 flex items-center">
+      <section className="min-h-screen w-full bg-white text-black p-16 md:p-24 flex items-center">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           {[
-            { title: 'Buy', btn: 'Find an agent', icon: <Heart className="text-red-500" /> },
-            { title: 'Mortgage', btn: 'Get prequalified', icon: <Landmark className="text-blue-600" /> },
-            { title: 'Sell', btn: 'Learn more', icon: <Key className="text-amber-500" /> },
-            { title: 'Rent', btn: 'Explore rentals', icon: <MapPin className="text-emerald-500" /> }
+            { title: 'Buy', desc: 'Find your dream home with the most experienced local agents.', btn: 'Browse Homes', icon: <Heart className="text-red-500" /> },
+            { title: 'Mortgage', desc: 'Partnering with local banks to deliver the best possible rates.', btn: 'Get Pre-approved', icon: <Landmark className="text-blue-600" /> },
+            { title: 'Sell', desc: 'We know how to price and market your property across Kosovo.', btn: 'List Property', icon: <Key className="text-amber-500" /> },
+            { title: 'Rent', desc: 'Whether searching for apartments or commercial spaces, we make it easy.', btn: 'Explore Rentals', icon: <MapPin className="text-emerald-500" /> }
           ].map((item) => (
             <div key={item.title} className="bg-[#fcfcfc] p-12 rounded-[50px] flex flex-col items-center text-center space-y-8 hover:shadow-2xl transition-all border border-black/[0.03]">
               <div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-md">{item.icon}</div>
@@ -75,46 +148,89 @@ const RealEstateHero = ({ onNavigate }) => {
       </section>
 
       {/* Cities Section */}
-      <section className="min-h-screen w-full snap-start bg-[#050505] p-24 flex flex-col justify-center text-white">
+      <section className="min-h-screen w-full bg-[#050505] p-16 md:p-24 flex flex-col justify-center text-white">
         <div className="max-w-7xl mx-auto w-full">
            <h2 className="text-7xl font-black tracking-tighter uppercase italic mb-20">Popular Cities</h2>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {popularCities.map((city) => (
-              <div key={city.name} className="group relative h-[550px] rounded-[64px] overflow-hidden border border-white/5 shadow-2xl">
-                <img src={city.img} onError={(e) => e.target.src = city.fallback} className="w-full h-full object-cover opacity-60" alt="" />
-                <div className="absolute inset-0 p-14 flex flex-col justify-end">
-                  <h4 className="text-5xl font-black uppercase italic">{city.name}</h4>
+              <div key={city.name} className="group relative h-[500px] rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+                <img src={city.img} onError={(e) => e.target.src = city.fallback} className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110 opacity-70" alt={city.name} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-12">
+                  <h4 className="text-5xl font-black tracking-tight uppercase italic mb-2">{city.name}</h4>
+                  <p className="text-[11px] font-bold text-white/40 tracking-[0.5em] uppercase">{city.homes} Properties</p>
                 </div>
               </div>
             ))}
            </div>
         </div>
       </section>
-
-      {/* Let Us Narrow The Field Section */}
-      <section className="min-h-screen w-full snap-start bg-white text-black p-24 flex flex-col items-center justify-center">
+      
+      {/* "Let us narrow the field" Section */}
+      <section className="min-h-screen w-full bg-white text-black p-16 md:p-24 flex flex-col items-center justify-center">
         <div className="max-w-3xl text-center space-y-8 mb-24">
-          <h2 className="text-6xl font-black tracking-tighter uppercase italic">Let us narrow the field for you</h2>
+          <h2 className="text-6xl font-black tracking-tighter uppercase italic leading-[0.9]">Let us narrow the field for you</h2>
+          <p className="text-xl font-medium opacity-50 tracking-tight max-w-2xl mx-auto">We connect you with a dedicated team that understands your vision and the unique dynamics of the Kosovar real estate market.</p>
         </div>
         <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-3 gap-20 text-center">
           {[
-            { title: 'Dedicated Team', desc: 'Coordinator to help you.', icon: <Users size={40} /> },
-            { title: 'Local Expertise', desc: 'Expertise of thousands of agents.', icon: <Handshake size={40} /> },
-            { title: 'No Hidden Fees', desc: 'Connect for free.', icon: <ShieldCheck size={40} /> }
+            { title: 'Dedicated Team', desc: 'Tell us about your needs and a coordinator will help you find the right local agent.', icon: <Users size={40} /> },
+            { title: 'Local Expertise', desc: 'Tap into the expertise of top agents from brokerages across Kosovo.', icon: <Handshake size={40} /> },
+            { title: 'No Hidden Fees', desc: 'Get connected to an agent in minutes for free. No commitment required.', icon: <ShieldCheck size={40} /> }
           ].map((feature) => (
             <div key={feature.title} className="space-y-8 group">
-              <div className="flex justify-center">{feature.icon}</div>
-              <h4 className="text-2xl font-black uppercase">{feature.title}</h4>
-              <p className="text-sm opacity-50">{feature.desc}</p>
+              <div className="flex justify-center text-black/20 group-hover:text-black transition-colors duration-500">{feature.icon}</div>
+              <h4 className="text-2xl font-black uppercase tracking-tight">{feature.title}</h4>
+              <p className="text-sm font-medium leading-relaxed opacity-50">{feature.desc}</p>
             </div>
           ))}
         </div>
+        <button className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
+          Connect with an agent <ChevronRight size={18} />
+        </button>
+      </section>
+
+      {/* Footer Section */}
+      <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between">
+        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-20 py-10">
+          <div className="space-y-10">
+            <h2 className="text-6xl font-black tracking-tighter uppercase leading-[0.8]">About Us</h2>
+            <p className="text-2xl font-medium tracking-tight leading-relaxed max-w-lg opacity-60">
+              KosovaNest is the leading premium real estate network in Kosovo. We specialize in identifying architectural legacies and providing elite, transparent service to buyers, sellers, and investors across the region.
+            </p>
+            <div className="flex gap-10 pt-4">
+               <Globe className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+               <Mail className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+               <Phone className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-12 pt-4">
+            <div className="space-y-8">
+              <h4 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40">Operations</h4>
+              <ul className="space-y-4 text-[13px] font-bold uppercase tracking-widest opacity-80">
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Local Market</li>
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Portfolio</li>
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Press Room</li>
+              </ul>
+            </div>
+            <div className="space-y-8">
+              <h4 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40">Legal</h4>
+              <ul className="space-y-4 text-[13px] font-bold uppercase tracking-widest opacity-80">
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Privacy Policy</li>
+                <li className="hover:opacity-100 hover:text-white cursor-pointer transition-all">Terms of Service</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto w-full pt-16 mt-16 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] font-black tracking-[0.6em] uppercase opacity-40">
+          <span>© 2026 KosovaNest. All Rights Reserved.</span>
+          <div className="flex gap-8">
+            <span>Premium Properties</span>
+            <span>•</span>
+            <span>Elite Service</span>
+          </div>
+        </div>
       </section>
       
-      {/* Footer */}
-      <section className="min-h-screen w-full snap-end bg-[#050505] text-white p-24 rounded-t-[80px]">
-        <p className="text-center opacity-40">© 2026 Find Home. All rights reserved.</p>
-      </section>
     </div>
   );
 };
