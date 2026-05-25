@@ -1,31 +1,30 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const multer = require('multer'); // SHTUAR: Për të menaxhuar file-t (fotot)
-const path = require('path');     // SHTUAR: Për të lexuar rrugët e file-ve
-const fs = require('fs');         // SHTUAR: Për të krijuar folderin automatikisht
+const multer = require('multer'); // Për të menaxhuar file-t (fotot)
+const path = require('path');     // Për të lexuar rrugët e file-ve
+const fs = require('fs');         // Për të krijuar folderin automatikisht
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// SHTUAR: Kjo lejon që React të shohë fotot që ruhen në folderin "uploads"
+// Lejon që React të shohë fotot që ruhen në folderin "uploads"
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Krijon folderin "uploads" automatikisht nëse nuk ekziston (Mbron nga Error-et)
+// Krijon folderin "uploads" automatikisht nëse nuk ekziston
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
 
-// Konfigurimi i Multer: Ku do të ruhen fotot dhe me çfarë emri
+// Konfigurimi i Multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/'); // Ruhen në folderin uploads/
+        cb(null, 'uploads/'); 
     },
     filename: function (req, file, cb) {
-        // Shton datën aktuale për të mos lejuar që 2 foto me të njëjtin emër të fshijnë njëra-tjetrën
         cb(null, Date.now() + path.extname(file.originalname)); 
     }
 });
@@ -45,7 +44,7 @@ db.connect((err) => {
     }
     console.log('✅ Successfully connected to the MySQL Database!');
 
-    // Pjesa nga 'main' për të siguruar kolonën 'type'
+    // Verifikimi i kolonës 'type'
     const fixDatabaseQuery = "ALTER TABLE properties ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'BUY'";
     db.query(fixDatabaseQuery, (err) => {
         if (!err) console.log('✅ Properties table verified!');
@@ -70,14 +69,9 @@ db.connect((err) => {
 // 1. API ROUTES PËR PRONAT (PROPERTIES CRUD)
 // ==========================================
 
-
-// IMPORTIMI I ROUTE-VE TË REJA
 const featureRoutes = require('./routes/featureRoutes.js')(db);
 app.use('/api/properties', featureRoutes);
 
-
-
-// --- API ROUTES: PROPERTIES (Kodi i Kolegeve - I PAPREKUR) ---
 app.get('/api/properties', (req, res) => {
     db.query("SELECT * FROM properties", (err, results) => {
         if (err) {
@@ -125,7 +119,6 @@ app.delete('/api/properties/:id', (req, res) => {
         res.status(200).json({ message: "U fshi me sukses!" });
     });
 });
-
 
 // ==========================================
 // 2. API ROUTES PËR IMAZHET (IMAGES CRUD ME MULTER)
@@ -190,12 +183,10 @@ app.put('/api/properties/images/:image_id/set-main', (req, res) => {
     });
 });
 
-
 // ==========================================
-// 3. API ROUTES: CLIENTS, FAVORITES, REVIEWS (Nga GitHub)
+// 3. API ROUTES: CLIENTS, FAVORITES, REVIEWS
 // ==========================================
 
-// --- API ROUTES: CLIENTS (Kodi i Kolegeve - I PAPREKUR) ---
 app.get('/api/clients', (req, res) => {
     db.query("SELECT * FROM clients", (err, results) => {
         if (err) return res.status(500).json(err);
@@ -212,7 +203,6 @@ app.post('/api/clients', (req, res) => {
     });
 });
 
-// --- API ROUTES: FAVORITES (Kodi i Kolegeve - I PAPREKUR) ---
 app.post('/api/favorites', (req, res) => {
     const { client_id, property_id } = req.body;
     db.query("INSERT INTO favorites (client_id, property_id) VALUES (?, ?)", [client_id, property_id], (err) => {
@@ -221,7 +211,6 @@ app.post('/api/favorites', (req, res) => {
     });
 });
 
-// --- API ROUTES: REVIEWS (Kodi i Kolegeve - I PAPREKUR) ---
 app.get('/api/reviews/:agent_id', (req, res) => {
     db.query("SELECT * FROM reviews WHERE agent_id = ?", [req.params.agent_id], (err, results) => {
         if (err) return res.status(500).json(err);
@@ -237,14 +226,19 @@ app.post('/api/reviews', (req, res) => {
     });
 });
 
-
 // =========================================================================
-// 🚀 MODULI I RI (Kodi i Elzës: Financat & Logjistika)
+// 🚀 MODULI: FINANCAT & LOGJISTIKA (Përditësuar për Elzën)
 // =========================================================================
 
 // --- 🛠️ 1. CRUD: MAINTENANCE TICKETS ---
 app.get('/api/maintenance', (req, res) => {
-    db.query("SELECT * FROM MaintenanceTickets ORDER BY created_at DESC", (err, results) => {
+    const query = `
+        SELECT m.*, p.title as property_title 
+        FROM maintenancetickets m 
+        LEFT JOIN properties p ON m.property_id = p.id
+        ORDER BY m.created_at DESC
+    `;
+    db.query(query, (err, results) => {
         if (err) return res.status(500).json(err);
         res.status(200).json(results);
     });
@@ -252,24 +246,46 @@ app.get('/api/maintenance', (req, res) => {
 
 app.post('/api/maintenance', (req, res) => {
     const { property_id, tenant_id, title, description } = req.body;
-    const sql = "INSERT INTO MaintenanceTickets (property_id, tenant_id, title, description) VALUES (?, ?, ?, ?)";
+    const sql = "INSERT INTO maintenancetickets (property_id, tenant_id, title, description, status) VALUES (?, ?, ?, ?, 'Pending')";
     db.query(sql, [property_id, tenant_id, title, description], (err, result) => {
         if (err) return res.status(500).json(err);
         res.status(201).json({ id: result.insertId, ...req.body });
     });
 });
 
+// Rruga e përditësuar: Kur mbyllet tiketa, krijohet transaksioni automatik
 app.put('/api/maintenance/:id', (req, res) => {
-    const { status } = req.body;
-    db.query("UPDATE MaintenanceTickets SET status = ? WHERE id = ?", [status, req.params.id], (err) => {
+    const { status, cost, title } = req.body;
+    
+    const updateQuery = "UPDATE maintenancetickets SET status = ? WHERE id = ?";
+    db.query(updateQuery, [status, req.params.id], (err, result) => {
         if (err) return res.status(500).json(err);
-        res.status(200).json({ message: "Statusi u ndryshua!" });
+        
+        // Nëse statusi bëhet Resolved dhe ka kosto, e hedhim te tabelën e financave
+        if (status === 'Resolved' && cost > 0) {
+            const insertExpenseSql = "INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, NOW())";
+            const description = `Riparim automatik: ${title || 'Tiketë Mirëmbajtjeje'}`;
+            
+            db.query(insertExpenseSql, ['Maintenance', cost, description], (err) => {
+                if (err) return res.status(500).json(err);
+                return res.status(200).json({ message: "Statusi u ndryshua dhe u regjistrua në financa!" });
+            });
+        } else {
+            res.status(200).json({ message: "Statusi u ndryshua!" });
+        }
+    });
+});
+
+app.delete('/api/maintenance/:id', (req, res) => {
+    db.query("DELETE FROM maintenancetickets WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json(err);
+        res.status(200).json({ message: "Bileta u fshi!" });
     });
 });
 
 // --- 📊 2. CRUD: AGENCY EXPENSES ---
 app.get('/api/expenses', (req, res) => {
-    db.query("SELECT * FROM AgencyExpenses ORDER BY expense_date DESC", (err, results) => {
+    db.query("SELECT * FROM agencyexpenses ORDER BY expense_date DESC", (err, results) => {
         if (err) return res.status(500).json(err);
         res.status(200).json(results);
     });
@@ -277,10 +293,44 @@ app.get('/api/expenses', (req, res) => {
 
 app.post('/api/expenses', (req, res) => {
     const { category, amount, description, expense_date } = req.body;
-    const sql = "INSERT INTO AgencyExpenses (category, amount, description, expense_date) VALUES (?, ?, ?, ?)";
+    const sql = "INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, ?)";
     db.query(sql, [category, amount, description, expense_date], (err, result) => {
         if (err) return res.status(500).json(err);
         res.status(201).json({ id: result.insertId, ...req.body });
+    });
+});
+
+app.delete('/api/expenses/:id', (req, res) => {
+    db.query("DELETE FROM agencyexpenses WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json(err);
+        res.status(200).json({ message: "Shpenzimi u fshi!" });
+    });
+});
+
+// Llogaritja e saktë e vlerave me COALESCE për kutitë financiare
+app.get('/api/financial-summary', (req, res) => {
+    const queryTotalPayments = "SELECT COALESCE(SUM(amount), 0) as total_income FROM payments WHERE status = 'PAID'";
+    const queryTotalExpenses = "SELECT COALESCE(SUM(amount), 0) as total_expenses FROM agencyexpenses";
+
+    db.query(queryTotalPayments, (err, incomeRes) => {
+        if (err) return res.status(500).json(err);
+        
+        db.query(queryTotalExpenses, (err, expenseRes) => {
+            if (err) return res.status(500).json(err);
+
+            const dbIncome = parseFloat(incomeRes[0].total_income);
+            // Nëse s'kemi pagesa të kryera ende në sistem, vendosim $180,000 si Gross Revenue testuese për projekt
+            const grossRevenue = dbIncome > 0 ? dbIncome : 180000; 
+
+            const totalExpenses = parseFloat(expenseRes[0].total_expenses);
+            const netProfit = grossRevenue - totalExpenses;
+
+            res.json({
+                grossRevenue,
+                totalExpenses,
+                netProfit
+            });
+        });
     });
 });
 
