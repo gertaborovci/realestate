@@ -1,243 +1,208 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, DollarSign, FileText, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import axios from 'axios';
+import { Wrench, BarChart3, DollarSign, TrendingUp } from 'lucide-react';
 
 export default function TransactionDashboard() {
-  const [stats, setStats] = useState({ overview: {}, monthlyRevenue: [] });
-  const [visits, setVisits] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [subTab, setSubTab] = useState('expenses'); // Tabi fillestar shfaq grafikun
 
-  const [formData, setFormData] = useState({
-    property_id: '1', 
-    user_id: '1',     
-    visit_date: '',
-    visit_time: ''
-  });
-  const [message, setMessage] = useState({ text: '', isError: false });
+  // STATED PËR FINANCAT
+  const [expenses, setExpenses] = useState([]);
+  const [expense, setExpense] = useState({ category: 'Marketing', amount: '', description: '', expense_date: '' });
+  const grossRevenue = 15000.00;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setStats({
-          overview: { total_contracts: 12, total_sales: 540000, total_rents: 14800 },
-          monthlyRevenue: [
-            { month: 'Jan', total: 45000 },
-            { month: 'Feb', total: 95000 },
-            { month: 'Mar', total: 60000 },
-            { month: 'Apr', total: 140000 },
-            { month: 'May', total: 110000 }
-          ]
-        });
+  // STATED PËR MIRËMBAJTJEN
+  const [tickets, setTickets] = useState([]);
+  const [ticket, setTicket] = useState({ property_id: '', tenant_id: '1', title: '', description: '' });
 
-        const defaultVisits = [
-          { id: 1, property_title: "Modern Glass Villa", location: "Dubai", visit_date: "2026-05-25", visit_time: "14:00", status: "APPROVED" },
-          { id: 2, property_title: "Banesë në Prishtinë", location: "Qendër", visit_date: "2026-05-28", visit_time: "11:30", status: "PENDING" }
-        ];
-
-        try {
-          const res = await fetch('http://localhost:5000/api/visits');
-          if (res.ok) {
-            const dbVisits = await res.json();
-            setVisits([...defaultVisits, ...dbVisits]);
-          } else {
-            setVisits(defaultVisits);
-          }
-        } catch (dbErr) {
-          setVisits(defaultVisits);
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error("Gabim gjatë ngarkimit të të dhënave", error);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleBooking = async (e) => {
-    e.preventDefault();
-    setMessage({ text: '', isError: false });
-
-    if (!formData.visit_date || !formData.visit_time) {
-      setMessage({ text: 'Ju lutem plotësoni datën dhe orën!', isError: true });
-      return;
-    }
-
+  const fetchExpenses = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/visits', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage({ text: 'Rezervimi i vizitës u ruajt në databazë me sukses!', isError: false });
-        
-        setVisits([...visits, {
-          id: data.visitId || Date.now(),
-          property_title: "Vizitë e re e planifikuar",
-          location: "Lokacioni i zgjedhur",
-          visit_date: formData.visit_date,
-          visit_time: formData.visit_time,
-          status: 'PENDING'
-        }]);
-
-        setFormData({ ...formData, visit_date: '', visit_time: '' });
-      } else {
-        setMessage({ text: data.error || 'Gabim gjatë ruajtjes në server.', isError: true });
-      }
-    } catch (err) {
-      setMessage({ text: 'Gabim rrjeti: ' + err.message, isError: true });
-    }
+      const res = await axios.get('http://localhost:5000/api/expenses');
+      setExpenses(res.data);
+    } catch (err) { console.error(err); }
   };
 
-  const maxRevenue = Math.max(...stats.monthlyRevenue.map(d => d.total), 1);
+  const fetchTickets = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/maintenance');
+      setTickets(res.data);
+    } catch (err) { console.error(err); }
+  };
 
-  if (loading) return <div className="p-6 text-center text-slate-500">Duke u ngarkuar...</div>;
+  useEffect(() => {
+    fetchExpenses();
+    fetchTickets();
+  }, []);
+
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:5000/api/expenses', expense);
+      alert("Shpenzimi u regjistrua me sukses!");
+      setExpense({ category: 'Marketing', amount: '', description: '', expense_date: '' });
+      fetchExpenses();
+    } catch (err) { alert("Gabim gjatë regjistrimit."); }
+  };
+
+  const handleTicketSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:5000/api/maintenance', ticket);
+      alert("Tiketa e mirëmbajtjes u dërgua!");
+      setTicket({ property_id: '', tenant_id: '1', title: '', description: '' });
+      fetchTickets();
+    } catch (err) { alert("Gabim gjatë dërgimit."); }
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      await axios.put(`http://localhost:5000/api/maintenance/${id}`, { status: newStatus });
+      fetchTickets();
+    } catch (err) { console.error(err); }
+  };
+
+  const totalExpenses = expenses.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+  const netProfit = grossRevenue - totalExpenses;
+
+  const grossHeight = 120;
+  const expenseHeight = grossRevenue > 0 ? (totalExpenses / grossRevenue) * 120 : 0;
+  const profitHeight = grossRevenue > 0 ? (netProfit / grossRevenue) * 120 : 0;
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen text-slate-800 font-sans">
-      {/* KOKA E PANELIT */}
+    <div className="p-6 bg-slate-50 min-h-screen text-slate-800 font-sans rounded-2xl">
+      
+      {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Paneli i Transaksioneve</h1>
-          <p className="text-sm text-slate-500 mt-1">Menaxhimi i vizitave, kontratave dhe statistikave të biznesit.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Financat & Logjistika</h1>
+          <p className="text-sm text-slate-500 mt-1">Menaxhimi i raporteve monetare dhe logjistikës së mirëmbajtjes.</p>
         </div>
         <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg font-semibold text-sm border border-indigo-100">
-          <TrendingUp size={16} /> Viti Akademik 2025/2026
+          <TrendingUp size={16} /> Moduli i Ri Analitik
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Vëllimi i Shitjeve</p>
-            <h3 className="text-2xl font-bold mt-1 text-emerald-600">${stats.overview.total_sales?.toLocaleString()}</h3>
-          </div>
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><DollarSign size={24} /></div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Të hyrat nga Qiratë</p>
-            <h3 className="text-2xl font-bold mt-1 text-blue-600">${stats.overview.total_rents?.toLocaleString()}/muaj</h3>
-          </div>
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><FileText size={24} /></div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Kontrata të Nënshkruara</p>
-            <h3 className="text-2xl font-bold mt-1 text-slate-900">{stats.overview.total_contracts} Kontrata</h3>
-          </div>
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><CheckCircle size={24} /></div>
-        </div>
+      {/* SUB-NAVIGATION (Butonat e brendshëm) */}
+      <div className="flex gap-4 mb-8 border-b border-slate-200 pb-4">
+        <button 
+          onClick={() => setSubTab('expenses')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${subTab === 'expenses' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border text-slate-600 hover:bg-slate-100'}`}
+        >
+          <BarChart3 size={16} /> KONTABILITETI & GRAFIKU
+        </button>
+        <button 
+          onClick={() => setSubTab('maintenance')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${subTab === 'maintenance' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border text-slate-600 hover:bg-slate-100'}`}
+        >
+          <Wrench size={16} /> MANTENANCA E PRONAVE
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Grafiku i Pagesave Mujore</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Pasqyrimi vizual i të hyrave të realizuara.</p>
-          </div>
-          
-          <div className="h-64 flex items-end gap-4 pt-8 border-b border-l border-slate-200 px-4 mt-4">
-            {stats.monthlyRevenue.map((data, index) => {
-              const barHeight = (data.total / maxRevenue) * 100;
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                  <span className="absolute -top-2 text-[11px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    ${data.total / 1000}k
-                  </span>
-                  <div 
-                    style={{ height: `${barHeight}%` }} 
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 rounded-t-lg transition-all duration-500 cursor-pointer shadow-sm"
-                  />
-                  <span className="text-xs font-semibold text-slate-500 mt-2">{data.month}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Cakto një Vizitë të Re</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Përzgjidhni datën dhe orën e lirë.</p>
-
-          <form onSubmit={handleBooking} className="space-y-4 mt-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase">Data e Vizitës</label>
-              <input 
-                type="date" 
-                className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
-                value={formData.visit_date}
-                onChange={(e) => setFormData({...formData, visit_date: e.target.value})}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase">Ora e Vizitës</label>
-              <input 
-                type="time" 
-                className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
-                value={formData.visit_time}
-                onChange={(e) => setFormData({...formData, visit_time: e.target.value})}
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm cursor-pointer"
-            >
-              Gjenero Rezervimin
-            </button>
-
-            {message.text && (
-              <p className={`text-xs text-center font-medium mt-2 p-2 rounded ${message.isError ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                {message.text}
-              </p>
-            )}
-          </form>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Terminet e Vizitave</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Lista e të gjitha rezervimeve aktive të gjeneruara nga kalendari.</p>
-          </div>
-          <Calendar className="text-indigo-600" size={20} />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {visits.map((visit, index) => (
-            <div key={visit.id || index} className="p-4 bg-slate-50 rounded-xl border border-slate-200/60 flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900">{visit.property_title || "Vizitë e planifikuar"}</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">{visit.location || "Lokacioni i zgjedhur"}</p>
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md tracking-wider ${
-                  visit.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {visit.status}
-                </span>
+      {/* TABI 1: EXPENSES & CHARTS */}
+      {subTab === 'expenses' && (
+        <div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gross Revenue</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600">{grossRevenue} €</h3>
               </div>
-              
-              <div className="flex items-center gap-4 text-xs font-medium text-slate-600 mt-4 pt-2 border-t border-slate-200/40">
-                <span className="flex items-center gap-1.5"><Calendar size={14} className="text-slate-400"/> {visit.visit_date}</span>
-                <span className="flex items-center gap-1.5"><Clock size={14} className="text-slate-400"/> {visit.visit_time}</span>
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><DollarSign size={24} /></div>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Expenses</p>
+                <h3 className="text-2xl font-bold mt-1 text-red-600">-{totalExpenses.toFixed(2)} €</h3>
+              </div>
+              <div className="p-3 bg-red-50 text-red-600 rounded-xl"><DollarSign size={24} /></div>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Net Profit</p>
+                <h3 className="text-2xl font-bold mt-1 text-indigo-600">{netProfit.toFixed(2)} €</h3>
+              </div>
+              <div className="p-3 bg-indigo-50 text-indigo-700 rounded-xl"><DollarSign size={24} /></div>
+            </div>
+          </div>
+
+          {/* GRAFIKU ME CSS */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Grafiku Krahasimor Financiar</h2>
+            <div className="h-64 flex items-end justify-around border-b border-slate-200 pb-2 px-12 pt-8">
+              <div className="flex flex-col items-center group relative">
+                <div style={{ height: `${grossHeight}px` }} className="w-16 bg-emerald-500 rounded-t-lg transition-all duration-300" />
+                <span className="text-xs font-bold text-slate-600 mt-2">Gross Revenue</span>
+              </div>
+              <div className="flex flex-col items-center group relative">
+                <div style={{ height: `${expenseHeight}px` }} className="w-16 bg-red-500 rounded-t-lg transition-all duration-300" />
+                <span className="text-xs font-bold text-slate-600 mt-2">Expenses</span>
+              </div>
+              <div className="flex flex-col items-center group relative">
+                <div style={{ height: `${profitHeight}px` }} className="w-16 bg-amber-500 rounded-t-lg transition-all duration-300" />
+                <span className="text-xs font-bold text-slate-600 mt-2">Net Profit</span>
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* FORMA E SHPENZIMEVE */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Regjistro Shpenzim të Ri</h3>
+            <form onSubmit={handleExpenseSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <select className="p-2.5 bg-slate-50 border rounded-lg text-sm" value={expense.category} onChange={(e) => setExpense({...expense, category: e.target.value})}>
+                <option value="Marketing">Marketing</option>
+                <option value="Office Rent">Office Rent</option>
+                <option value="Agent Bonuses">Agent Bonuses</option>
+                <option value="Utilities">Utilities</option>
+              </select>
+              <input className="p-2.5 bg-slate-50 border rounded-lg text-sm" type="number" placeholder="Shuma (€)" value={expense.amount} onChange={(e) => setExpense({...expense, amount: e.target.value})} required />
+              <input className="p-2.5 bg-slate-50 border rounded-lg text-sm" type="date" value={expense.expense_date} onChange={(e) => setExpense({...expense, expense_date: e.target.value})} required />
+              <button type="submit" className="bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Shto</button>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* TABI 2: MAINTENANCE TICKETS */}
+      {subTab === 'maintenance' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Raporto një Defekt</h3>
+            <form onSubmit={handleTicketSubmit} className="space-y-4">
+              <input className="w-full p-2.5 bg-slate-50 border rounded-lg text-sm" type="number" placeholder="ID e Pronës" value={ticket.property_id} onChange={(e) => setTicket({...ticket, property_id: e.target.value})} required />
+              <input className="w-full p-2.5 bg-slate-50 border rounded-lg text-sm" type="text" placeholder="Titulli i problemit" value={ticket.title} onChange={(e) => setTicket({...ticket, title: e.target.value})} required />
+              <textarea className="w-full p-2.5 bg-slate-50 border rounded-lg text-sm h-24" placeholder="Përshkrimi..." value={ticket.description} onChange={(e) => setTicket({...ticket, description: e.target.value})} required />
+              <button type="submit" className="w-full py-2.5 bg-indigo-600 text-white font-semibold rounded-lg text-sm hover:bg-indigo-700">Dërgo</button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Menaxhimi i Ndërhyrjeve</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-600"><th className="p-3">Prona</th><th className="p-3">Titulli</th><th className="p-3">Statusi</th><th className="p-3">Veprimi</th></tr>
+                </thead>
+                <tbody>
+                  {tickets.map(t => (
+                    <tr key={t.id} className="border-b">
+                      <td className="p-3 font-semibold"># {t.property_id}</td>
+                      <td className="p-3">{t.title}</td>
+                      <td className="p-3 font-bold">{t.status}</td>
+                      <td className="p-3">
+                        <select className="p-1 border rounded" value={t.status} onChange={(e) => handleStatusChange(t.id, e.target.value)}>
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Resolved">Resolved</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
