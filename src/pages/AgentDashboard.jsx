@@ -4,7 +4,9 @@ import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
 import AddProperty from './AddProperty';
 
-// Komponenti i Profile
+import TransactionDashboard from '../components/TransactionDashboard';
+import MaintenanceVisits from '../components/MaintenanceVisits';
+
 const AgentProfile = () => {
   const [profile, setProfile] = useState({
     firstName: '',
@@ -67,25 +69,23 @@ const AgentDashboard = ({ onBack }) => {
 
   return (
     <div className="flex h-screen bg-[#050505] text-white">
-      {/* Sidebar */}
       <div className="w-64 border-r border-white/10 p-10 flex flex-col justify-between">
         <div>
           <h1 className="text-xl font-extrabold uppercase tracking-tight mb-12">FIND HOME</h1>
           <div className="space-y-8 text-[12px] font-bold uppercase tracking-widest text-white/50">
-            <p onClick={() => setView('profile')} className="hover:text-white cursor-pointer">Profile</p>
-            <p onClick={() => setView('list')} className="hover:text-white cursor-pointer">Properties</p>
-            <p onClick={() => setView('transactions')} className="hover:text-white cursor-pointer">Transactions</p>
-            <p onClick={() => setView('visits')} className="hover:text-white cursor-pointer">Visits</p>
-            <p onClick={() => setView('certifications')} className="hover:text-white cursor-pointer">Certifications</p>
-            <p onClick={() => setView('inquiries')} className="hover:text-white cursor-pointer">Contact Inquiries</p>
+            <p onClick={() => setView('profile')} className={`cursor-pointer transition-colors ${view === 'profile' ? 'text-white font-black' : 'hover:text-white'}`}>Profile</p>
+            <p onClick={() => setView('list')} className={`cursor-pointer transition-colors ${view === 'list' ? 'text-white font-black' : 'hover:text-white'}`}>Properties</p>
+            <p onClick={() => setView('transactions')} className={`cursor-pointer transition-colors ${view === 'transactions' ? 'text-white font-black' : 'hover:text-white'}`}>Transactions</p>
+            <p onClick={() => setView('visits')} className={`cursor-pointer transition-colors ${view === 'visits' ? 'text-white font-black' : 'hover:text-white'}`}>Visits</p>
+            <p onClick={() => setView('certifications')} className={`cursor-pointer transition-colors ${view === 'certifications' ? 'text-white font-black' : 'hover:text-white'}`}>Certifications</p>
+            <p onClick={() => setView('inquiries')} className={`cursor-pointer transition-colors ${view === 'inquiries' ? 'text-white font-black' : 'hover:text-white'}`}>Contact Inquiries</p>
           </div>
         </div>
-        <p className="hover:text-red-500 cursor-pointer text-[12px] font-bold uppercase" onClick={onBack}>
-            <LogOut size={14} className="inline mr-2"/> Log Out
+        <p className="hover:text-red-500 cursor-pointer text-[12px] font-bold uppercase flex items-center" onClick={onBack}>
+          <LogOut size={14} className="mr-2"/> Log Out
         </p>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto relative">
         
         {view === 'profile' && <AgentProfile />}
@@ -110,19 +110,12 @@ const AgentDashboard = ({ onBack }) => {
           </div>
         )}
 
-        {/* PAMJET E REJA */}
         {view === 'transactions' && (
-          <div className="p-10">
-            <h2 className="text-4xl font-extrabold uppercase tracking-tight mb-10">TRANSACTIONS</h2>
-            <p className="text-white/50">Your transactions will appear here.</p>
-          </div>
+          <TransactionDashboard />
         )}
 
         {view === 'visits' && (
-          <div className="p-10">
-            <h2 className="text-4xl font-extrabold uppercase tracking-tight mb-10">PROPERTY VISITS</h2>
-            <p className="text-white/50">Your scheduled property visits will appear here.</p>
-          </div>
+          <MaintenanceVisits />
         )}
 
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}

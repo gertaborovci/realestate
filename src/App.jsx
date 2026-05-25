@@ -14,6 +14,9 @@ import UserDashboard from './pages/UserDashboard';
 import AgentPages from './pages/AgentPages'; 
 import AgentDashboard from './pages/AgentDashboard';
 
+import TransactionDashboard from './components/TransactionDashboard';
+import MaintenanceVisits from './components/MaintenanceVisits';
+
 import {
   Home,
   Shield,
@@ -90,7 +93,6 @@ function App() {
   return (
     <div className="h-screen bg-black overflow-y-auto text-white">
 
-      {/* Floating Toggle Admin / Back Button */}
       {view !== 'user-profile' && (
         <button
           onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
@@ -110,7 +112,6 @@ function App() {
         <RealEstateHero onNavigate={navigateTo} />
       )}
 
-      {/* Rruga për faqen publike të Agjentëve - Hapet direkt pa kërkuar ID në App.jsx */}
       {view === 'agent-details' && (
         <AgentPages onBack={() => navigateTo('hero')} />
       )}
@@ -133,7 +134,6 @@ function App() {
         </div>
       )}
 
-      {/* ADMIN DASHBOARD ROUTING */}
       {view === 'dashboard' && (
         <div className="flex h-full bg-[#050505]">
           <Sidebar
@@ -184,6 +184,13 @@ function App() {
                   />
                 )}
 
+                {activeTab === 'transactions' && (
+                  <TransactionDashboard />
+                )}
+
+                {activeTab === 'visits' && (
+                  <MaintenanceVisits />
+                )}
 
                 {activeTab === 'agents' && (
                   <ManageAgents
