@@ -7,7 +7,7 @@ const SignIn = ({ onNavigate }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
       <div className="bg-[#121212] border border-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <h2 className="text-3xl font-black text-center text-white mb-2 tracking-wide">FIND HOME</h2>
+        <h2 className="text-3xl font-black text-center text-white mb-2 tracking-wide">KOSOVANEST</h2>
         <p className="text-gray-400 text-sm text-center mb-6">Welcome back</p>
         <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
           <div>
