@@ -10,9 +10,9 @@ import Signup from './pages/signup';
 import ManageAgents from './pages/ManageAgents';
 import ManageUsers from './pages/ManageUsers';
 import AgentProfile from './pages/AgentProfile';
-import TransactionDashboard from './TransactionDashboard';
 import UserDashboard from './pages/UserDashboard';
 import AgentPages from './pages/AgentPages'; 
+import AgentDashboard from './pages/AgentDashboard';
 
 import {
   Home,
@@ -184,7 +184,6 @@ function App() {
                   />
                 )}
 
-                {activeTab === 'transactions' && <TransactionDashboard />}
 
                 {activeTab === 'agents' && (
                   <ManageAgents
