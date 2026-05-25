@@ -71,13 +71,13 @@ const AgentDashboard = ({ onBack }) => {
       <div className="w-64 border-r border-white/10 p-10 flex flex-col justify-between">
         <div>
           <h1 className="text-xl font-extrabold uppercase tracking-tight mb-12">FIND HOME</h1>
-          <div className="space-y-6 text-[12px] font-bold uppercase tracking-widest text-white/50">
+          <div className="space-y-8 text-[12px] font-bold uppercase tracking-widest text-white/50">
             <p onClick={() => setView('profile')} className="hover:text-white cursor-pointer">Profile</p>
             <p onClick={() => setView('list')} className="hover:text-white cursor-pointer">Properties</p>
-            <p onClick={() => setView('certifications')} className="hover:text-white cursor-pointer">Certifications</p>
-            <p onClick={() => setView('inquiries')} className="hover:text-white cursor-pointer">Contact Inquiries</p>
             <p onClick={() => setView('transactions')} className="hover:text-white cursor-pointer">Transactions</p>
             <p onClick={() => setView('visits')} className="hover:text-white cursor-pointer">Visits</p>
+            <p onClick={() => setView('certifications')} className="hover:text-white cursor-pointer">Certifications</p>
+            <p onClick={() => setView('inquiries')} className="hover:text-white cursor-pointer">Contact Inquiries</p>
           </div>
         </div>
         <p className="hover:text-red-500 cursor-pointer text-[12px] font-bold uppercase" onClick={onBack}>
@@ -110,13 +110,23 @@ const AgentDashboard = ({ onBack }) => {
           </div>
         )}
 
+        {/* PAMJET E REJA */}
+        {view === 'transactions' && (
+          <div className="p-10">
+            <h2 className="text-4xl font-extrabold uppercase tracking-tight mb-10">TRANSACTIONS</h2>
+            <p className="text-white/50">Your transactions will appear here.</p>
+          </div>
+        )}
+
+        {view === 'visits' && (
+          <div className="p-10">
+            <h2 className="text-4xl font-extrabold uppercase tracking-tight mb-10">PROPERTY VISITS</h2>
+            <p className="text-white/50">Your scheduled property visits will appear here.</p>
+          </div>
+        )}
+
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}
         {view === 'inquiries' && <div className="p-10"><ContactInquiries /></div>}
-        
-        {/* PAMJET E REJA */}
-        {view === 'transactions' && <div className="p-10"><TransactionDashboard /></div>}
-        {view === 'visits' && <div className="p-10"><VisitsDashboard /></div>}
-        
       </div>
     </div>
   );
