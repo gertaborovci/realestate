@@ -4,7 +4,7 @@ import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
 import AddProperty from './AddProperty';
 
-// Komponenti i Profile (Shtuar vetëm fushat e password-it)
+// Komponenti i Profile
 const AgentProfile = () => {
   const [profile, setProfile] = useState({
     firstName: '',
@@ -43,13 +43,12 @@ const AgentProfile = () => {
           <input name="email" type="email" placeholder="Email" onChange={handleInputChange} className="bg-white/5 border border-white/10 p-4 rounded-lg w-full outline-none focus:border-white text-white" />
           <input name="licenseId" placeholder="License ID" onChange={handleInputChange} className="bg-white/5 border border-white/10 p-4 rounded-lg w-full outline-none focus:border-white text-white" />
           
-          {/* FUSHA E PASSWORDIT TË SHTUARA KËTU */}
           <input name="currentPassword" type="password" placeholder="Current Password" onChange={handleInputChange} className="bg-white/5 border border-white/10 p-4 rounded-lg w-full outline-none focus:border-white text-white" />
           <input name="newPassword" type="password" placeholder="New Password" onChange={handleInputChange} className="bg-white/5 border border-white/10 p-4 rounded-lg w-full outline-none focus:border-white text-white" />
           
           <div className="border border-dashed border-white/20 p-8 text-center rounded-lg hover:border-white transition-colors">
             <label className="cursor-pointer block">
-              <span className="text-white/50">Upload Profile Profile</span>
+              <span className="text-white/50">Upload Profile Photo</span>
               <input type="file" onChange={handleFileChange} className="hidden" />
             </label>
           </div>
@@ -68,15 +67,17 @@ const AgentDashboard = ({ onBack }) => {
 
   return (
     <div className="flex h-screen bg-[#050505] text-white">
-      {/* Sidebar - Pjesa statike majtas */}
+      {/* Sidebar */}
       <div className="w-64 border-r border-white/10 p-10 flex flex-col justify-between">
         <div>
           <h1 className="text-xl font-extrabold uppercase tracking-tight mb-12">FIND HOME</h1>
-          <div className="space-y-8 text-[12px] font-bold uppercase tracking-widest text-white/50">
+          <div className="space-y-6 text-[12px] font-bold uppercase tracking-widest text-white/50">
             <p onClick={() => setView('profile')} className="hover:text-white cursor-pointer">Profile</p>
             <p onClick={() => setView('list')} className="hover:text-white cursor-pointer">Properties</p>
             <p onClick={() => setView('certifications')} className="hover:text-white cursor-pointer">Certifications</p>
             <p onClick={() => setView('inquiries')} className="hover:text-white cursor-pointer">Contact Inquiries</p>
+            <p onClick={() => setView('transactions')} className="hover:text-white cursor-pointer">Transactions</p>
+            <p onClick={() => setView('visits')} className="hover:text-white cursor-pointer">Visits</p>
           </div>
         </div>
         <p className="hover:text-red-500 cursor-pointer text-[12px] font-bold uppercase" onClick={onBack}>
@@ -87,10 +88,8 @@ const AgentDashboard = ({ onBack }) => {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto relative">
         
-        {/* PAMJA E PROFILIT */}
         {view === 'profile' && <AgentProfile />}
 
-        {/* PAMJA E LISTES */}
         {view === 'list' && (
           <div className="p-10">
             <h2 className="text-4xl font-extrabold uppercase tracking-tight mb-10">MY PROPERTIES</h2>
@@ -100,7 +99,6 @@ const AgentDashboard = ({ onBack }) => {
           </div>
         )}
 
-        {/* PAMJA ADD PROPERTY */}
         {view === 'add' && (
           <div className="fixed inset-0 z-50 bg-[#050505] p-20 overflow-y-auto">
              <div className="max-w-4xl mx-auto">
@@ -112,9 +110,13 @@ const AgentDashboard = ({ onBack }) => {
           </div>
         )}
 
-        {/* PAMJET TJERA */}
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}
         {view === 'inquiries' && <div className="p-10"><ContactInquiries /></div>}
+        
+        {/* PAMJET E REJA */}
+        {view === 'transactions' && <div className="p-10"><TransactionDashboard /></div>}
+        {view === 'visits' && <div className="p-10"><VisitsDashboard /></div>}
+        
       </div>
     </div>
   );
