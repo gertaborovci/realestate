@@ -91,17 +91,19 @@ function App() {
     <div className="h-screen bg-black overflow-y-auto text-white">
 
       {/* Floating Toggle Admin / Back Button */}
-      <button
-        onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
-        className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
-      >
-        <div className="bg-white p-2 rounded-full text-black">
-          {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
-        </div>
-        <span className="font-bold text-[10px] tracking-widest pr-2">
-          {view === 'dashboard' ? "GO BACK" : "ADMIN PANEL"}
-        </span>
-      </button>
+      {view !== 'user-profile' && (
+        <button
+          onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
+          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
+        >
+          <div className="bg-white p-2 rounded-full text-black">
+            {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
+          </div>
+          <span className="font-bold text-[10px] tracking-widest pr-2">
+            {view === 'dashboard' ? "GO BACK" : "ADMIN PANEL"}
+          </span>
+        </button>
+      )}
 
       {/* View/Page Routing */}
       {view === 'hero' && (
@@ -131,6 +133,7 @@ function App() {
         </div>
       )}
 
+      {/* ADMIN DASHBOARD ROUTING */}
       {view === 'dashboard' && (
         <div className="flex h-full bg-[#050505]">
           <Sidebar
