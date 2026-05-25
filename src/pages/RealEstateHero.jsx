@@ -33,7 +33,8 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'RENT', view: 'properties' },
     { name: 'SELL', view: 'hero' },
     { name: 'MORTGAGE', view: 'hero' },
-    { name: 'AGENTS', view: 'hero' }
+    // NDRYSHIMI KETU: 'agent-details' per te hapur faqen e agjenteve
+    { name: 'AGENTS', view: 'agent-details' }
   ];
 
   // Updated to focus on Kosovo
@@ -102,7 +103,7 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </nav>
 
-      {/* AGENT PANEL BUTTON SHTUAR KETU */}
+      {/* AGENT PANEL BUTTON */}
       <div className="fixed bottom-8 left-8 z-[100]">
         <button 
           onClick={() => setShowDashboard(true)} 
@@ -113,7 +114,7 @@ const RealEstateHero = ({ onNavigate }) => {
         </button>
       </div>
 
-      {/* Hero Section: FULL SCREEN */}
+      {/* Hero Section */}
       <section className="h-screen w-full relative">
         <div className="h-full w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
           <div className="absolute inset-0 bg-black/40"></div>
@@ -184,7 +185,7 @@ const RealEstateHero = ({ onNavigate }) => {
             </div>
           ))}
         </div>
-        <button className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
+        <button onClick={() => onNavigate('agent-details')} className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
           Connect with an agent <ChevronRight size={18} />
         </button>
       </section>
