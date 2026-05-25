@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
-import AgentDashboard from './AgentDashboard';
+
+// TEMPORARILY DISABLED: The file is missing from the repository!
+// import AgentDashboard from './AgentDashboard';
 
 const RealEstateHero = ({ onNavigate }) => {
   const [showDashboard, setShowDashboard] = useState(false);
@@ -44,9 +46,10 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'Peja', homes: '430', img: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' }
   ];
 
-  if (showDashboard) {
-    return <AgentDashboard onBack={() => setShowDashboard(false)} />;
-  }
+  // TEMPORARILY DISABLED to prevent crashes
+  // if (showDashboard) {
+  //   return <AgentDashboard onBack={() => setShowDashboard(false)} />;
+  // }
 
   return (
     <div 
@@ -90,7 +93,7 @@ const RealEstateHero = ({ onNavigate }) => {
         <div className="flex items-center gap-6">
           <div 
             className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
-            onClick={() => onNavigate('user-dashboard')}
+            onClick={() => onNavigate('user-profile')}
           >
             <User size={20} className="text-white" />
           </div>
@@ -106,7 +109,7 @@ const RealEstateHero = ({ onNavigate }) => {
       {/* AGENT PANEL BUTTON */}
       <div className="fixed bottom-8 left-8 z-[100]">
         <button 
-          onClick={() => setShowDashboard(true)} 
+          onClick={() => alert("The Agent Dashboard file is missing from the repository. Ask your teammate to push it!")} 
           className="bg-[#1f1f1f] border border-white/10 text-white px-8 py-4 rounded-full flex items-center gap-3 shadow-lg hover:bg-[#2a2a2a] transition-all"
         >
           <div className="bg-white text-black p-1.5 rounded-full"><ShieldCheck size={16} /></div>

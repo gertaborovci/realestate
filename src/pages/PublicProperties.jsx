@@ -5,11 +5,12 @@ const PublicProperties = ({ onBack }) => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // States for the Detail Viewer
+  // States for the Detail Viewer (FIXED: Nuk ka më duplikime!)
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [gallery, setGallery] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mainImages, setMainImages] = useState({});
+  const [propertyFeatures, setPropertyFeatures] = useState([]); // Shtuar për veçoritë
 
   // Navbar & Filter States
   const [isScrolled, setIsScrolled] = useState(false);
@@ -152,12 +153,21 @@ const PublicProperties = ({ onBack }) => {
     setCurrentImageIndex(0);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/properties/${property.id}/images`);
-      const images = await response.json();
+      // Fetchojmë fotot DHE veçoritë në të njëjtën kohë
+      const [imagesRes, featuresRes] = await Promise.all([
+        fetch(`http://localhost:5000/api/properties/${property.id}/images`),
+        fetch(`http://localhost:5000/api/properties/${property.id}/features`)
+      ]);
+      
+      const images = await imagesRes.json();
+      const features = await featuresRes.json();
+      
       setGallery(images);
+      setPropertyFeatures(features); // Ruajmë veçoritë në state
     } catch (error) {
-      console.error("Failed to load images", error);
+      console.error("Failed to load property details", error);
       setGallery([]);
+      setPropertyFeatures([]);
     }
   };
 
@@ -290,7 +300,7 @@ const PublicProperties = ({ onBack }) => {
           ))}
         </div>
 
-        {/* COMPACT DETAIL VIEWER OVERLAY (English) */}
+        {/* COMPACT DETAIL VIEWER OVERLAY */}
         {selectedProperty && (
           <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
             
@@ -372,6 +382,23 @@ const PublicProperties = ({ onBack }) => {
                     <p className="text-xl font-black text-white">{selectedProperty.area || 0} <span className="text-sm">m²</span></p>
                   </div>
                 </div>
+
+                {/* VEÇORITË E PRONËS (Features) */}
+                {propertyFeatures.length > 0 && (
+                  <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-white/40 font-bold mb-4">
+                      Property Features
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {propertyFeatures.map(feat => (
+                        <div key={feat.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-colors">
+                          <span className="text-[9px] text-white/50 uppercase tracking-widest font-bold">{feat.emertimi}</span>
+                          <span className="text-xs text-white font-black">{feat.vlera}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <button className="w-full bg-white text-black py-4 rounded-full font-black uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition shadow-lg">
                   Book a Viewing

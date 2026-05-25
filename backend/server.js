@@ -70,6 +70,14 @@ db.connect((err) => {
 // 1. API ROUTES PËR PRONAT (PROPERTIES CRUD)
 // ==========================================
 
+
+// IMPORTIMI I ROUTE-VE TË REJA
+const featureRoutes = require('./routes/featureRoutes.js')(db);
+app.use('/api/properties', featureRoutes);
+
+
+
+// --- API ROUTES: PROPERTIES (Kodi i Kolegeve - I PAPREKUR) ---
 app.get('/api/properties', (req, res) => {
     db.query("SELECT * FROM properties", (err, results) => {
         if (err) {
@@ -187,6 +195,7 @@ app.put('/api/properties/images/:image_id/set-main', (req, res) => {
 // 3. API ROUTES: CLIENTS, FAVORITES, REVIEWS (Nga GitHub)
 // ==========================================
 
+// --- API ROUTES: CLIENTS (Kodi i Kolegeve - I PAPREKUR) ---
 app.get('/api/clients', (req, res) => {
     db.query("SELECT * FROM clients", (err, results) => {
         if (err) return res.status(500).json(err);
@@ -203,6 +212,7 @@ app.post('/api/clients', (req, res) => {
     });
 });
 
+// --- API ROUTES: FAVORITES (Kodi i Kolegeve - I PAPREKUR) ---
 app.post('/api/favorites', (req, res) => {
     const { client_id, property_id } = req.body;
     db.query("INSERT INTO favorites (client_id, property_id) VALUES (?, ?)", [client_id, property_id], (err) => {
@@ -211,6 +221,7 @@ app.post('/api/favorites', (req, res) => {
     });
 });
 
+// --- API ROUTES: REVIEWS (Kodi i Kolegeve - I PAPREKUR) ---
 app.get('/api/reviews/:agent_id', (req, res) => {
     db.query("SELECT * FROM reviews WHERE agent_id = ?", [req.params.agent_id], (err, results) => {
         if (err) return res.status(500).json(err);
@@ -223,6 +234,53 @@ app.post('/api/reviews', (req, res) => {
     db.query("INSERT INTO reviews (agent_id, client_id, vleresimi, komenti) VALUES (?, ?, ?, ?)", [agent_id, client_id, vleresimi, komenti], (err) => {
         if (err) return res.status(500).json(err);
         res.json({ message: "Review added successfully!" });
+    });
+});
+
+
+// =========================================================================
+// 🚀 MODULI I RI (Kodi i Elzës: Financat & Logjistika)
+// =========================================================================
+
+// --- 🛠️ 1. CRUD: MAINTENANCE TICKETS ---
+app.get('/api/maintenance', (req, res) => {
+    db.query("SELECT * FROM MaintenanceTickets ORDER BY created_at DESC", (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.status(200).json(results);
+    });
+});
+
+app.post('/api/maintenance', (req, res) => {
+    const { property_id, tenant_id, title, description } = req.body;
+    const sql = "INSERT INTO MaintenanceTickets (property_id, tenant_id, title, description) VALUES (?, ?, ?, ?)";
+    db.query(sql, [property_id, tenant_id, title, description], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.status(201).json({ id: result.insertId, ...req.body });
+    });
+});
+
+app.put('/api/maintenance/:id', (req, res) => {
+    const { status } = req.body;
+    db.query("UPDATE MaintenanceTickets SET status = ? WHERE id = ?", [status, req.params.id], (err) => {
+        if (err) return res.status(500).json(err);
+        res.status(200).json({ message: "Statusi u ndryshua!" });
+    });
+});
+
+// --- 📊 2. CRUD: AGENCY EXPENSES ---
+app.get('/api/expenses', (req, res) => {
+    db.query("SELECT * FROM AgencyExpenses ORDER BY expense_date DESC", (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.status(200).json(results);
+    });
+});
+
+app.post('/api/expenses', (req, res) => {
+    const { category, amount, description, expense_date } = req.body;
+    const sql = "INSERT INTO AgencyExpenses (category, amount, description, expense_date) VALUES (?, ?, ?, ?)";
+    db.query(sql, [category, amount, description, expense_date], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.status(201).json({ id: result.insertId, ...req.body });
     });
 });
 
