@@ -13,6 +13,8 @@ import AgentProfile from './pages/AgentProfile';
 import TransactionDashboard from './TransactionDashboard';
 import UserDashboard from './pages/UserDashboard'; 
 
+import PublicAgents from './pages/PublicAgents';
+
 import {
   Home,
   Shield,
@@ -82,7 +84,7 @@ function App() {
   };
 
   return (
-    <div className="h-screen bg-black overflow-hidden text-white">
+    <div className="h-screen bg-black overflow-y-auto text-white">
 
       {/* Floating Toggle Admin Button - Mos e shfaq kur je te profili */}
       {view !== 'user-profile' && (
@@ -115,6 +117,9 @@ function App() {
           <PublicProperties onBack={() => navigateTo('hero')} />
         </div>
       )}
+
+      {/* Public Agents Gallery */}
+      {view === 'agents' && <PublicAgents onNavigate={navigateTo} />}
 
       {/* ADMIN DASHBOARD ROUTING */}
       {view === 'dashboard' && (

@@ -35,7 +35,7 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'RENT', view: 'properties' },
     { name: 'SELL', view: 'hero' },
     { name: 'MORTGAGE', view: 'hero' },
-    { name: 'AGENTS', view: 'hero' }
+    { name: 'AGENTS', view: 'agents' }
   ];
 
   // Updated to focus on Kosovo
