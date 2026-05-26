@@ -20,12 +20,22 @@ router.post('/', (req, res) => {
     });
 });
 
-// Ndrysho buxhetin ose preferencat (PUT)
+// Ndrysho të gjitha detajet e klientit (PUT) - VERSIONI I PLOTË
 router.put('/:id', (req, res) => {
-    const { buxheti_max, preferencat } = req.body;
-    db.query("UPDATE Clients SET buxheti_max = ?, preferencat = ? WHERE id = ?", [buxheti_max, preferencat, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Klienti u përditësua!" });
+    const { emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit } = req.body;
+    
+    const sql = `
+        UPDATE Clients 
+        SET emri = ?, mbiemri = ?, telefoni = ?, email = ?, buxheti_max = ?, preferencat = ?, lloji_klientit = ?
+        WHERE id = ?
+    `;
+    
+    db.query(sql, [emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit, req.params.id], (err, result) => {
+        if (err) {
+            console.error("Gabim në databazë:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: "Detajet e klientit u përditësuan me sukses!" });
     });
 });
 
