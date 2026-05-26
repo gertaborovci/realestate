@@ -10,8 +10,12 @@ import Signup from './pages/signup';
 import ManageAgents from './pages/ManageAgents';
 import ManageUsers from './pages/ManageUsers';
 import AgentProfile from './pages/AgentProfile';
-import TransactionDashboard from './TransactionDashboard';
-import UserDashboard from './pages/UserDashboard'; 
+import UserDashboard from './pages/UserDashboard';
+import AgentPages from './pages/AgentPages'; 
+import AgentDashboard from './pages/AgentDashboard';
+
+import TransactionDashboard from './components/TransactionDashboard';
+import MaintenanceVisits from './components/MaintenanceVisits';
 
 import PublicAgents from './pages/PublicAgents';
 
@@ -52,10 +56,6 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  useEffect(() => {
-    fetchProperties();
-  }, []);
-
   const fetchProperties = async () => {
     try {
       setLoading(true);
@@ -70,10 +70,16 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
   const deleteProperty = async (id) => {
     if (window.confirm("⚠️ Are you sure?")) {
       const response = await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
-      if (response.ok) setProperties(prev => prev.filter(p => p.id !== id));
+      if (response.ok) {
+        setProperties(prev => prev.filter(p => p.id !== id));
+      }
     }
   };
 
@@ -86,8 +92,8 @@ function App() {
   return (
     <div className="h-screen bg-black overflow-y-auto text-white">
 
-      {/* Floating Toggle Admin Button - Mos e shfaq kur je te profili */}
-      {view !== 'user-profile' && (
+      {/* Floating Toggle Admin Button */}
+      {view !== 'user-profile' && view !== 'user-dashboard' && (
         <button
           onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
           className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full hover:bg-white/20 transition-all shadow-2xl"
@@ -106,8 +112,13 @@ function App() {
       {view === 'signin' && <Signin onNavigate={navigateTo} />}
       {view === 'signup' && <Signup onNavigate={navigateTo} />}
       
-      {/* User Dashboard */}
-      {view === 'user-profile' && (
+      {/* Agent Page details Routing */}
+      {view === 'agent-details' && (
+        <AgentPages onBack={() => navigateTo('hero')} />
+      )}
+
+      {/* User Dashboard / Profiles */}
+      {(view === 'user-dashboard' || view === 'user-profile') && (
         <UserDashboard onBack={() => navigateTo('hero')} />
       )}
 
@@ -127,28 +138,18 @@ function App() {
           <Sidebar onTabChange={setActiveTab} activeTab={activeTab} />
           
           <main className="flex-1 p-12 overflow-y-auto">
-            {loading ? <div className="text-xl animate-pulse">Duke ngarkuar...</div> : (
+            {loading ? (
+              <div className="text-xl animate-pulse">Duke ngarkuar...</div>
+            ) : (
               <>
                 {/* 1. Main Dashboard View (Stat Cards) */}
                 {activeTab === 'dashboard' && (
                   <div className="animate-in fade-in duration-500">
                     <h1 className="text-5xl font-black tracking-tighter uppercase mb-10">DASHBOARD</h1>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      <StatCard 
-                        title="Total Properties" 
-                        value={properties.length} 
-                        icon={<Home size={24} />} 
-                      />
-                      <StatCard 
-                        title="Active Agents" 
-                        value="8" 
-                        icon={<Users size={24} />} 
-                      />
-                      <StatCard 
-                        title="Pending Transactions" 
-                        value="12" 
-                        icon={<Clock size={24} />} 
-                      />
+                      <StatCard title="Total Properties" value={properties.length} icon={<Home size={24} />} />
+                      <StatCard title="Active Agents" value="12" icon={<Users size={24} />} />
+                      <StatCard title="Pending Transactions" value="12" icon={<Clock size={24} />} />
                     </div>
                   </div>
                 )}
@@ -183,16 +184,38 @@ function App() {
                   </div>
                 )}
 
-                {/* 3. Other Sidebar Tabs */}
+                {/* 3. Legacy Add Property Tab support */}
+                {activeTab === 'add' && (
+                  <AddProperty
+                    onBack={() => setActiveTab('properties')}
+                    onAdd={saveProperty}
+                    editData={editingProperty}
+                  />
+                )}
+
+                {/* 4. Transactions View */}
                 {activeTab === 'transactions' && <TransactionDashboard />}
                 
+                {/* 5. Maintenance Visits View */}
+                {activeTab === 'visits' && <MaintenanceVisits />}
+
+                {/* 6. Agents Management View */}
                 {activeTab === 'agents' && (
                   selectedAgentId ? 
                     <AgentProfile agentId={selectedAgentId} onBack={() => setSelectedAgentId(null)} /> : 
-                    <ManageAgents onSelectAgent={setSelectedAgentId} />
+                    <ManageAgents onSelectAgent={setSelectedAgentId} onViewProfile={setSelectedAgentId} />
                 )}
 
+                {/* 7. Users Management View */}
                 {activeTab === 'users' && <ManageUsers />}
+
+                {/* 8. Dedicated Agent Profile Sub-View */}
+                {activeTab === 'agent-profile' && (
+                  <AgentProfile
+                    agentId={selectedAgentId}
+                    onBack={() => setActiveTab('agents')}
+                  />
+                )}
               </>
             )}
           </main>

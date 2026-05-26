@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
-
-// TEMPORARILY DISABLED: The file is missing from the repository!
-// import AgentDashboard from './AgentDashboard';
+import AgentDashboard from './AgentDashboard';
 
 const RealEstateHero = ({ onNavigate }) => {
   const [showDashboard, setShowDashboard] = useState(false);
@@ -45,10 +43,9 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'Peja', homes: '430', img: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' }
   ];
 
-  // TEMPORARILY DISABLED to prevent crashes
-  // if (showDashboard) {
-  //   return <AgentDashboard onBack={() => setShowDashboard(false)} />;
-  // }
+  if (showDashboard) {
+    return <AgentDashboard onBack={() => setShowDashboard(false)} />;
+  }
 
   return (
     <div 
@@ -105,10 +102,10 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </nav>
 
-      {/* AGENT PANEL BUTTON SHTUAR KETU */}
+      {/* AGENT PANEL BUTTON */}
       <div className="fixed bottom-8 left-8 z-[100]">
         <button 
-          onClick={() => alert("The Agent Dashboard file is missing from the repository. Ask your teammate to push it!")} 
+          onClick={() => setShowDashboard(true)} 
           className="bg-[#1f1f1f] border border-white/10 text-white px-8 py-4 rounded-full flex items-center gap-3 shadow-lg hover:bg-[#2a2a2a] transition-all"
         >
           <div className="bg-white text-black p-1.5 rounded-full"><ShieldCheck size={16} /></div>
@@ -187,7 +184,7 @@ const RealEstateHero = ({ onNavigate }) => {
             </div>
           ))}
         </div>
-        <button className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
+        <button onClick={() => onNavigate('agents')} className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
           Connect with an agent <ChevronRight size={18} />
         </button>
       </section>
