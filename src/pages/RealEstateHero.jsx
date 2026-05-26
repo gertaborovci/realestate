@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
-// E pasaktë (po kërkon te src/pages/pages/...)
-// E saktë (po kërkon te src/pages/...)
 import AgentDashboard from './AgentDashboard';
 
 const RealEstateHero = ({ onNavigate }) => {
@@ -9,6 +7,7 @@ const RealEstateHero = ({ onNavigate }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
 
+  // Smart Scroll Detector (Fixed for snap scrolling)
   useEffect(() => {
     const handleScroll = () => {
       if (scrollRef.current) {
@@ -34,9 +33,10 @@ const RealEstateHero = ({ onNavigate }) => {
     { name: 'RENT', view: 'properties' },
     { name: 'SELL', view: 'hero' },
     { name: 'MORTGAGE', view: 'hero' },
-    { name: 'AGENTS', view: 'agent-details' }
+    { name: 'AGENTS', view: 'agents' }
   ];
 
+  // Updated to focus on Kosovo
   const popularCities = [
     { name: 'Prishtina', homes: '1,240', img: '/photos/hero_Pristina.avif', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' },
     { name: 'Prizren', homes: '850', img: 'https://images.unsplash.com/photo-1610012759972-e1c27e025f18?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1000' },
@@ -52,12 +52,19 @@ const RealEstateHero = ({ onNavigate }) => {
       ref={scrollRef}
       className="h-screen w-full bg-black overflow-y-auto scroll-smooth hide-scrollbar text-white"
     >
+      
+      {/* Dynamic Navbar: Transparent at top, Black blur on scroll */}
       <nav className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-[100] transition-all duration-500 ${
         isScrolled 
           ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' 
           : 'bg-transparent py-8'
       }`}>
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onNavigate('hero')}>
+        
+        {/* Left: KosovaNest Logo */}
+        <div 
+          className="flex items-center gap-3 cursor-pointer group" 
+          onClick={() => onNavigate('hero')}
+        >
           <Building2 size={32} className="text-white group-hover:opacity-70 transition-opacity" />
           <div className="flex flex-col">
               <span className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none group-hover:opacity-70 transition-opacity">KosovaNest</span>
@@ -65,6 +72,7 @@ const RealEstateHero = ({ onNavigate }) => {
           </div>
         </div>
 
+        {/* Center: Navigation Links */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((item) => (
             <button 
@@ -77,8 +85,12 @@ const RealEstateHero = ({ onNavigate }) => {
           ))}
         </div>
 
+        {/* Right: User Actions */}
         <div className="flex items-center gap-6">
-          <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition" onClick={() => onNavigate('user-profile')}>
+          <div 
+            className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
+            onClick={() => onNavigate('user-profile')}
+          >
             <User size={20} className="text-white" />
           </div>
           <button 
@@ -90,6 +102,7 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </nav>
 
+      {/* AGENT PANEL BUTTON */}
       <div className="fixed bottom-8 left-8 z-[100]">
         <button 
           onClick={() => setShowDashboard(true)} 
@@ -100,11 +113,15 @@ const RealEstateHero = ({ onNavigate }) => {
         </button>
       </div>
 
+      {/* Hero Section: FULL SCREEN */}
       <section className="h-screen w-full relative">
         <div className="h-full w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
           <div className="absolute inset-0 bg-black/40"></div>
+          
           <div className="absolute bottom-32 left-16 md:left-24">
-            <h1 className="text-white text-[6vw] font-bold tracking-tighter leading-[0.8] mb-8 uppercase">DREAM HOME</h1>
+            <h1 className="text-white text-[6vw] font-bold tracking-tighter leading-[0.8] mb-8 uppercase">
+              DREAM HOME
+            </h1>
             <p className="text-white/80 text-[10px] max-w-xl font-semibold tracking-[0.3em] uppercase opacity-80 leading-relaxed">
               KosovaNest is the premier real estate agency in the region, connecting clients with architectural excellence and modern living spaces across Kosovo.
             </p>
@@ -112,6 +129,7 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </section>
 
+      {/* Features Section */}
       <section className="min-h-screen w-full bg-white text-black p-16 md:p-24 flex items-center">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           {[
@@ -129,6 +147,7 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </section>
 
+      {/* Cities Section */}
       <section className="min-h-screen w-full bg-[#050505] p-16 md:p-24 flex flex-col justify-center text-white">
         <div className="max-w-7xl mx-auto w-full">
            <h2 className="text-7xl font-black tracking-tighter uppercase italic mb-20">Popular Cities</h2>
@@ -146,6 +165,7 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
       </section>
       
+      {/* "Let us narrow the field" Section */}
       <section className="min-h-screen w-full bg-white text-black p-16 md:p-24 flex flex-col items-center justify-center">
         <div className="max-w-3xl text-center space-y-8 mb-24">
           <h2 className="text-6xl font-black tracking-tighter uppercase italic leading-[0.9]">Let us narrow the field for you</h2>
@@ -164,11 +184,12 @@ const RealEstateHero = ({ onNavigate }) => {
             </div>
           ))}
         </div>
-        <button onClick={() => onNavigate('agent-details')} className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
+        <button onClick={() => onNavigate('agents')} className="mt-24 bg-black text-white px-14 py-6 rounded-full text-xs font-black tracking-[0.4em] uppercase flex items-center gap-4 hover:scale-105 transition-all shadow-xl">
           Connect with an agent <ChevronRight size={18} />
         </button>
       </section>
 
+      {/* Footer Section */}
       <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between">
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-20 py-10">
           <div className="space-y-10">
@@ -209,6 +230,7 @@ const RealEstateHero = ({ onNavigate }) => {
           </div>
         </div>
       </section>
+      
     </div>
   );
 };

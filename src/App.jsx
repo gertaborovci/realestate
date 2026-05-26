@@ -17,6 +17,8 @@ import AgentDashboard from './pages/AgentDashboard';
 import TransactionDashboard from './components/TransactionDashboard';
 import MaintenanceVisits from './components/MaintenanceVisits';
 
+import PublicAgents from './pages/PublicAgents';
+
 import {
   Home,
   Shield,
@@ -47,13 +49,10 @@ function App() {
         setView('hero');
       }
     };
-
     window.addEventListener('popstate', handlePopState);
-
     if (!window.history.state) {
       window.history.replaceState({ view: 'hero' }, "", "");
     }
-
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
@@ -93,89 +92,99 @@ function App() {
   return (
     <div className="h-screen bg-black overflow-y-auto text-white">
 
-      {view !== 'user-profile' && (
+      {/* Floating Toggle Admin Button */}
+      {view !== 'user-profile' && view !== 'user-dashboard' && (
         <button
           onClick={() => navigateTo(view === 'dashboard' ? 'hero' : 'dashboard')}
-          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full"
+          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-full hover:bg-white/20 transition-all shadow-2xl"
         >
           <div className="bg-white p-2 rounded-full text-black">
             {view === 'dashboard' ? <X size={20} /> : <Shield size={20} />}
           </div>
-          <span className="font-bold text-[10px] tracking-widest pr-2">
+          <span className="font-bold text-[10px] tracking-widest pr-2 uppercase">
             {view === 'dashboard' ? "GO BACK" : "ADMIN PANEL"}
           </span>
         </button>
       )}
 
       {/* View/Page Routing */}
-      {view === 'hero' && (
-        <RealEstateHero onNavigate={navigateTo} />
-      )}
-
+      {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
+      {view === 'signin' && <Signin onNavigate={navigateTo} />}
+      {view === 'signup' && <Signup onNavigate={navigateTo} />}
+      
+      {/* Agent Page details Routing */}
       {view === 'agent-details' && (
         <AgentPages onBack={() => navigateTo('hero')} />
       )}
 
-      {view === 'user-dashboard' && (
+      {/* User Dashboard / Profiles */}
+      {(view === 'user-dashboard' || view === 'user-profile') && (
         <UserDashboard onBack={() => navigateTo('hero')} />
       )}
 
-      {view === 'signin' && (
-        <Signin onNavigate={navigateTo} />
-      )}
-
-      {view === 'signup' && (
-        <Signup onNavigate={navigateTo} />
-      )}
-
+      {/* Public Properties Gallery */}
       {view === 'properties' && (
         <div className="h-full overflow-y-auto">
           <PublicProperties onBack={() => navigateTo('hero')} />
         </div>
       )}
 
+      {/* Public Agents Gallery */}
+      {view === 'agents' && <PublicAgents onNavigate={navigateTo} />}
+
+      {/* ADMIN DASHBOARD ROUTING */}
       {view === 'dashboard' && (
         <div className="flex h-full bg-[#050505]">
-          <Sidebar
-            onTabChange={setActiveTab}
-            activeTab={activeTab}
-          />
+          <Sidebar onTabChange={setActiveTab} activeTab={activeTab} />
+          
           <main className="flex-1 p-12 overflow-y-auto">
             {loading ? (
-              <div className="text-xl">Duke ngarkuar...</div>
+              <div className="text-xl animate-pulse">Duke ngarkuar...</div>
             ) : (
               <>
+                {/* 1. Main Dashboard View (Stat Cards) */}
                 {activeTab === 'dashboard' && (
-                  <>
-                    <h1 className="text-5xl font-bold mb-12">DASHBOARD</h1>
-                    <div className="flex flex-wrap gap-6">
-                      <StatCard title="Total Properties" value={properties.length} icon={<Home size={20} />} />
-                      <StatCard title="Agents" value="12" icon={<Users size={20} />} />
-                      <StatCard title="Revenue" value="$120K" icon={<DollarSign size={20} />} />
-                      <StatCard title="Pending" value="8" icon={<Clock size={20} />} />
+                  <div className="animate-in fade-in duration-500">
+                    <h1 className="text-5xl font-black tracking-tighter uppercase mb-10">DASHBOARD</h1>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <StatCard title="Total Properties" value={properties.length} icon={<Home size={24} />} />
+                      <StatCard title="Active Agents" value="12" icon={<Users size={24} />} />
+                      <StatCard title="Pending Transactions" value="12" icon={<Clock size={24} />} />
                     </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 2. Properties View (Table & Add/Edit Form) */}
                 {activeTab === 'properties' && (
-                  <>
-                    <div className="flex justify-between mb-12">
-                      <h1 className="text-5xl font-bold">PROPERTIES</h1>
-                      <button
-                        onClick={() => { setEditingProperty(null); setActiveTab('add'); }}
-                        className="bg-white text-black px-8 py-4 rounded-full text-xs font-bold hover:bg-gray-200"
-                      >
-                        ADD NEW +
-                      </button>
-                    </div>
-                    <PropertyTable
-                      properties={properties}
-                      onDelete={deleteProperty}
-                      onEdit={(p) => { setEditingProperty(p); setActiveTab('add'); }}
-                    />
-                  </>
+                  <div className="animate-in fade-in duration-500">
+                    {!editingProperty ? (
+                      <>
+                        <div className="flex justify-between items-center mb-10">
+                          <h1 className="text-5xl font-black tracking-tighter uppercase">Properties</h1>
+                          <button 
+                            onClick={() => setEditingProperty('new')}
+                            className="bg-white text-black font-bold text-[11px] tracking-widest px-6 py-3 rounded-full uppercase hover:bg-gray-200 transition"
+                          >
+                            Shto +
+                          </button>
+                        </div>
+                        <PropertyTable 
+                          properties={properties} 
+                          onDelete={deleteProperty} 
+                          onEdit={(prop) => setEditingProperty(prop)} 
+                        />
+                      </>
+                    ) : (
+                      <AddProperty 
+                        onBack={() => setEditingProperty(null)} 
+                        onAdd={saveProperty} 
+                        editData={editingProperty !== 'new' ? editingProperty : null}
+                      />
+                    )}
+                  </div>
                 )}
 
+                {/* 3. Legacy Add Property Tab support */}
                 {activeTab === 'add' && (
                   <AddProperty
                     onBack={() => setActiveTab('properties')}
@@ -184,25 +193,23 @@ function App() {
                   />
                 )}
 
-                {activeTab === 'transactions' && (
-                  <TransactionDashboard />
-                )}
+                {/* 4. Transactions View */}
+                {activeTab === 'transactions' && <TransactionDashboard />}
+                
+                {/* 5. Maintenance Visits View */}
+                {activeTab === 'visits' && <MaintenanceVisits />}
 
-                {activeTab === 'visits' && (
-                  <MaintenanceVisits />
-                )}
-
+                {/* 6. Agents Management View */}
                 {activeTab === 'agents' && (
-                  <ManageAgents
-                    onViewProfile={(id) => {
-                      setSelectedAgentId(id);
-                      setActiveTab('agent-profile');
-                    }}
-                  />
+                  selectedAgentId ? 
+                    <AgentProfile agentId={selectedAgentId} onBack={() => setSelectedAgentId(null)} /> : 
+                    <ManageAgents onSelectAgent={setSelectedAgentId} onViewProfile={setSelectedAgentId} />
                 )}
 
+                {/* 7. Users Management View */}
                 {activeTab === 'users' && <ManageUsers />}
 
+                {/* 8. Dedicated Agent Profile Sub-View */}
                 {activeTab === 'agent-profile' && (
                   <AgentProfile
                     agentId={selectedAgentId}
