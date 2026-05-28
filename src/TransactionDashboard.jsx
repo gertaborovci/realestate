@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE } from './lib/api';
+import { Wrench, BarChart3, DollarSign, TrendingUp } from 'lucide-react';
+import { API_BASE } from '../lib/api'; // Kujdes rrugën (mund të jetë '../lib/api')
 
 const api = axios.create({ baseURL: API_BASE });
-import { Wrench, BarChart3, DollarSign, TrendingUp } from 'lucide-react';
 
 export default function TransactionDashboard() {
   const [subTab, setSubTab] = useState('expenses'); // Tabi fillestar shfaq grafikun

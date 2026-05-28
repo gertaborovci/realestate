@@ -1,5 +1,4 @@
 import React from 'react';
-
 import {
   LayoutDashboard,
   Building2,
@@ -7,7 +6,9 @@ import {
   LogOut,
   Users,
   UserCog,
-  Calendar
+  Calendar,
+  Wallet,
+  Wrench
 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
@@ -18,31 +19,31 @@ const Sidebar = ({ onTabChange, activeTab }) => {
       icon: <LayoutDashboard size={18} />,
       label: 'DASHBOARD'
     },
-
     {
       id: 'properties',
       icon: <Building2 size={18} />,
       label: 'PROPERTIES'
     },
-
     {
       id: 'transactions',
-      icon: <Building2 size={18} />,
+      icon: <Wallet size={18} />, 
       label: 'TRANSACTIONS'
     },
-
+    {
+      id: 'maintenance', // Fixed duplicate ID!
+      icon: <Wrench size={18} />, 
+      label: 'MAINTENANCE'
+    },
     {
       id: 'visits',
       icon: <Calendar size={18} />,
       label: 'VISITS'
     },
-
     {
       id: 'agents',
       icon: <Users size={18} />,
       label: 'AGENTS'
     },
-
     {
       id: 'users',
       icon: <UserCog size={18} />,
@@ -53,7 +54,6 @@ const Sidebar = ({ onTabChange, activeTab }) => {
   return (
     <div className="flex flex-col h-screen w-64 bg-[#050505] border-r border-white/5 shadow-2xl">
 
-      {/* Logo */}
       <div className="p-8">
         <h1 className="text-white font-black text-xl tracking-tighter flex items-center gap-2">
           FIND HOME
@@ -61,13 +61,11 @@ const Sidebar = ({ onTabChange, activeTab }) => {
         </h1>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-4">
         <ul className="space-y-2 px-4">
 
           {menuItems.map((item) => (
             <li key={item.id}>
-
               <button
                 onClick={() => onTabChange(item.id)}
                 className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-[10px] font-bold tracking-[0.2em] transition-all ${
@@ -79,16 +77,13 @@ const Sidebar = ({ onTabChange, activeTab }) => {
                 {item.icon}
                 {item.label}
               </button>
-
             </li>
           ))}
 
         </ul>
       </nav>
 
-      {/* Bottom Actions */}
       <div className="p-6 border-t border-white/5 space-y-2">
-
         <button className="w-full flex items-center gap-4 px-4 py-3 text-[10px] font-bold tracking-[0.2em] text-white/40 hover:text-white transition-all">
           <Settings size={18} />
           SETTINGS
@@ -98,7 +93,6 @@ const Sidebar = ({ onTabChange, activeTab }) => {
           <LogOut size={18} />
           LOG OUT
         </button>
-
       </div>
     </div>
   );
