@@ -1,44 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { User, Shield, MapPin, Mail, ArrowLeft } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 const AgentProfile = ({ agentId, onBack }) => {
   const [agent, setAgent] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-
-    // 1. Lexojmë listën live nga localStorage
-    const savedAgents = localStorage.getItem('my_agents_list');
-    let foundAgent = null;
-
-    if (savedAgents) {
-      const agentsList = JSON.parse(savedAgents);
-      // Gjejmë agjentin që përputhet me ID-në e klikuar
-      foundAgent = agentsList.find(a => a.id === Number(agentId) || a.id === agentId);
-    }
-
-    // 2. Nëse agjenti ekziston në listë, përdorim të dhënat e tij reale
-    if (foundAgent) {
-      setAgent({
-        name: foundAgent.username.toUpperCase(),
-        email: `${foundAgent.username.replace(/\s+/g, '.').toLowerCase()}@ubt-uni.net`, // Formatim më i pastër i emailit
-        license_number: foundAgent.license_number,
-        specialization: foundAgent.specialization,
-        zone: foundAgent.zone
-      });
-    } else {
-      // Fallback nëse diçka dështon rastësisht
-      setAgent({
-        name: 'Filan Fisteku',
-        email: 'filan@ubt-uni.net',
-        license_number: 'LIC-2026-001',
-        specialization: 'Sale',
-        zone: 'Prishtinë'
-      });
-    }
-
-    setLoading(false);
+    const loadAgent = async () => {
+      setLoading(true);
+      try {
+        const foundAgent = await apiFetch(`/api/agents/${agentId}`);
+        setAgent({
+          name: (foundAgent.username || 'Agent').toUpperCase(),
+          email: foundAgent.email || 'N/A',
+          license_number: foundAgent.license_number,
+          specialization: foundAgent.specialization,
+          zone: foundAgent.zone,
+        });
+      } catch (error) {
+        console.error('Failed to load agent profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (agentId) loadAgent();
   }, [agentId]);
 
   if (loading) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../lib/api';
 import Sidebar from '../components/Sidebar';
 import PropertyTable from '../components/PropertyTable';
 import AddProperty from './AddProperty';
@@ -13,7 +14,7 @@ const Dashboard = () => {
 
   // 3. Fetch real data from your Node.js Backend
   const fetchProperties = () => {
-    fetch('http://localhost:5000/api/properties')
+    fetch(`${API_BASE}/api/properties`)
       .then(res => res.json())
       .then(data => setProperties(data))
       .catch(err => console.error("Error fetching properties:", err));
@@ -27,7 +28,7 @@ const Dashboard = () => {
   // 4. Handle Deleting (Member 2 can expand on this later, but we need the UI to work)
   const handleDelete = async (id) => {
     try {
-      await fetch(`http://localhost:5000/api/properties/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/api/properties/${id}`, { method: 'DELETE' });
       setProperties(properties.filter(p => p.id !== id)); // Remove from screen
     } catch (error) {
       console.error("Error deleting:", error);

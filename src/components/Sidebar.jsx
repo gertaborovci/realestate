@@ -6,8 +6,9 @@ import {
   LogOut,
   Users,
   UserCog,
-  Wallet, 
-  Wrench  
+  Calendar,
+  Wallet,
+  Wrench
 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
@@ -29,8 +30,13 @@ const Sidebar = ({ onTabChange, activeTab }) => {
       label: 'TRANSACTIONS'
     },
     {
-      id: 'visits',
+      id: 'maintenance', // Fixed duplicate ID!
       icon: <Wrench size={18} />, 
+      label: 'MAINTENANCE'
+    },
+    {
+      id: 'visits',
+      icon: <Calendar size={18} />,
       label: 'VISITS'
     },
     {

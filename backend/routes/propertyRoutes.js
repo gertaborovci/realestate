@@ -1,17 +1,21 @@
 const express = require('express');
-const router = express.Router();
-const db = require('../db'); // Importon lidhjen me databazën
+const { asyncHandler } = require('../middleware/errorHandler');
+const propertyController = require('../controllers/propertyController');
+const imageController = require('../controllers/imageController');
+const upload = require('../config/upload');
 
-// Kjo rrugë do të jetë /api/properties (sepse e regjistrojmë në server.js)
-router.get('/', (req, res) => {
-    const sql = "SELECT * FROM properties"; // Sigurohu që emri i tabelës në databazë është 'properties'
-    db.query(sql, (err, data) => {
-        if (err) {
-            console.error("Gabim në databazë:", err);
-            return res.status(500).json({ error: "Gabim në server" });
-        }
-        return res.json(data); // Kthen të dhënat si JSON
-    });
-});
+const router = express.Router();
+
+router.get('/', asyncHandler(propertyController.getAll));
+router.post('/', asyncHandler(propertyController.create));
+
+router.get('/:id/images', asyncHandler(imageController.getByProperty));
+router.post('/:id/images', upload.single('image'), asyncHandler(imageController.upload));
+router.delete('/images/:image_id', asyncHandler(imageController.remove));
+router.put('/images/:image_id/set-main', asyncHandler(imageController.setMain));
+
+router.get('/:id', asyncHandler(propertyController.getById));
+router.put('/:id', asyncHandler(propertyController.update));
+router.delete('/:id', asyncHandler(propertyController.remove));
 
 module.exports = router;

@@ -1,0 +1,15 @@
+const express = require('express');
+const { asyncHandler } = require('../middleware/errorHandler');
+const { requireRole } = require('../middleware/authMiddleware');
+const visitController = require('../controllers/visitController');
+
+const router = express.Router();
+
+router.get('/', asyncHandler(visitController.getAll));
+router.get('/user/:user_id', asyncHandler(visitController.getByUser));
+router.get('/:id', asyncHandler(visitController.getById));
+router.post('/', asyncHandler(visitController.create));
+router.put('/:id', requireRole('admin', 'agent'), asyncHandler(visitController.update));
+router.delete('/:id', requireRole('admin'), asyncHandler(visitController.remove));
+
+module.exports = router;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropertyFeatures from './PropertyFeatures';
+import { API_BASE } from '../lib/api';
 import { ArrowLeft, Euro, MapPin, Image as ImageIcon, DoorOpen, Bath, Maximize, Activity, Home, UploadCloud, X, CheckCircle } from 'lucide-react';
 
 const AddProperty = ({ onBack, onAdd, editData }) => {
@@ -30,8 +31,8 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
     try {
       const isEditing = Boolean(editData && editData.id);
       const url = isEditing 
-        ? `http://localhost:5000/api/properties/${editData.id}` 
-        : 'http://localhost:5000/api/properties';
+        ? `${API_BASE}/api/properties/${editData.id}` 
+        : `${API_BASE}/api/properties`;
       const method = isEditing ? 'PUT' : 'POST';
 
       // 1. Save base data (Text)
@@ -61,7 +62,7 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
           imageFormData.append('renditja', i);
 
           try {
-            const imgUploadRes = await fetch(`http://localhost:5000/api/properties/${propertyId}/images`, {
+            const imgUploadRes = await fetch(`${API_BASE}/api/properties/${propertyId}/images`, {
               method: 'POST',
               body: imageFormData 
             });

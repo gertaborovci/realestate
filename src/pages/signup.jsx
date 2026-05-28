@@ -1,15 +1,43 @@
 import React, { useState } from 'react';
+import { apiFetch } from '../lib/api';
 
 const SignUp = ({ onNavigate }) => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '', role: 'buyer' });
+  const [error, setError] = useState('');
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    try {
+      await apiFetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+        }),
+      });
+      alert('Account created! Please sign in.');
+      onNavigate('signin');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
       <div className="bg-[#121212] border border-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
         <h2 className="text-3xl font-black text-center text-white mb-2 tracking-wide">KOSOVANEST</h2>
         <p className="text-gray-400 text-sm text-center mb-6">Create a new account</p>
-        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+        {error && <p className="text-red-400 text-xs text-center mb-2">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-gray-400 text-xs font-bold uppercase mb-1">Full Name</label>
             <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full bg-[#1a1a1a] border border-gray-800 text-white px-4 py-2.5 rounded-xl focus:outline-none" placeholder="John Doe" required />

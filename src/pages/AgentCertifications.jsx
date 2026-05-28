@@ -1,10 +1,25 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X } from 'lucide-react';
+import { API_BASE, apiFetch } from '../lib/api';
 
 const AgentCertifications = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [certifications, setCertifications] = useState([]);
   const fileInputRef = useRef(null);
+
+  const loadCertifications = async () => {
+    try {
+      const data = await apiFetch('/api/certifications');
+      setCertifications(data);
+    } catch (error) {
+      console.error('Failed to load certifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadCertifications();
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -27,7 +42,7 @@ const AgentCertifications = () => {
     formData.append('type', 'Passport / ID'); 
 
     try {
-      const response = await fetch('http://localhost:5000/api/certifications', {
+      const response = await fetch(`${API_BASE}/api/certifications`, {
         method: 'POST',
         body: formData,
       });
@@ -36,6 +51,7 @@ const AgentCertifications = () => {
         alert("Dokumenti u ngarkua me sukses!");
         setShowModal(false);
         setSelectedFile(null);
+        loadCertifications();
       } else {
         alert("Gabim gjatë ruajtjes në server.");
       }
@@ -70,26 +86,22 @@ const AgentCertifications = () => {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4 items-center p-5 border border-white/10 rounded-2xl bg-[#0a0a0a]">
-            <span className="text-sm font-bold">Real Estate License 2026</span>
-            <span className="text-xs text-white/60">License</span>
-            <span className="text-[10px] text-green-500 font-bold uppercase bg-green-500/10 px-3 py-1 rounded-full w-fit">Verified</span>
-            <span className="text-xs text-white/40 text-right">31/12/2027</span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-4 items-center p-5 border border-white/10 rounded-2xl bg-[#0a0a0a]">
-            <span className="text-sm font-bold">Advanced Prop. Management</span>
-            <span className="text-xs text-white/60">Training</span>
-            <span className="text-[10px] text-yellow-500 font-bold uppercase bg-yellow-500/10 px-3 py-1 rounded-full w-fit">Pending</span>
-            <span className="text-xs text-white/40 text-right">-</span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-4 items-center p-5 border border-white/10 rounded-2xl bg-[#0a0a0a]">
-            <span className="text-sm font-bold">Passport Copy</span>
-            <span className="text-xs text-white/60">Identification</span>
-            <span className="text-[10px] text-red-500 font-bold uppercase bg-red-500/10 px-3 py-1 rounded-full w-fit">Rejected</span>
-            <span className="text-xs text-white/40 text-right">-</span>
-          </div>
+          {certifications.length === 0 ? (
+            <p className="text-white/40 text-sm">No certifications uploaded yet.</p>
+          ) : (
+            certifications.map((cert) => (
+              <div key={cert.id} className="grid grid-cols-4 gap-4 items-center p-5 border border-white/10 rounded-2xl bg-[#0a0a0a]">
+                <span className="text-sm font-bold">{cert.type}</span>
+                <span className="text-xs text-white/60">{cert.type}</span>
+                <span className={`text-[10px] font-bold uppercase px-3 py-1 rounded-full w-fit ${
+                  cert.status === 'Verified' ? 'text-green-500 bg-green-500/10' :
+                  cert.status === 'Rejected' ? 'text-red-500 bg-red-500/10' :
+                  'text-yellow-500 bg-yellow-500/10'
+                }`}>{cert.status}</span>
+                <span className="text-xs text-white/40 text-right">{cert.expires_at || '-'}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

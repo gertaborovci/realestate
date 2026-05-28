@@ -1,25 +1,27 @@
+require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2');
 const cors = require('cors');
-const multer = require('multer'); // Për të menaxhuar file-t (fotot)
-const path = require('path');     // Për të lexuar rrugët e file-ve
-const fs = require('fs');         // Për të krijuar folderin automatikisht
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const mysql = require('mysql2'); // E shtuar për të mos lejuar serverin të krashte!
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
-// Lejon që React të shohë fotot që ruhen në folderin "uploads"
+// ==========================================
+// SETUP I FOTOVE (MULTER)
+// ==========================================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Krijon folderin "uploads" automatikisht nëse nuk ekziston
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
 
-// Konfigurimi i Multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/'); 
@@ -30,6 +32,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+// ==========================================
+// LIDHJA ME DATABAZËN (Nga kodi i shokut)
+// ==========================================
 const db = mysql.createConnection({
     host: '127.0.0.1',
     user: 'root',
@@ -44,7 +49,6 @@ db.connect((err) => {
     }
     console.log('✅ Successfully connected to the MySQL Database!');
 
-    // Verifikimi i kolonës 'type'
     const fixDatabaseQuery = "ALTER TABLE properties ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'BUY'";
     db.query(fixDatabaseQuery, (err) => {
         if (!err) console.log('✅ Properties table verified!');
@@ -66,12 +70,17 @@ db.connect((err) => {
 });
 
 // ==========================================
-// 1. API ROUTES PËR PRONAT (PROPERTIES CRUD)
+// ROUTES QË ZGJIDHËM MË PARË (Për të mos i humbur)
 // ==========================================
+const agentRoutes = require('./routes/agentRoutes');
+app.use('/api/agents', agentRoutes);
 
 const featureRoutes = require('./routes/featureRoutes.js')(db);
 app.use('/api/properties', featureRoutes);
 
+// ==========================================
+// 1. API ROUTES PËR PRONAT
+// ==========================================
 app.get('/api/properties', (req, res) => {
     db.query("SELECT * FROM properties", (err, results) => {
         if (err) {
@@ -84,8 +93,7 @@ app.get('/api/properties', (req, res) => {
 
 app.get('/api/properties/:id', (req, res) => {
     const propertyId = req.params.id;
-    const sqlQuery = "SELECT * FROM properties WHERE id = ?";
-    db.query(sqlQuery, [propertyId], (err, result) => {
+    db.query("SELECT * FROM properties WHERE id = ?", [propertyId], (err, result) => {
         if (err) return res.status(500).json({ error: "Failed to fetch property details." });
         if (result.length === 0) return res.status(404).json({ message: "Property not found." });
         res.status(200).json(result[0]);
@@ -121,14 +129,11 @@ app.delete('/api/properties/:id', (req, res) => {
 });
 
 // ==========================================
-// 2. API ROUTES PËR IMAZHET (IMAGES CRUD ME MULTER)
+// 2. API ROUTES PËR IMAZHET (MULTER)
 // ==========================================
-
 app.get('/api/properties/:id/images', (req, res) => {
     const propertyId = req.params.id;
-    const sqlQuery = "SELECT * FROM propertyimages WHERE property_id = ? ORDER BY renditja ASC";
-    
-    db.query(sqlQuery, [propertyId], (err, results) => {
+    db.query("SELECT * FROM propertyimages WHERE property_id = ? ORDER BY renditja ASC", [propertyId], (err, results) => {
         if (err) {
             console.error("Database error fetching images:", err);
             return res.status(500).json({ error: "Failed to fetch images." });
@@ -138,30 +143,21 @@ app.get('/api/properties/:id/images', (req, res) => {
 });
 
 app.post('/api/properties/:id/images', upload.single('image'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: "No image file provided." });
-    }
+    if (!req.file) return res.status(400).json({ error: "No image file provided." });
 
     const propertyId = req.params.id;
     const imageUrl = `/uploads/${req.file.filename}`; 
     const eshteKryesore = req.body.eshte_kryesore === 'true' || req.body.eshte_kryesore === true ? 1 : 0;
     
-    const sqlQuery = `INSERT INTO propertyimages (property_id, image_url, eshte_kryesore, renditja) VALUES (?, ?, ?, ?)`;
-    db.query(sqlQuery, [propertyId, imageUrl, eshteKryesore, 0], (err, result) => {
+    db.query(`INSERT INTO propertyimages (property_id, image_url, eshte_kryesore, renditja) VALUES (?, ?, ?, ?)`, 
+    [propertyId, imageUrl, eshteKryesore, 0], (err, result) => {
         if (err) return res.status(500).json({ error: "Failed to add image to database." });
-        res.status(201).json({ 
-            message: "Image uploaded successfully!", 
-            id: result.insertId,
-            image_url: imageUrl 
-        });
+        res.status(201).json({ message: "Image uploaded successfully!", id: result.insertId, image_url: imageUrl });
     });
 });
 
 app.delete('/api/properties/images/:image_id', (req, res) => {
-    const imageId = req.params.image_id;
-    const sqlQuery = "DELETE FROM propertyimages WHERE id = ?";
-    
-    db.query(sqlQuery, [imageId], (err) => {
+    db.query("DELETE FROM propertyimages WHERE id = ?", [req.params.image_id], (err) => {
         if (err) return res.status(500).json({ error: "Failed to delete image." });
         res.status(200).json({ message: "Image deleted!" });
     });
@@ -171,12 +167,10 @@ app.put('/api/properties/images/:image_id/set-main', (req, res) => {
     const imageId = req.params.image_id;
     const { property_id } = req.body;
 
-    const resetQuery = "UPDATE propertyimages SET eshte_kryesore = false WHERE property_id = ?";
-    db.query(resetQuery, [property_id], (err) => {
+    db.query("UPDATE propertyimages SET eshte_kryesore = false WHERE property_id = ?", [property_id], (err) => {
         if (err) return res.status(500).json({ error: "Error resetting images." });
 
-        const setMainQuery = "UPDATE propertyimages SET eshte_kryesore = true WHERE id = ?";
-        db.query(setMainQuery, [imageId], (err) => {
+        db.query("UPDATE propertyimages SET eshte_kryesore = true WHERE id = ?", [imageId], (err) => {
             if (err) return res.status(500).json({ error: "Failed to set main image." });
             res.status(200).json({ message: "Main image updated successfully!" });
         });
@@ -186,7 +180,6 @@ app.put('/api/properties/images/:image_id/set-main', (req, res) => {
 // ==========================================
 // 3. API ROUTES: CLIENTS, FAVORITES, REVIEWS
 // ==========================================
-
 app.get('/api/clients', (req, res) => {
     db.query("SELECT * FROM clients", (err, results) => {
         if (err) return res.status(500).json(err);
@@ -196,8 +189,8 @@ app.get('/api/clients', (req, res) => {
 
 app.post('/api/clients', (req, res) => {
     const { user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit } = req.body;
-    const sql = "INSERT INTO clients (user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    db.query(sql, [user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit], (err) => {
+    db.query("INSERT INTO clients (user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+    [user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit], (err) => {
         if (err) return res.status(500).json(err);
         res.json({ message: "Client created successfully!" });
     });
@@ -229,8 +222,6 @@ app.post('/api/reviews', (req, res) => {
 // =========================================================================
 // 🚀 MODULI: FINANCAT & LOGJISTIKA (Përditësuar për Elzën)
 // =========================================================================
-
-// --- 🛠️ 1. CRUD: MAINTENANCE TICKETS ---
 app.get('/api/maintenance', (req, res) => {
     const query = `
         SELECT m.*, p.title as property_title 
@@ -246,27 +237,22 @@ app.get('/api/maintenance', (req, res) => {
 
 app.post('/api/maintenance', (req, res) => {
     const { property_id, tenant_id, title, description } = req.body;
-    const sql = "INSERT INTO maintenancetickets (property_id, tenant_id, title, description, status) VALUES (?, ?, ?, ?, 'Pending')";
-    db.query(sql, [property_id, tenant_id, title, description], (err, result) => {
+    db.query("INSERT INTO maintenancetickets (property_id, tenant_id, title, description, status) VALUES (?, ?, ?, ?, 'Pending')", 
+    [property_id, tenant_id, title, description], (err, result) => {
         if (err) return res.status(500).json(err);
         res.status(201).json({ id: result.insertId, ...req.body });
     });
 });
 
-// Rruga e përditësuar: Kur mbyllet tiketa, krijohet transaksioni automatik
 app.put('/api/maintenance/:id', (req, res) => {
     const { status, cost, title } = req.body;
-    
-    const updateQuery = "UPDATE maintenancetickets SET status = ? WHERE id = ?";
-    db.query(updateQuery, [status, req.params.id], (err, result) => {
+    db.query("UPDATE maintenancetickets SET status = ? WHERE id = ?", [status, req.params.id], (err, result) => {
         if (err) return res.status(500).json(err);
         
-        // Nëse statusi bëhet Resolved dhe ka kosto, e hedhim te tabelën e financave
         if (status === 'Resolved' && cost > 0) {
-            const insertExpenseSql = "INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, NOW())";
             const description = `Riparim automatik: ${title || 'Tiketë Mirëmbajtjeje'}`;
-            
-            db.query(insertExpenseSql, ['Maintenance', cost, description], (err) => {
+            db.query("INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, NOW())", 
+            ['Maintenance', cost, description], (err) => {
                 if (err) return res.status(500).json(err);
                 return res.status(200).json({ message: "Statusi u ndryshua dhe u regjistrua në financa!" });
             });
@@ -283,7 +269,6 @@ app.delete('/api/maintenance/:id', (req, res) => {
     });
 });
 
-// --- 📊 2. CRUD: AGENCY EXPENSES ---
 app.get('/api/expenses', (req, res) => {
     db.query("SELECT * FROM agencyexpenses ORDER BY expense_date DESC", (err, results) => {
         if (err) return res.status(500).json(err);
@@ -293,8 +278,8 @@ app.get('/api/expenses', (req, res) => {
 
 app.post('/api/expenses', (req, res) => {
     const { category, amount, description, expense_date } = req.body;
-    const sql = "INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, ?)";
-    db.query(sql, [category, amount, description, expense_date], (err, result) => {
+    db.query("INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, ?)", 
+    [category, amount, description, expense_date], (err, result) => {
         if (err) return res.status(500).json(err);
         res.status(201).json({ id: result.insertId, ...req.body });
     });
@@ -307,7 +292,6 @@ app.delete('/api/expenses/:id', (req, res) => {
     });
 });
 
-// Llogaritja e saktë e vlerave me COALESCE për kutitë financiare
 app.get('/api/financial-summary', (req, res) => {
     const queryTotalPayments = "SELECT COALESCE(SUM(amount), 0) as total_income FROM payments WHERE status = 'PAID'";
     const queryTotalExpenses = "SELECT COALESCE(SUM(amount), 0) as total_expenses FROM agencyexpenses";
@@ -319,7 +303,6 @@ app.get('/api/financial-summary', (req, res) => {
             if (err) return res.status(500).json(err);
 
             const dbIncome = parseFloat(incomeRes[0].total_income);
-            // Nëse s'kemi pagesa të kryera ende në sistem, vendosim $180,000 si Gross Revenue testuese për projekt
             const grossRevenue = dbIncome > 0 ? dbIncome : 180000; 
 
             const totalExpenses = parseFloat(expenseRes[0].total_expenses);
@@ -334,7 +317,6 @@ app.get('/api/financial-summary', (req, res) => {
     });
 });
 
-const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server started on http://localhost:${PORT}`);
 });

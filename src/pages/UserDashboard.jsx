@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, CheckCircle, Shield, Calendar, Bell, X, User, Star, MessageSquare, AlertCircle, Plus, Search, MapPin } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 import UserProfile from '../components/UserProfile';
 import UserFavorites from '../components/UserFavorites';
@@ -32,11 +33,22 @@ export default function UserDashboard({ onBack }) {
   const [comment, setComment] = useState("");
   const [ratingName, setRatingName] = useState("");
   const [agentName, setAgentName] = useState(""); 
+
+  // --- MERGED ALERT & STORY STATES ---
   const [alertData, setAlertData] = useState({ city: '', maxPrice: '' });
   const [newStory, setNewStory] = useState({ text: '', client: '', isAnonymous: false });
-  const [testimonials, setTestimonials] = useState([
-    { id: 1, text: "Platforma Find Home më ndihmoi të gjej shtëpinë time të ëndrrave!", client: "Klient i lumtur" }
-  ]);
+  const [testimonials, setTestimonials] = useState([]);
+
+  // Fetch from DB on load
+  useEffect(() => {
+    apiFetch('/api/testimonials')
+      .then((data) => setTestimonials(data.map((t) => ({
+        id: t.id,
+        text: t.teksti,
+        client: t.klienti_emri,
+      }))))
+      .catch(console.error);
+  }, []);
 
   // --- DATA & LOGIC ---
   const allLocations = ["Prishtinë", "Prizren", "Pejë", "Gjakovë", "Mitrovicë", "Ferizaj", "Gjilan", "Podujevë"];
@@ -53,23 +65,84 @@ export default function UserDashboard({ onBack }) {
 
   const handleSubmitRating = (e) => {
     e.preventDefault();
-    if (!agentName.trim()) { alert("Ju lutem plotësoni emrin e agjentit!"); return; }
-    alert("Faleminderit! Vlerësimi për " + agentName + " u dërgua me sukses.");
-    setRating(0); setComment(""); setRatingName(""); setAgentName("");
+
+    if (!agentName.trim()) {
+      alert("Ju lutem plotësoni emrin e agjentit!");
+      return;
+    }
+
+    if (rating === 0 && comment.trim() === "") {
+      alert("Ju lutem vlerësoni me yje ose shkruani një koment!");
+      return;
+    }
+
+    // Backend Connection
+    apiFetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agent_id: 1,
+        client_id: 1,
+        vleresimi: rating,
+        komenti: comment,
+      }),
+    })
+      .then(() => alert("Faleminderit! Vlerësimi për " + agentName + " u dërgua me sukses."))
+      .catch((err) => alert(err.message));
+
+    setRating(0);
+    setComment("");
+    setRatingName("");
+    setAgentName("");
   };
 
   const handleSaveAlert = () => {
-    if (!alertData.city.trim() && !alertData.maxPrice.trim()) { alert("Ju lutemi plotësoni qytetin ose çmimin!"); return; }
-    alert("Alarmi u ruajt me sukses!");
-    setIsAlertModalOpen(false);
-    setAlertData({ city: '', maxPrice: '' });
+    if (!alertData.city.trim() && !alertData.maxPrice.trim()) {
+      alert("Ju lutemi plotësoni qytetin ose çmimin maksimal!");
+      return;
+    }
+
+    // Backend Connection
+    apiFetch('/api/search-alerts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: 1,
+        qyteti: alertData.city,
+        cmimi_max: alertData.maxPrice || null,
+      }),
+    })
+      .then(() => {
+        alert("Alarmi u ruajt me sukses!");
+        setIsAlertModalOpen(false);
+        setAlertData({ city: '', maxPrice: '' });
+      })
+      .catch((err) => alert(err.message));
   };
 
   const handleSaveStory = () => {
-    if (!newStory.text.trim()) { alert("Shkruaj tekstin e historisë!"); return; }
-    setTestimonials([...testimonials, { id: Date.now(), text: newStory.text, client: newStory.isAnonymous ? "Anonim" : (newStory.client || "Përdorues") }]);
-    setIsStoryModalOpen(false);
-    setNewStory({ text: '', client: '', isAnonymous: false });
+    if (!newStory.text.trim()) {
+      alert("Shkruaj tekstin e historisë!");
+      return;
+    }
+
+    const finalName = newStory.isAnonymous ? "Anonim" : (newStory.client || "Përdorues");
+
+    // Backend Connection
+    apiFetch('/api/testimonials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ klienti_emri: finalName, teksti: newStory.text }),
+    })
+      .then((created) => {
+        setTestimonials([
+          ...testimonials,
+          { id: created.id, text: newStory.text, client: finalName },
+        ]);
+        setIsStoryModalOpen(false);
+        setNewStory({ text: '', client: '', isAnonymous: false });
+      })
+      .catch((err) => alert(err.message));
   };
 
   return (
@@ -127,7 +200,7 @@ export default function UserDashboard({ onBack }) {
                             onClick={() => setSelectedLocation(loc)}
                             className={`p-3 cursor-pointer hover:bg-zinc-800 flex items-center gap-2 ${selectedLocation === loc ? 'bg-zinc-800 text-white font-bold' : 'text-zinc-400'}`}
                         >
-                           <MapPin size={16}/> {loc}
+                            <MapPin size={16}/> {loc}
                         </div>
                     ))
                 ) : (

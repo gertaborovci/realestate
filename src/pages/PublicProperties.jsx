@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square } from 'lucide-react';
+import { API_BASE } from '../lib/api';
 
 const PublicProperties = ({ onNavigate, onBack }) => {
   const [properties, setProperties] = useState([]);
@@ -41,7 +42,7 @@ const PublicProperties = ({ onNavigate, onBack }) => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/properties');
+        const response = await fetch(`${API_BASE}/api/properties`);
         const data = await response.json();
         setProperties(data);
 
@@ -49,11 +50,11 @@ const PublicProperties = ({ onNavigate, onBack }) => {
         await Promise.all(
           data.map(async (property) => {
             try {
-              const imgRes = await fetch(`http://localhost:5000/api/properties/${property.id}/images`);
+              const imgRes = await fetch(`${API_BASE}/api/properties/${property.id}/images`);
               const imgs = await imgRes.json();
               if (imgs && imgs.length > 0) {
                 const mainImg = imgs.find((img) => img.eshte_kryesore) || imgs[0];
-                imageMap[property.id] = `http://localhost:5000${mainImg.image_url}`;
+                imageMap[property.id] = `${API_BASE}${mainImg.image_url}`;
               }
             } catch (err) {}
           })
@@ -132,8 +133,8 @@ const PublicProperties = ({ onNavigate, onBack }) => {
     setCurrentImageIndex(0);
     try {
       const [imagesRes, featuresRes] = await Promise.all([
-        fetch(`http://localhost:5000/api/properties/${property.id}/images`),
-        fetch(`http://localhost:5000/api/properties/${property.id}/features`)
+        fetch(`${API_BASE}/api/properties/${property.id}/images`),
+        fetch(`${API_BASE}/api/properties/${property.id}/features`)
       ]);
       const images = await imagesRes.json();
       const features = await featuresRes.json();
@@ -209,7 +210,6 @@ const PublicProperties = ({ onNavigate, onBack }) => {
   if (loading) return <div className="min-h-screen w-full bg-[#050505] flex items-center justify-center text-white text-2xl font-black tracking-widest uppercase">Loading properties...</div>;
 
   return (
-    // Changed to h-screen and overflow-y-auto to activate the scroll listener properly
     <div ref={scrollRef} className="h-screen w-full bg-black text-white font-sans overflow-y-auto overflow-x-hidden flex flex-col">
       <div ref={pageTopRef} className="absolute top-0 w-full h-1" />
       
@@ -254,7 +254,7 @@ const PublicProperties = ({ onNavigate, onBack }) => {
             <button onClick={() => setSelectedProperty(null)} className="flex items-center gap-3 text-[10px] font-black tracking-[0.3em] uppercase text-white/50 hover:text-white transition-colors mb-8"><ArrowLeft size={16} /> Back to Listings</button>
             
             <div className="h-[500px] w-full rounded-[50px] overflow-hidden border border-white/10 relative shadow-2xl mb-12 bg-black group">
-              <img src={gallery.length > 0 ? `http://localhost:5000${gallery[currentImageIndex].image_url}` : (mainImages[selectedProperty.id] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')} alt={selectedProperty.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80" />
+              <img src={gallery.length > 0 ? `${API_BASE}${gallery[currentImageIndex].image_url}` : (mainImages[selectedProperty.id] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')} alt={selectedProperty.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80" />
               {gallery.length > 1 && (
                 <>
                   <button onClick={() => setCurrentImageIndex((prev) => prev === 0 ? gallery.length - 1 : prev - 1)} className="absolute left-8 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-md p-4 rounded-full hover:bg-black text-white z-30 transition-all hover:scale-110"><ChevronLeft size={24} /></button>

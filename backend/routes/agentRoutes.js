@@ -1,4 +1,18 @@
 const express = require('express');
+<<<<<<< HEAD
+const { asyncHandler } = require('../middleware/errorHandler');
+const agentController = require('../controllers/agentController');
+
+const router = express.Router();
+
+router.get('/', asyncHandler(agentController.getAll));
+router.get('/:id', asyncHandler(agentController.getById));
+router.post('/', asyncHandler(agentController.create));
+router.put('/:id', asyncHandler(agentController.update));
+router.delete('/:id', asyncHandler(agentController.remove));
+
+module.exports = router;
+=======
 const router = express.Router();
 const db = require('../db');
 
@@ -39,3 +53,4 @@ router.delete('/:id', (req, res) => {
 });
 
 module.exports = router;
+>>>>>>> 3c9ebc6bc7082101a6d08ac308d830ba61476dbc
