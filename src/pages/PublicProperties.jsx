@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square } from 'lucide-react';
+import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart } from 'lucide-react';
 import { API_BASE } from '../lib/api';
 
-const PublicProperties = ({ onNavigate, onBack }) => {
+const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened }) => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -145,6 +145,17 @@ const PublicProperties = ({ onNavigate, onBack }) => {
     }
   };
 
+  // Auto-open a specific property when arriving from the favorites page
+  useEffect(() => {
+    if (initialPropertyId && properties.length > 0) {
+      const prop = properties.find((p) => p.id === Number(initialPropertyId));
+      if (prop) {
+        openPropertyDetails(prop);
+        if (onPropertyOpened) onPropertyOpened();
+      }
+    }
+  }, [initialPropertyId, properties]);
+
   const isActivelyFiltering = searchQuery !== "" || filterType !== "ALL" || minPrice > 0 || maxPrice < MAX_SLIDER_PRICE;
   
   const renderDynamicCategories = () => {
@@ -181,31 +192,46 @@ const PublicProperties = ({ onNavigate, onBack }) => {
     );
   };
 
-  const PropertyCard = ({ property }) => (
-    <div onClick={() => openPropertyDetails(property)} className="group cursor-pointer relative bg-[#0a0a0a] rounded-[40px] border border-white/5 overflow-hidden hover:shadow-2xl hover:border-white/20 transition-all duration-500 hover:-translate-y-2 flex flex-col h-full">
-      <div className="h-72 w-full overflow-hidden relative transition-all duration-700">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent z-10" />
-        <img src={mainImages[property.id] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920'} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
-        <div className="absolute top-6 left-6 bg-white text-black px-4 py-2 rounded-full font-black tracking-tighter text-sm z-20 shadow-xl">€{Number(property.price).toLocaleString()}</div>
-        <div className={`absolute top-6 right-6 px-4 py-2 rounded-full text-[9px] font-black tracking-widest uppercase z-20 border border-white/10 ${getStatusBadgeStyle(property.status)}`}>{getStatusDisplay(property.status)}</div>
-      </div>
-      <div className="p-8 relative z-20 -mt-10 flex-1 flex flex-col justify-between">
-        <div>
-          <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 mb-2 flex items-center gap-2"><MapPin size={12} /> {property.location}</p>
-          <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 line-clamp-1">{property.title}</h3>
-          <div className="flex gap-6 text-white/60 text-sm font-medium mb-6">
-            <div className="flex items-center gap-2"><DoorOpen size={16} /> {property.rooms || 0}</div>
-            <div className="flex items-center gap-2"><Bath size={16} /> {property.bathrooms || 0}</div>
-            <div className="flex items-center gap-2"><Maximize size={16} /> {property.area}m²</div>
+  const PropertyCard = ({ property }) => {
+    const isFavorited = favorites.some((f) => f.id === property.id);
+    const handleFavoriteToggle = (e) => {
+      e.stopPropagation();
+      if (onToggleFavorite) onToggleFavorite({ ...property, mainImage: mainImages[property.id] });
+    };
+    return (
+      <div onClick={() => openPropertyDetails(property)} className="group cursor-pointer relative bg-[#0a0a0a] rounded-[40px] border border-white/5 overflow-hidden hover:shadow-2xl hover:border-white/20 transition-all duration-500 hover:-translate-y-2 flex flex-col h-full">
+        <div className="h-72 w-full overflow-hidden relative transition-all duration-700">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent z-10" />
+          <img src={mainImages[property.id] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920'} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+          <div className="absolute top-6 left-6 bg-white text-black px-4 py-2 rounded-full font-black tracking-tighter text-sm z-20 shadow-xl">€{Number(property.price).toLocaleString()}</div>
+          <div className={`absolute top-6 right-6 px-4 py-2 rounded-full text-[9px] font-black tracking-widest uppercase z-20 border border-white/10 ${getStatusBadgeStyle(property.status)}`}>{getStatusDisplay(property.status)}</div>
+        </div>
+        <div className="p-8 relative z-20 -mt-10 flex-1 flex flex-col justify-between">
+          <div>
+            <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 mb-2 flex items-center gap-2"><MapPin size={12} /> {property.location}</p>
+            <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 line-clamp-1">{property.title}</h3>
+            <div className="flex gap-6 text-white/60 text-sm font-medium mb-6">
+              <div className="flex items-center gap-2"><DoorOpen size={16} /> {property.rooms || 0}</div>
+              <div className="flex items-center gap-2"><Bath size={16} /> {property.bathrooms || 0}</div>
+              <div className="flex items-center gap-2"><Maximize size={16} /> {property.area}m²</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between border-t border-white/5 pt-6 mt-4 group-hover:border-white/20 transition-colors">
+            <p className="text-[10px] font-bold tracking-widest text-white/30 uppercase">View Details</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleFavoriteToggle}
+                className={`p-2.5 rounded-full transition-all hover:scale-110 border ${isFavorited ? 'bg-red-500/20 border-red-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+              >
+                <Heart size={16} className={isFavorited ? 'text-red-500 fill-red-500' : 'text-white/40'} />
+              </button>
+              <div className="bg-white text-black p-3 rounded-full group-hover:scale-110 transition-transform"><ChevronRight size={16} /></div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-white/5 pt-6 mt-4 group-hover:border-white/20 transition-colors">
-          <p className="text-[10px] font-bold tracking-widest text-white/30 uppercase">View Details</p>
-          <div className="bg-white text-black p-3 rounded-full group-hover:scale-110 transition-transform"><ChevronRight size={16} /></div>
-        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) return <div className="min-h-screen w-full bg-[#050505] flex items-center justify-center text-white text-2xl font-black tracking-widest uppercase">Loading properties...</div>;
 

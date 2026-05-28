@@ -19,11 +19,48 @@ import {
   DASHBOARD_VIEWS,
 } from './lib/auth';
 
-const VIEWS_WITHOUT_NAVBAR = [DASHBOARD_VIEWS.admin, DASHBOARD_VIEWS.agent];
+// These views render their own built-in navbar — don't add a second one on top
+const VIEWS_WITHOUT_NAVBAR = [
+  DASHBOARD_VIEWS.admin,   // 'dashboard'
+  DASHBOARD_VIEWS.agent,   // 'agent-dashboard'
+  'hero',                  // RealEstateHero has its own nav
+  'properties',            // PublicProperties has its own nav
+  'agents',                // PublicAgents has its own nav
+  'agent-details',         // AgentPages has its own nav
+];
 
 function App() {
   const [view, setView] = useState('hero');
   const [selectedAgentId, setSelectedAgentId] = useState(null);
+
+  // --- FAVORITES (persisted in localStorage) ---
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('kn_favorites') || '[]'); } catch { return []; }
+  });
+  const [initialPropertyId, setInitialPropertyId] = useState(null);
+
+  const toggleFavorite = (property) => {
+    setFavorites((prev) => {
+      const updated = prev.some((f) => f.id === property.id)
+        ? prev.filter((f) => f.id !== property.id)
+        : [...prev, property];
+      localStorage.setItem('kn_favorites', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeFromFavorites = (id) => {
+    setFavorites((prev) => {
+      const updated = prev.filter((f) => f.id !== id);
+      localStorage.setItem('kn_favorites', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const viewPropertyDetail = (propertyId) => {
+    setInitialPropertyId(propertyId);
+    navigateTo('properties');
+  };
 
   const navigateTo = (newView, options = {}) => {
     if (options.agentId != null) {
@@ -83,7 +120,14 @@ function App() {
         {view === 'hero' && <RealEstateHero onNavigate={navigateTo} />}
 
         {view === 'properties' && (
-          <PublicProperties onNavigate={navigateTo} onBack={() => navigateTo('hero')} />
+          <PublicProperties
+            onNavigate={navigateTo}
+            onBack={() => navigateTo('hero')}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+            initialPropertyId={initialPropertyId}
+            onPropertyOpened={() => setInitialPropertyId(null)}
+          />
         )}
 
         {/* Public Agents Gallery (Shtuar nga shoku i skuadrës) */}
@@ -96,7 +140,12 @@ function App() {
         )}
 
         {(view === 'user-dashboard' || view === 'user-profile') && (
-          <UserDashboard onBack={() => navigateTo('hero')} />
+          <UserDashboard
+            onBack={() => navigateTo('hero')}
+            favorites={favorites}
+            onRemoveFavorite={removeFromFavorites}
+            onViewProperty={viewPropertyDetail}
+          />
         )}
 
         {view === DASHBOARD_VIEWS.agent && canAccessAgentDashboard() && (

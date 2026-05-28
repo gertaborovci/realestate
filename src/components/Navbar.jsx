@@ -8,7 +8,7 @@ const Navbar = ({ onNavigate, isScrolled, currentView }) => {
     { name: 'RENT', view: 'properties' },
     { name: 'SELL', view: 'hero' },
     { name: 'MORTGAGE', view: 'hero' },
-    { name: 'AGENTS', view: 'agent-details' },
+    { name: 'AGENTS', view: 'agents' },
   ];
 
   return (

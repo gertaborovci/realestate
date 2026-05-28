@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const mysql = require('mysql2'); // E shtuar për të mos lejuar serverin të krashte!
+const mysql = require('mysql2'); 
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // ==========================================
-// LIDHJA ME DATABAZËN (Nga kodi i shokut)
+// LIDHJA ME DATABAZËN 
 // ==========================================
 const db = mysql.createConnection({
     host: '127.0.0.1',
@@ -67,16 +67,42 @@ db.connect((err) => {
         if (!err) console.log('✅ propertyimages table is ready!');
         else console.error('Error creating propertyimages table:', err);
     });
+
+    // Auto-create users table (needed for auth / login)
+    const createUsersTableQuery = `
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(100) NOT NULL,
+            email VARCHAR(150) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            role ENUM('admin','agent','user') NOT NULL DEFAULT 'user',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `;
+    db.query(createUsersTableQuery, (err) => {
+        if (!err) console.log('✅ users table is ready!');
+        else console.error('Error creating users table:', err);
+    });
 });
 
 // ==========================================
-// ROUTES QË ZGJIDHËM MË PARË (Për të mos i humbur)
+// ROUTES
 // ==========================================
-const agentRoutes = require('./routes/agentRoutes');
-app.use('/api/agents', agentRoutes);
+const { errorHandler } = require('./middleware/errorHandler');
 
-const featureRoutes = require('./routes/featureRoutes.js')(db);
-app.use('/api/properties', featureRoutes);
+const authRoutes        = require('./routes/authRoutes');
+const agentRoutes       = require('./routes/agentRoutes');
+const featureRoutes     = require('./routes/featureRoutes.js');
+const userRoutes        = require('./routes/userRoutes');
+const testimonialRoutes = require('./routes/testimonialRoutes');
+const searchAlertRoutes = require('./routes/searchAlertRoutes');
+
+app.use('/api/auth',          authRoutes);
+app.use('/api/agents',        agentRoutes);
+app.use('/api/properties',    featureRoutes);
+app.use('/api/users',         userRoutes);
+app.use('/api/testimonials',  testimonialRoutes);
+app.use('/api/search-alerts', searchAlertRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT
@@ -114,7 +140,7 @@ app.post('/api/properties', (req, res) => {
 
 app.put('/api/properties/:id', (req, res) => {
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-    const sql = "UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = ?, bathrooms = ?, area = ? WHERE id = ?";
+    const sql = "UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = bathrooms = ?, area = ? WHERE id = ?";
     db.query(sql, [title, price, location, status, type, image, rooms, bathrooms, area, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json({ message: "U përditësua me sukses!" });
@@ -316,6 +342,9 @@ app.get('/api/financial-summary', (req, res) => {
         });
     });
 });
+
+// Global error handler (must be last middleware)
+app.use(errorHandler);
 
 app.listen(PORT, () => {
     console.log(`🚀 Server started on http://localhost:${PORT}`);

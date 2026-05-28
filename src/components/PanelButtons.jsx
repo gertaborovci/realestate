@@ -3,6 +3,7 @@ import { Shield, ShieldCheck } from 'lucide-react';
 import { canAccessAdminDashboard, canAccessAgentDashboard } from '../lib/auth';
 
 const PanelButtons = ({ onNavigate, currentView }) => {
+  // Only show each button when the logged-in user has the matching role
   const showAdmin = canAccessAdminDashboard() && currentView !== 'dashboard';
   const showAgent = canAccessAgentDashboard() && currentView !== 'agent-dashboard';
 
@@ -24,16 +25,17 @@ const PanelButtons = ({ onNavigate, currentView }) => {
           </span>
         </button>
       )}
+
       {showAdmin && (
         <button
           type="button"
           onClick={() => onNavigate('dashboard')}
-          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 px-6 py-3 rounded-full"
+          className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 px-6 py-3 rounded-full hover:bg-white/20 transition-all shadow-2xl"
         >
           <div className="bg-white p-2 rounded-full text-black">
             <Shield size={18} />
           </div>
-          <span className="font-bold text-[10px] tracking-widest pr-1 text-white">
+          <span className="font-bold text-[10px] tracking-widest pr-1 text-white uppercase">
             Admin Panel
           </span>
         </button>
