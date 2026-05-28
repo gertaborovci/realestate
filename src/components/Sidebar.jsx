@@ -6,7 +6,8 @@ import {
   Settings,
   LogOut,
   Users,
-  UserCog
+  UserCog,
+  Calendar
 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
@@ -28,6 +29,12 @@ const Sidebar = ({ onTabChange, activeTab }) => {
       id: 'transactions',
       icon: <Building2 size={18} />,
       label: 'TRANSACTIONS'
+    },
+
+    {
+      id: 'visits',
+      icon: <Calendar size={18} />,
+      label: 'VISITS'
     },
 
     {

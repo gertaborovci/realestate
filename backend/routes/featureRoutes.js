@@ -1,51 +1,32 @@
 const express = require('express');
+const db = require('../db');
+const { asyncHandler } = require('../middleware/errorHandler');
+
 const router = express.Router();
 
-module.exports = (db) => {
+router.get('/:id/features', asyncHandler(async (req, res) => {
+  const [results] = await db.query('SELECT * FROM propertyfeatures WHERE property_id = ?', [req.params.id]);
+  res.status(200).json(results);
+}));
 
-    // 1. GET: Merr të gjitha veçoritë për një pronë specifike
-    router.get('/:id/features', (req, res) => {
-        const sql = "SELECT * FROM propertyfeatures WHERE property_id = ?";
-        db.query(sql, [req.params.id], (err, results) => {
-            if (err) return res.status(500).json({ error: "Gabim në databazë" });
-            res.status(200).json(results);
-        });
-    });
+router.post('/:id/features', asyncHandler(async (req, res) => {
+  const { emertimi, vlera } = req.body;
+  const [result] = await db.query(
+    'INSERT INTO propertyfeatures (property_id, emertimi, vlera) VALUES (?, ?, ?)',
+    [req.params.id, emertimi, vlera]
+  );
+  res.status(201).json({ message: 'Feature added successfully.', id: result.insertId });
+}));
 
-    // 2. POST: Shto një veçori të re (psh. Ashensor: Po)
-    router.post('/:id/features', (req, res) => {
-        const { emertimi, vlera } = req.body;
-        const property_id = req.params.id;
+router.put('/features/:feature_id', asyncHandler(async (req, res) => {
+  const { emertimi, vlera } = req.body;
+  await db.query('UPDATE propertyfeatures SET emertimi = ?, vlera = ? WHERE id = ?', [emertimi, vlera, req.params.feature_id]);
+  res.status(200).json({ message: 'Feature updated successfully.' });
+}));
 
-        const sql = "INSERT INTO propertyfeatures (property_id, emertimi, vlera) VALUES (?, ?, ?)";
-        db.query(sql, [property_id, emertimi, vlera], (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(201).json({ message: "Veçoria u shtua me sukses!", id: result.insertId });
-        });
-    });
+router.delete('/features/:feature_id', asyncHandler(async (req, res) => {
+  await db.query('DELETE FROM propertyfeatures WHERE id = ?', [req.params.feature_id]);
+  res.status(200).json({ message: 'Feature deleted successfully.' });
+}));
 
-    // 3. PUT: Ndrysho një veçori ekzistuese
-    router.put('/features/:feature_id', (req, res) => {
-        const { emertimi, vlera } = req.body;
-        const feature_id = req.params.feature_id;
-
-        const sql = "UPDATE propertyfeatures SET emertimi = ?, vlera = ? WHERE id = ?";
-        db.query(sql, [emertimi, vlera, feature_id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(200).json({ message: "Veçoria u përditësua!" });
-        });
-    });
-
-    // 4. DELETE: Fshi një veçori
-    router.delete('/features/:feature_id', (req, res) => {
-        const feature_id = req.params.feature_id;
-
-        const sql = "DELETE FROM propertyfeatures WHERE id = ?";
-        db.query(sql, [feature_id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(200).json({ message: "Veçoria u fshi!" });
-        });
-    });
-
-    return router;
-};
+module.exports = router;

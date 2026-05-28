@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../lib/api';
 
 import {
   Heart,
@@ -75,14 +76,17 @@ export default function UserDashboard({ onBack }) {
   });
 
   // STORIES
-  const [testimonials, setTestimonials] = useState([
-    {
-      id: 1,
-      text:
-        "Platforma Find Home më ndihmoi të gjej shtëpinë time të ëndrrave!",
-      client: "Klient i lumtur"
-    }
-  ]);
+  const [testimonials, setTestimonials] = useState([]);
+
+  useEffect(() => {
+    apiFetch('/api/testimonials')
+      .then((data) => setTestimonials(data.map((t) => ({
+        id: t.id,
+        text: t.teksti,
+        client: t.klienti_emri,
+      }))))
+      .catch(console.error);
+  }, []);
 
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
 
@@ -143,7 +147,18 @@ export default function UserDashboard({ onBack }) {
       return;
     }
 
-    alert("Faleminderit! Vlerësimi për " + agentName + " u dërgua me sukses.");
+    apiFetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agent_id: 1,
+        client_id: 1,
+        vleresimi: rating,
+        komenti: comment,
+      }),
+    })
+      .then(() => alert("Faleminderit! Vlerësimi për " + agentName + " u dërgua me sukses."))
+      .catch((err) => alert(err.message));
 
     setRating(0);
     setComment("");
@@ -159,7 +174,17 @@ export default function UserDashboard({ onBack }) {
       return;
     }
 
-    alert("Alarmi u ruajt me sukses!");
+    apiFetch('/api/search-alerts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: 1,
+        qyteti: alertData.city,
+        cmimi_max: alertData.maxPrice || null,
+      }),
+    })
+      .then(() => alert("Alarmi u ruajt me sukses!"))
+      .catch((err) => alert(err.message));
 
     setIsAlertModalOpen(false);
 
@@ -182,14 +207,18 @@ export default function UserDashboard({ onBack }) {
         ? "Anonim"
         : (newStory.client || "Përdorues");
 
-    setTestimonials([
-      ...testimonials,
-      {
-        id: Date.now(),
-        text: newStory.text,
-        client: finalName
-      }
-    ]);
+    apiFetch('/api/testimonials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ klienti_emri: finalName, teksti: newStory.text }),
+    })
+      .then((created) => {
+        setTestimonials([
+          ...testimonials,
+          { id: created.id, text: newStory.text, client: finalName },
+        ]);
+      })
+      .catch((err) => alert(err.message));
 
     setIsStoryModalOpen(false);
 

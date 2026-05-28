@@ -1,44 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Trash2, UserCheck } from 'lucide-react';
+import { API_BASE, apiFetch } from '../lib/api';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [editingUserId, setEditingUserId] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
 
-  useEffect(() => {
-    // Përdorim çelës të ri që të injorohet memoria e vjetër e gabuar
-    const savedUsers = localStorage.getItem('final_realestate_users');
-    
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      const mockUsers = [
-        { id: 1, username: 'Gerta Borovci', email: 'gerta@ubt-uni.net', role: 'client' },
-        { id: 2, username: 'Alba Rudari', email: 'alba@ubt-uni.net', role: 'admin' },
-        { id: 3, username: 'Eljesa Bytyqi', email: 'eljesa@ubt-uni.net', role: 'agent' },
-        { id: 4, username: 'Elza Shabani', email: 'elza@ubt-uni.net', role: 'client' }
-      ];
-      setUsers(mockUsers);
-      localStorage.setItem('final_realestate_users', JSON.stringify(mockUsers));
+  const loadUsers = async () => {
+    try {
+      const data = await apiFetch('/api/users');
+      setUsers(data);
+    } catch (error) {
+      console.error('Failed to load users:', error);
     }
-  }, []);
-
-  const handleRoleChangeSubmit = (id) => {
-    const updatedUsers = users.map(user => 
-      user.id === id ? { ...user, role: selectedRole } : user
-    );
-    setUsers(updatedUsers);
-    localStorage.setItem('final_realestate_users', JSON.stringify(updatedUsers));
-    setEditingUserId(null);
-    setSelectedRole('');
   };
 
-  const handleDeleteUser = (id) => {
-    if (window.confirm('⚠️ Are you sure you want to delete this user from the system?')) {
-      const updatedUsers = users.filter(user => user.id !== id);
-      setUsers(updatedUsers);
-      localStorage.setItem('final_realestate_users', JSON.stringify(updatedUsers));
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleRoleChangeSubmit = async (id) => {
+    try {
+      await apiFetch(`/api/users/${id}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: selectedRole }),
+      });
+      await loadUsers();
+      setEditingUserId(null);
+      setSelectedRole('');
+    } catch (error) {
+      alert(error.message || 'Failed to update role.');
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm('⚠️ Are you sure you want to delete this user from the system?')) return;
+    try {
+      await fetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE' });
+      await loadUsers();
+    } catch (error) {
+      alert(error.message || 'Failed to delete user.');
     }
   };
 
@@ -79,6 +82,7 @@ const ManageUsers = () => {
                       <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase ${
                         user.role === 'admin' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
                         user.role === 'agent' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                        user.role === 'client' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' :
                         'bg-gray-500/10 text-gray-400 border border-gray-500/20'
                       }`}>
                         {user.role}
@@ -93,7 +97,7 @@ const ManageUsers = () => {
                             onChange={(e) => setSelectedRole(e.target.value)}
                             className="bg-[#1a1a1a] border border-gray-800 text-white px-3 py-1.5 rounded-xl text-xs focus:outline-none cursor-pointer"
                           >
-                            <option value="client">Client / Buyer</option>
+                            <option value="user">Client / Buyer</option>
                             <option value="agent">Real Estate Agent</option>
                             <option value="admin">Admin</option>
                           </select>

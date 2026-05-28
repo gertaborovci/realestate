@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE } from './lib/api';
+
+const api = axios.create({ baseURL: API_BASE });
 import { Wrench, BarChart3, DollarSign, TrendingUp } from 'lucide-react';
 
 export default function TransactionDashboard() {
@@ -16,14 +19,14 @@ export default function TransactionDashboard() {
 
   const fetchExpenses = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/expenses');
+      const res = await api.get('/api/expenses');
       setExpenses(res.data);
     } catch (err) { console.error(err); }
   };
 
   const fetchTickets = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/maintenance');
+      const res = await api.get('/api/maintenance');
       setTickets(res.data);
     } catch (err) { console.error(err); }
   };
@@ -36,7 +39,7 @@ export default function TransactionDashboard() {
   const handleExpenseSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/expenses', expense);
+      await api.post('/api/expenses', expense);
       alert("Shpenzimi u regjistrua me sukses!");
       setExpense({ category: 'Marketing', amount: '', description: '', expense_date: '' });
       fetchExpenses();
@@ -46,7 +49,7 @@ export default function TransactionDashboard() {
   const handleTicketSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/maintenance', ticket);
+      await api.post('/api/maintenance', ticket);
       alert("Tiketa e mirëmbajtjes u dërgua!");
       setTicket({ property_id: '', tenant_id: '1', title: '', description: '' });
       fetchTickets();
@@ -55,7 +58,7 @@ export default function TransactionDashboard() {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      await axios.put(`http://localhost:5000/api/maintenance/${id}`, { status: newStatus });
+      await api.put(`/api/maintenance/${id}`, { status: newStatus });
       fetchTickets();
     } catch (err) { console.error(err); }
   };

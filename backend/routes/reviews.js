@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Sigurohu që po e importon databazën saktë
+const db = require('../db');
 
 // Route për të marrë të gjitha vlerësimet
 router.get('/', (req, res) => {

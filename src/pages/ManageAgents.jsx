@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Edit2, Trash2, Eye } from 'lucide-react';
+import { API_BASE, apiFetch } from '../lib/api';
 
 const ManageAgents = ({ onViewProfile }) => {
   const [agents, setAgents] = useState([]);
@@ -17,71 +18,50 @@ const ManageAgents = ({ onViewProfile }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentAgentId, setCurrentAgentId] = useState(null);
 
-  useEffect(() => {
-    // 1. Lexojmë përdoruesit realë nga sistemi yt
-    const savedUsers = localStorage.getItem('realestate_users');
-    
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      const myRealUsers = [
-        { id: 1, username: 'Gerta Borovci', email: 'gerta@example.com' },
-        { id: 2, username: 'Alba Rudari', email: 'alba@example.com' },
-        { id: 3, username: 'Eljesa Bytyqi', email: 'eljesa@example.com' },
-        { id: 4, username: 'Elza Shabani', email: 'elza@example.com' }
-      ];
-      setUsers(myRealUsers);
-      localStorage.setItem('realestate_users', JSON.stringify(myRealUsers));
+  const loadData = async () => {
+    try {
+      const [usersData, agentsData] = await Promise.all([
+        apiFetch('/api/users'),
+        apiFetch('/api/agents'),
+      ]);
+      setUsers(usersData);
+      setAgents(agentsData);
+    } catch (error) {
+      console.error('Failed to load agents/users:', error);
     }
+  };
 
-    // 2. Lexojmë agjentët
-    const savedAgents = localStorage.getItem('my_agents_list');
-    if (savedAgents) {
-      setAgents(JSON.parse(savedAgents));
-    } else {
-      const defaultAgents = [
-        { id: 1, user_id: 3, username: 'Eljesa Bytyqi', license_number: 'LIC-2026-001', specialization: 'Sale', commission_percentage: '3.5', zone: 'Prishtinë', status: 'Active' }
-      ];
-      setAgents(defaultAgents);
-      localStorage.setItem('my_agents_list', JSON.stringify(defaultAgents));
-    }
+  useEffect(() => {
+    loadData();
   }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    let updatedAgents;
-
-    // Gjejmë përdoruesin e saktë të përzgjedhur nga lista bazuar në user_id e formës
-    const selectedUser = users.find(u => String(u.id) === String(formData.user_id));
-    const targetUsername = selectedUser ? selectedUser.username : 'Unknown User';
-
-    if (isEditing) {
-      // PËRMIRËSIMI: Përditësojmë të dhënat duke u siguruar që ruhet ose ndryshohet edhe username-i saktë
-      updatedAgents = agents.map(agent => 
-        agent.id === currentAgentId 
-          ? { ...agent, ...formData, username: targetUsername } 
-          : agent
-      );
-      setIsEditing(false);
-      setCurrentAgentId(null);
-    } else {
-      const newAgent = {
-        id: Date.now(),
-        ...formData,
-        username: targetUsername
-      };
-      updatedAgents = [...agents, newAgent];
+    try {
+      if (isEditing) {
+        await fetch(`${API_BASE}/api/agents/${currentAgentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        setIsEditing(false);
+        setCurrentAgentId(null);
+      } else {
+        await apiFetch('/api/agents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+      }
+      await loadData();
+      setFormData({ user_id: '', license_number: '', specialization: '', commission_percentage: '', zone: '', status: 'Active' });
+    } catch (error) {
+      alert(error.message || 'Failed to save agent.');
     }
-    
-    setAgents(updatedAgents);
-    localStorage.setItem('my_agents_list', JSON.stringify(updatedAgents));
-
-    // Resetojmë formën në gjendjen fillestare
-    setFormData({ user_id: '', license_number: '', specialization: '', commission_percentage: '', zone: '', status: 'Active' });
   };
 
   const handleEdit = (agent) => {
@@ -97,11 +77,13 @@ const ManageAgents = ({ onViewProfile }) => {
     });
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('⚠️ Are you sure you want to delete this agent?')) {
-      const updatedAgents = agents.filter(agent => agent.id !== id);
-      setAgents(updatedAgents);
-      localStorage.setItem('my_agents_list', JSON.stringify(updatedAgents));
+  const handleDelete = async (id) => {
+    if (!window.confirm('⚠️ Are you sure you want to delete this agent?')) return;
+    try {
+      await fetch(`${API_BASE}/api/agents/${id}`, { method: 'DELETE' });
+      await loadData();
+    } catch (error) {
+      alert(error.message || 'Failed to delete agent.');
     }
   };
 

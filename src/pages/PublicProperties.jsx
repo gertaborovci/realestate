@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, User, Menu, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { API_BASE } from '../lib/api';
 
 const PublicProperties = ({ onBack }) => {
   const [properties, setProperties] = useState([]);
@@ -26,7 +27,7 @@ const PublicProperties = ({ onBack }) => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/properties');
+        const response = await fetch(`${API_BASE}/api/properties`);
         const data = await response.json();
 
         setProperties(data);
@@ -35,12 +36,12 @@ const PublicProperties = ({ onBack }) => {
         await Promise.all(
           data.map(async (property) => {
             try {
-              const imgRes = await fetch(`http://localhost:5000/api/properties/${property.id}/images`);
+              const imgRes = await fetch(`${API_BASE}/api/properties/${property.id}/images`);
               const imgs = await imgRes.json();
 
               if (imgs && imgs.length > 0) {
                 const mainImg = imgs.find((img) => img.eshte_kryesore) || imgs[0];
-                imageMap[property.id] = `http://localhost:5000${mainImg.image_url}`;
+                imageMap[property.id] = `${API_BASE}${mainImg.image_url}`;
               }
             } catch (err) {
               console.error('Image fetch failed', err);
@@ -155,8 +156,8 @@ const PublicProperties = ({ onBack }) => {
     try {
       // Fetchojmë fotot DHE veçoritë në të njëjtën kohë
       const [imagesRes, featuresRes] = await Promise.all([
-        fetch(`http://localhost:5000/api/properties/${property.id}/images`),
-        fetch(`http://localhost:5000/api/properties/${property.id}/features`)
+        fetch(`${API_BASE}/api/properties/${property.id}/images`),
+        fetch(`${API_BASE}/api/properties/${property.id}/features`)
       ]);
       
       const images = await imagesRes.json();
@@ -180,38 +181,8 @@ const PublicProperties = ({ onBack }) => {
   return (
     <div ref={scrollRef} className="h-screen w-full bg-black overflow-y-auto scroll-smooth font-sans pb-20 text-white">
       
-      {/* NAVBAR */}
-      <nav className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-[100] transition-all duration-500 ${isScrolled ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-8'}`}>
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={onBack}>
-          <Building2 size={32} className="text-white group-hover:opacity-70 transition-opacity" />
-          <div className="flex flex-col">
-             <span className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none group-hover:opacity-70 transition-opacity">KosovaNest</span>
-          </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((item) => {
-            const isActive = (item === 'BUY' && filterType === 'BUY') || (item === 'RENT' && filterType === 'RENT');
-            return (
-              <button 
-                key={item} 
-                onClick={() => handleNavClick(item)} 
-                className={`text-white text-[10px] font-bold tracking-widest uppercase transition-all ${isActive ? 'opacity-100 border-b border-white pb-1' : 'opacity-60 hover:opacity-100'}`}
-              >
-                {item}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"><User size={20} className="text-white" /></div>
-          <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">Login</button>
-        </div>
-      </nav>
-
       {/* MAIN CONTENT */}
-      <main className="pt-48 px-8 md:px-12 max-w-[1600px] mx-auto text-left">
+      <main className="pt-8 px-8 md:px-12 max-w-[1600px] mx-auto text-left">
         <header className="mb-12 space-y-8">
           <div className="flex flex-col space-y-4">
             <button onClick={onBack} className="flex items-center gap-3 text-white/50 hover:text-white transition-all group w-max">
@@ -316,7 +287,7 @@ const PublicProperties = ({ onBack }) => {
               {/* Left Side: Images */}
               <div className="relative w-full md:w-1/2 h-64 md:h-auto bg-black">
                 <img
-                  src={gallery.length > 0 ? `http://localhost:5000${gallery[currentImageIndex].image_url}` : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920'}
+                  src={gallery.length > 0 ? `${API_BASE}${gallery[currentImageIndex].image_url}` : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920'}
                   alt=""
                   className="w-full h-full object-cover"
                 />
