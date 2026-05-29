@@ -3,7 +3,7 @@ import PropertyFeatures from './PropertyFeatures';
 import { API_BASE } from '../lib/api';
 import { ArrowLeft, Euro, MapPin, Image as ImageIcon, DoorOpen, Bath, Maximize, Activity, Home, UploadCloud, X, CheckCircle } from 'lucide-react';
 
-const AddProperty = ({ onBack, onAdd, editData }) => {
+const AddProperty = ({ onBack, onAdd, editData, agentId }) => {
   const [formData, setFormData] = useState({
     title: '', 
     price: '', 
@@ -39,7 +39,12 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({...formData, image: ''}), 
+        body: JSON.stringify({
+          ...formData,
+          image: '',
+          // Link property to this agent (only set on create; ignored on edit)
+          ...(agentId && !isEditing ? { agent_id: agentId } : {}),
+        }),
       });
 
       if (!response.ok) {

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart } from 'lucide-react';
-import { API_BASE } from '../lib/api';
+import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck } from 'lucide-react';
+import { API_BASE, apiFetch } from '../lib/api';
+import { getCurrentUser } from '../lib/auth';
+
+const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
 const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened }) => {
   const [properties, setProperties] = useState([]);
@@ -10,7 +13,21 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [gallery, setGallery] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mainImages, setMainImages] = useState({});
-  const [propertyFeatures, setPropertyFeatures] = useState([]); 
+  const [propertyFeatures, setPropertyFeatures] = useState([]);
+
+  // ── Schedule a Visit state ──────────────────────────────────────────────
+  const [visitDate,       setVisitDate]       = useState('');
+  const [visitTime,       setVisitTime]       = useState('');
+  const [visitSubmitting, setVisitSubmitting] = useState(false);
+  const [visitSuccess,    setVisitSuccess]    = useState(false);
+  const [visitError,      setVisitError]      = useState('');
+  const today = new Date().toISOString().split('T')[0];
+
+  // ── Initiate Purchase (20% deposit) state ───────────────────────────────
+  const [purchaseLoading,  setPurchaseLoading]  = useState(false);
+  const [purchaseSuccess,  setPurchaseSuccess]  = useState(false);
+  const [purchaseError,    setPurchaseError]    = useState('');
+  const [contractData,     setContractData]     = useState(null);
 
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
@@ -131,6 +148,9 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const openPropertyDetails = async (property) => {
     setSelectedProperty(property);
     setCurrentImageIndex(0);
+    // Reset visit form for fresh property
+    setVisitDate(''); setVisitTime(''); setVisitSuccess(false); setVisitError('');
+    setPurchaseSuccess(false); setPurchaseError(''); setContractData(null);
     try {
       const [imagesRes, featuresRes] = await Promise.all([
         fetch(`${API_BASE}/api/properties/${property.id}/images`),
@@ -157,7 +177,75 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   }, [initialPropertyId, properties]);
 
   const isActivelyFiltering = searchQuery !== "" || filterType !== "ALL" || minPrice > 0 || maxPrice < MAX_SLIDER_PRICE;
-  
+
+  // ── Schedule a Visit submit ─────────────────────────────────────────────
+  const handleVisitSubmit = async (e) => {
+    e.preventDefault();
+    if (!visitDate || !visitTime) {
+      setVisitError('Please select both a date and a time slot.');
+      return;
+    }
+    const user = getCurrentUser();
+    if (!user?.id) {
+      setVisitError('Please sign in to schedule a visit.');
+      return;
+    }
+    setVisitSubmitting(true);
+    setVisitError('');
+    try {
+      await apiFetch('/api/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_id: selectedProperty.id,
+          agent_id:    selectedProperty.agent_id || null,
+          user_id:     user.id,
+          visit_date:  visitDate,
+          visit_time:  visitTime,
+        }),
+      });
+      setVisitSuccess(true);
+    } catch (err) {
+      setVisitError(err.message || 'Failed to schedule visit. Please try again.');
+    } finally {
+      setVisitSubmitting(false);
+    }
+  };
+
+  // ── Initiate purchase handler ────────────────────────────────────────────
+  const handleInitiatePurchase = async () => {
+    const user = getCurrentUser();
+    if (!user?.id) {
+      setPurchaseError('Please sign in to initiate a purchase.');
+      return;
+    }
+    setPurchaseLoading(true);
+    setPurchaseError('');
+    try {
+      const result = await apiFetch('/api/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id:     user.id,
+          property_id: selectedProperty.id,
+          agent_id:    selectedProperty.agent_id || null,
+          type:        'Sale',
+        }),
+      });
+      setContractData(result);
+      setPurchaseSuccess(true);
+    } catch (err) {
+      // If a contract already exists, surface it gracefully
+      if (err.message?.includes('already exists')) {
+        setPurchaseError('You already have an active purchase contract for this property. Contact your agent for next steps.');
+      } else {
+        setPurchaseError(err.message || 'Failed to initiate purchase. Please try again.');
+      }
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
   const renderDynamicCategories = () => {
     if (!Array.isArray(properties) || properties.length === 0) return null;
 
@@ -321,14 +409,172 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                     <p className="text-xl text-white/70 leading-relaxed font-medium">{selectedProperty.description ? selectedProperty.description : `A beautiful property located in the heart of ${selectedProperty.location}. Contact our elite agents to schedule a viewing and learn more about this exclusive listing.`}</p>
                   </div>
                 )}
+
+                {/* ── Buy This Property — shown below the description, left column ── */}
+                {getTypeDisplay(selectedProperty.type) === 'SALE' &&
+                 getStatusDisplay(selectedProperty.status) === 'AVAILABLE' && (
+                  <div className="border-t border-white/10 pt-10">
+                    <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6 flex items-center gap-2">
+                      <Banknote size={14} /> Purchase This Property
+                    </h3>
+
+                    {purchaseSuccess ? (
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-8 flex items-center gap-6">
+                        <ShieldCheck size={40} className="text-green-400 shrink-0" />
+                        <div>
+                          <p className="font-black text-white text-xl mb-1">Purchase Initiated!</p>
+                          {contractData?.contract_number && (
+                            <p className="text-[10px] text-green-400/70 font-bold uppercase tracking-widest mb-2">
+                              {contractData.contract_number}
+                            </p>
+                          )}
+                          {contractData?.deposit_amount && (
+                            <p className="text-[10px] text-white/40 font-bold mb-2">
+                              Deposit due: €{Number(contractData.deposit_amount).toLocaleString('en')}
+                            </p>
+                          )}
+                          <p className="text-white/50 text-sm leading-relaxed">
+                            Your contract is <span className="text-yellow-400 font-bold">Pending Signature</span>. A deposit payment has been logged — your agent will confirm receipt and guide you through signing.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8">
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+
+                          {/* Price breakdown */}
+                          <div className="flex-1 space-y-3">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-white/50">Full Property Price</span>
+                              <span className="font-bold text-white">€{Number(selectedProperty.price).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/10 border border-white/10 rounded-2xl px-5 py-4">
+                              <div>
+                                <p className="text-[9px] font-black tracking-widest uppercase text-white/50 mb-0.5">Required Deposit</p>
+                                <p className="text-[10px] font-bold text-white/40">20% of purchase price</p>
+                              </div>
+                              <span className="font-black text-white text-3xl tracking-tight">
+                                €{(Number(selectedProperty.price) * 0.2).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-white/40">Remaining balance</span>
+                              <span className="font-bold text-white/60">€{(Number(selectedProperty.price) * 0.8).toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Action */}
+                          <div className="shrink-0 flex flex-col items-center gap-3">
+                            {purchaseError && (
+                              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 mb-1 max-w-[220px] text-center">
+                                {purchaseError}
+                              </p>
+                            )}
+                            <button
+                              onClick={handleInitiatePurchase}
+                              disabled={purchaseLoading}
+                              className="bg-white text-black px-10 py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                            >
+                              {purchaseLoading
+                                ? <><Loader size={14} className="animate-spin" /> Processing…</>
+                                : <><ShieldCheck size={14} /> Initiate Purchase</>}
+                            </button>
+                            <p className="text-[9px] text-white/25 font-bold tracking-widest uppercase text-center">
+                              No commitment until deposit is confirmed
+                            </p>
+                          </div>
+
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
-                  <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-2">Interested?</h3>
-                  <p className="text-sm text-white/50 font-medium mb-8">Contact an elite agent to schedule a private viewing.</p>
-                  <button className="w-full bg-white text-black py-5 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors mb-4 flex items-center justify-center gap-3"><User size={18} /> Contact Agent</button>
-                  <button className="w-full bg-transparent border border-white/20 text-white py-5 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-white/10 transition-colors flex items-center justify-center gap-3"><Phone size={18} /> Call Now</button>
+                  <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
+                    Schedule a Visit
+                  </h3>
+                  <p className="text-sm text-white/50 font-medium mb-7">
+                    Pick a date and time — the agent will confirm your booking.
+                  </p>
+
+                  {visitSuccess ? (
+                    /* ── Success state ── */
+                    <div className="flex flex-col items-center gap-4 py-6 text-center">
+                      <CheckCircle size={48} className="text-green-400" />
+                      <p className="font-bold text-white">Visit Requested!</p>
+                      <p className="text-white/50 text-sm">
+                        The agent will confirm your appointment shortly.
+                      </p>
+                      <button
+                        onClick={() => { setVisitSuccess(false); setVisitDate(''); setVisitTime(''); }}
+                        className="text-[10px] font-bold tracking-widest uppercase text-white/40 hover:text-white transition mt-2"
+                      >
+                        Book another date
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleVisitSubmit} className="space-y-5">
+                      {/* Date */}
+                      <div>
+                        <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
+                          Select Date
+                        </label>
+                        <input
+                          type="date"
+                          min={today}
+                          value={visitDate}
+                          onChange={(e) => setVisitDate(e.target.value)}
+                          required
+                          className="w-full bg-black/40 border border-white/10 text-white rounded-2xl px-4 py-3 text-sm
+                                     focus:outline-none focus:border-white/30 transition [color-scheme:dark]"
+                        />
+                      </div>
+
+                      {/* Time slots */}
+                      <div>
+                        <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
+                          Select Time
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {TIME_SLOTS.map((slot) => (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setVisitTime(slot)}
+                              className={`py-2 rounded-xl text-[10px] font-black tracking-wider transition border ${
+                                visitTime === slot
+                                  ? 'bg-white text-black border-white'
+                                  : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30 hover:text-white'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {visitError && (
+                        <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
+                          {visitError}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={visitSubmitting}
+                        className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em]
+                                   uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {visitSubmitting
+                          ? <><Loader size={14} className="animate-spin" /> Submitting…</>
+                          : <><CalendarCheck size={14} /> Confirm Visit</>}
+                      </button>
+                    </form>
+                  )}
                 </div>
+
               </div>
             </div>
           </div>
