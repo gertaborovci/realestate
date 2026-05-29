@@ -207,6 +207,38 @@ db.connect((err) => {
         if (!err) console.log('✅ users table is ready!');
         else console.error('Error creating users table:', err);
     });
+
+    const createTestimonialsTableQuery = `
+        CREATE TABLE IF NOT EXISTS testimonials (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            klienti_emri VARCHAR(100) NOT NULL DEFAULT 'Anonymous',
+            teksti TEXT NOT NULL,
+            data_publikimit TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `;
+    db.query(createTestimonialsTableQuery, (err) => {
+        if (!err) console.log('✅ testimonials table is ready!');
+        else console.error('Error creating testimonials table:', err);
+    });
+
+    const createAgentRatingsTableQuery = `
+        CREATE TABLE IF NOT EXISTS agent_ratings (
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            user_id    INT NOT NULL,
+            agent_id   INT NOT NULL,
+            agent_name VARCHAR(100) NOT NULL,
+            rating     DECIMAL(2,1) NOT NULL,
+            comment    TEXT DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_user_agent (user_id, agent_id),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    `;
+    db.query(createAgentRatingsTableQuery, (err) => {
+        if (!err) console.log('✅ agent_ratings table is ready!');
+        else console.error('Error creating agent_ratings table:', err);
+    });
 });
 
 // ==========================================
@@ -225,6 +257,8 @@ const contractRoutes        = require('./routes/contractRoutes');
 const transactionRoutes     = require('./routes/transactionRoutes');
 const inquiryRoutes         = require('./routes/inquiryRoutes');
 const certificationRoutes   = require('./routes/certificationRoutes');
+const favoriteRoutes        = require('./routes/favoriteRoutes');
+const ratingRoutes          = require('./routes/ratingRoutes');
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/agents',        agentRoutes);
@@ -237,6 +271,8 @@ app.use('/api/contracts',      contractRoutes);
 app.use('/api/transactions',   transactionRoutes);
 app.use('/api/inquiries',      inquiryRoutes);
 app.use('/api/certifications', certificationRoutes);
+app.use('/api/favorites',      favoriteRoutes);
+app.use('/api/ratings',        ratingRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT

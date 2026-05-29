@@ -2,8 +2,6 @@ import React from 'react';
 import {
   LayoutDashboard,
   Building2,
-  Settings,
-  LogOut,
   Users,
   UserCog,
   Calendar,
@@ -77,17 +75,6 @@ const Sidebar = ({ onTabChange, activeTab }) => {
         </ul>
       </nav>
 
-      <div className="p-6 border-t border-white/5 space-y-2">
-        <button className="w-full flex items-center gap-4 px-4 py-3 text-[10px] font-bold tracking-[0.2em] text-white/40 hover:text-white transition-all">
-          <Settings size={18} />
-          SETTINGS
-        </button>
-
-        <button className="w-full flex items-center gap-4 px-4 py-3 text-[10px] font-bold tracking-[0.2em] text-red-500/60 hover:text-red-500 transition-all">
-          <LogOut size={18} />
-          LOG OUT
-        </button>
-      </div>
     </div>
   );
 };

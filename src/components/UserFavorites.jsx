@@ -10,17 +10,19 @@ const getStatusDisplay = (status) => {
 };
 
 const getStatusBadgeStyle = (status) => {
-  switch (getStatusDisplay(status)) {
-    case 'SOLD':   return 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+  const display = getStatusDisplay(status);
+  switch (display) {
+    case 'SOLD': return 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.5)]';
     case 'RENTED': return 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]';
-    default:       return 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.5)]';
+    default: return 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.5)]';
   }
 };
 
 export default function UserFavorites({ favorites, handleRemoveFavorite, onViewProperty }) {
+  // Guard against null / undefined arriving from a stale API response
+  const safeFavs = Array.isArray(favorites) ? favorites : [];
   return (
     <div className="max-w-7xl mx-auto mt-8">
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 pb-6 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -28,23 +30,20 @@ export default function UserFavorites({ favorites, handleRemoveFavorite, onViewP
           <h2 className="text-2xl font-bold text-white">My Saved Properties</h2>
         </div>
         <span className="bg-white/5 border border-white/10 text-white/50 text-sm font-semibold px-4 py-2 rounded-full flex items-center gap-2">
-          <Building size={14} />
-          {favorites.length} {favorites.length === 1 ? 'Property' : 'Properties'} Saved
+          <Building size={14} /> {safeFavs.length} {safeFavs.length === 1 ? 'Property' : 'Properties'} Saved
         </span>
       </div>
 
       {/* Empty state */}
-      {favorites.length === 0 ? (
+      {safeFavs.length === 0 ? (
         <div className="bg-white/5 border border-white/10 border-dashed p-16 rounded-[40px] text-center">
           <Heart size={48} className="mx-auto mb-4 text-white/20" />
           <p className="text-lg font-bold text-white/40">No saved properties yet.</p>
-          <p className="text-sm mt-2 text-white/30">
-            Browse properties and click the heart icon to save them here.
-          </p>
+          <p className="text-sm mt-2 text-white/30">Browse properties and click the heart icon to save them here.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-12">
-          {favorites.map((property) => (
+          {safeFavs.map((property) => (
             <div
               key={property.id}
               onClick={() => onViewProperty && onViewProperty(property.id)}
@@ -58,11 +57,9 @@ export default function UserFavorites({ favorites, handleRemoveFavorite, onViewP
                   alt={property.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-100"
                 />
-                {/* Price badge */}
                 <div className="absolute top-6 left-6 bg-white text-black px-4 py-2 rounded-full font-black tracking-tighter text-sm z-20 shadow-xl">
                   €{Number(property.price).toLocaleString()}
                 </div>
-                {/* Status badge */}
                 <div className={`absolute top-6 right-6 px-4 py-2 rounded-full text-[9px] font-black tracking-widest uppercase z-20 border border-white/10 ${getStatusBadgeStyle(property.status)}`}>
                   {getStatusDisplay(property.status)}
                 </div>
@@ -82,9 +79,7 @@ export default function UserFavorites({ favorites, handleRemoveFavorite, onViewP
                   <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 mb-2 flex items-center gap-2">
                     <MapPin size={12} /> {property.location}
                   </p>
-                  <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 line-clamp-1">
-                    {property.title}
-                  </h3>
+                  <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 line-clamp-1">{property.title}</h3>
                   <div className="flex gap-6 text-white/60 text-sm font-medium mb-6">
                     <div className="flex items-center gap-2"><DoorOpen size={16} /> {property.rooms || 0}</div>
                     <div className="flex items-center gap-2"><Bath size={16} /> {property.bathrooms || 0}</div>

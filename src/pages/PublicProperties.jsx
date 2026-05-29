@@ -164,10 +164,10 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     }
   };
 
-  // Auto-open a specific property when arriving from the favorites page
+  // Auto-open a specific property when navigated from favorites
   useEffect(() => {
     if (initialPropertyId && properties.length > 0) {
-      const prop = properties.find((p) => p.id === Number(initialPropertyId));
+      const prop = properties.find(p => p.id === Number(initialPropertyId));
       if (prop) {
         openPropertyDetails(prop);
         if (onPropertyOpened) onPropertyOpened();
@@ -278,7 +278,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   };
 
   const PropertyCard = ({ property }) => {
-    const isFavorited = favorites.some((f) => f.id === property.id);
+    const isFavorited = favorites.some(f => f.id === property.id);
     const handleFavoriteToggle = (e) => {
       e.stopPropagation();
       if (onToggleFavorite) onToggleFavorite({ ...property, mainImage: mainImages[property.id] });

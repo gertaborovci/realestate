@@ -4,7 +4,7 @@ const favoriteController = require('../controllers/favoriteController');
 
 const router = express.Router();
 
-router.get('/:client_id', asyncHandler(favoriteController.getByClient));
+router.get('/:user_id', asyncHandler(favoriteController.getByUser));
 router.post('/', asyncHandler(favoriteController.create));
 router.delete('/item/:id', asyncHandler(favoriteController.remove));
 router.delete('/', asyncHandler(favoriteController.removeByProperty));
