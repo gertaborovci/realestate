@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, MapPin, Mail, ArrowLeft } from 'lucide-react';
+import { User, Shield, MapPin, Mail, ArrowLeft, CalendarPlus } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import ConsultationModal from '../components/ConsultationModal';
 
 const AgentProfile = ({ agentId, onBack }) => {
   const [agent, setAgent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const loadAgent = async () => {
@@ -37,8 +39,8 @@ const AgentProfile = ({ agentId, onBack }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-4">
-      {/* Back Button - Ndryshuar teksti këtu */}
-      <button 
+      {/* Back Button */}
+      <button
         onClick={onBack}
         className="flex items-center gap-2 text-xs font-bold tracking-widest text-gray-500 hover:text-white transition uppercase"
       >
@@ -64,6 +66,16 @@ const AgentProfile = ({ agentId, onBack }) => {
             </p>
           </div>
 
+          {/* Schedule Consultation Button */}
+          <div className="pt-1">
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full text-xs font-bold tracking-widest uppercase hover:bg-gray-200 transition"
+            >
+              <CalendarPlus size={14} /> Schedule a Consultation
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             <div className="bg-[#1a1a1a] p-4 rounded-2xl border border-gray-800/50 text-left">
               <span className="text-[10px] font-bold text-gray-500 tracking-wider block uppercase mb-1">License Number</span>
@@ -86,6 +98,14 @@ const AgentProfile = ({ agentId, onBack }) => {
           </div>
         </div>
       </div>
+      {/* Consultation Modal */}
+      {showModal && (
+        <ConsultationModal
+          agentId={agentId}
+          agentName={agent.name}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 };

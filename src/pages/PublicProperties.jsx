@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, Phone, Mail, Globe, Heart, CalendarCheck, ShoppingBag } from 'lucide-react';
+import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+
+const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
 const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened }) => {
   const [properties, setProperties] = useState([]);
@@ -11,25 +13,29 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [gallery, setGallery] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mainImages, setMainImages] = useState({});
-  const [propertyFeatures, setPropertyFeatures] = useState([]); 
+  const [propertyFeatures, setPropertyFeatures] = useState([]);
+
+  // ── Schedule a Visit state ──────────────────────────────────────────────
+  const [visitDate,       setVisitDate]       = useState('');
+  const [visitTime,       setVisitTime]       = useState('');
+  const [visitSubmitting, setVisitSubmitting] = useState(false);
+  const [visitSuccess,    setVisitSuccess]    = useState(false);
+  const [visitError,      setVisitError]      = useState('');
+  const today = new Date().toISOString().split('T')[0];
+
+  // ── Initiate Purchase (20% deposit) state ───────────────────────────────
+  const [purchaseLoading,  setPurchaseLoading]  = useState(false);
+  const [purchaseSuccess,  setPurchaseSuccess]  = useState(false);
+  const [purchaseError,    setPurchaseError]    = useState('');
+  const [contractData,     setContractData]     = useState(null);
 
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
   const pageTopRef = useRef(null);
 
-  // Resolve current user once so the whole component reacts to it
-  const [currentUser] = useState(() => getCurrentUser());
-  const role = currentUser ? (currentUser.role === 'client' || currentUser.role === 'buyer' ? 'user' : currentUser.role) : null;
-
-  // Visit booking form state
-  const [visitDate, setVisitDate] = useState('');
-  const [visitTime, setVisitTime] = useState('');
-  const [visitSubmitting, setVisitSubmitting] = useState(false);
-  const [visitResult, setVisitResult] = useState(null); // 'ok' | 'error'
-
-  // Purchase state
-  const [purchaseSubmitting, setPurchaseSubmitting] = useState(false);
-  const [purchaseResult, setPurchaseResult] = useState(null); // 'ok' | 'error'
+  // Derive current user & role once per render for conditional UI
+  const currentUser = getCurrentUser();
+  const role = currentUser?.role || null;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState('newest');
@@ -146,10 +152,9 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const openPropertyDetails = async (property) => {
     setSelectedProperty(property);
     setCurrentImageIndex(0);
-    // Reset per-property form/result state
-    setVisitDate(''); setVisitTime('');
-    setVisitResult(null); setVisitSubmitting(false);
-    setPurchaseResult(null); setPurchaseSubmitting(false);
+    // Reset visit form for fresh property
+    setVisitDate(''); setVisitTime(''); setVisitSuccess(false); setVisitError('');
+    setPurchaseSuccess(false); setPurchaseError(''); setContractData(null);
     try {
       const [imagesRes, featuresRes] = await Promise.all([
         fetch(`${API_BASE}/api/properties/${property.id}/images`),
@@ -164,10 +169,10 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     }
   };
 
-  // Auto-open a specific property when navigated from favorites
+  // Auto-open a specific property when arriving from the favorites page
   useEffect(() => {
     if (initialPropertyId && properties.length > 0) {
-      const prop = properties.find(p => p.id === Number(initialPropertyId));
+      const prop = properties.find((p) => p.id === Number(initialPropertyId));
       if (prop) {
         openPropertyDetails(prop);
         if (onPropertyOpened) onPropertyOpened();
@@ -176,7 +181,75 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   }, [initialPropertyId, properties]);
 
   const isActivelyFiltering = searchQuery !== "" || filterType !== "ALL" || minPrice > 0 || maxPrice < MAX_SLIDER_PRICE;
-  
+
+  // ── Schedule a Visit submit ─────────────────────────────────────────────
+  const handleVisitSubmit = async (e) => {
+    e.preventDefault();
+    if (!visitDate || !visitTime) {
+      setVisitError('Please select both a date and a time slot.');
+      return;
+    }
+    const user = getCurrentUser();
+    if (!user?.id) {
+      setVisitError('Please sign in to schedule a visit.');
+      return;
+    }
+    setVisitSubmitting(true);
+    setVisitError('');
+    try {
+      await apiFetch('/api/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_id: selectedProperty.id,
+          agent_id:    selectedProperty.agent_id || null,
+          user_id:     user.id,
+          visit_date:  visitDate,
+          visit_time:  visitTime,
+        }),
+      });
+      setVisitSuccess(true);
+    } catch (err) {
+      setVisitError(err.message || 'Failed to schedule visit. Please try again.');
+    } finally {
+      setVisitSubmitting(false);
+    }
+  };
+
+  // ── Initiate purchase handler ────────────────────────────────────────────
+  const handleInitiatePurchase = async () => {
+    const user = getCurrentUser();
+    if (!user?.id) {
+      setPurchaseError('Please sign in to initiate a purchase.');
+      return;
+    }
+    setPurchaseLoading(true);
+    setPurchaseError('');
+    try {
+      const result = await apiFetch('/api/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id:     user.id,
+          property_id: selectedProperty.id,
+          agent_id:    selectedProperty.agent_id || null,
+          type:        'Sale',
+        }),
+      });
+      setContractData(result);
+      setPurchaseSuccess(true);
+    } catch (err) {
+      // If a contract already exists, surface it gracefully
+      if (err.message?.includes('already exists')) {
+        setPurchaseError('You already have an active purchase contract for this property. Contact your agent for next steps.');
+      } else {
+        setPurchaseError(err.message || 'Failed to initiate purchase. Please try again.');
+      }
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
   const renderDynamicCategories = () => {
     if (!Array.isArray(properties) || properties.length === 0) return null;
 
@@ -211,74 +284,8 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     );
   };
 
-  const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
-
-  const handleInitiatePurchase = async (property) => {
-    setPurchaseResult(null);
-    setPurchaseSubmitting(true);
-    const deposit = Math.round(Number(property.price) * 0.2);
-    try {
-      await apiFetch('/api/contracts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-role': currentUser.role,
-          'x-user-id': String(currentUser.id),
-        },
-        body: JSON.stringify({
-          user_id: currentUser.id,
-          property_id: property.id,
-          agent_id: property.agent_id || null,
-          type: (property.type || '').toUpperCase() === 'QIRA' || (property.type || '').toUpperCase() === 'RENT' ? 'Rent' : 'Sale',
-          property_price: property.price,
-          deposit_amount: deposit,
-          remaining_balance: Number(property.price) - deposit,
-          status: 'Pending Signature',
-        }),
-      });
-      setPurchaseResult('ok');
-    } catch (err) {
-      console.error(err);
-      setPurchaseResult('error');
-    } finally {
-      setPurchaseSubmitting(false);
-    }
-  };
-
-  const handleScheduleVisit = async (property) => {
-    if (!visitDate || !visitTime) return;
-    setVisitResult(null);
-    setVisitSubmitting(true);
-    try {
-      await apiFetch('/api/visits', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-role': currentUser.role,
-          'x-user-id': String(currentUser.id),
-        },
-        body: JSON.stringify({
-          user_id: currentUser.id,
-          property_id: property.id,
-          agent_id: property.agent_id || null,
-          visit_date: visitDate,
-          visit_time: visitTime,
-          status: 'PENDING',
-        }),
-      });
-      setVisitResult('ok');
-      setVisitDate('');
-      setVisitTime('');
-    } catch (err) {
-      console.error(err);
-      setVisitResult('error');
-    } finally {
-      setVisitSubmitting(false);
-    }
-  };
-
   const PropertyCard = ({ property }) => {
-    const isFavorited = favorites.some(f => f.id === property.id);
+    const isFavorited = favorites.some((f) => f.id === property.id);
     const handleFavoriteToggle = (e) => {
       e.stopPropagation();
       if (onToggleFavorite) onToggleFavorite({ ...property, mainImage: mainImages[property.id] });
@@ -378,8 +385,6 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
-
-              {/* ── LEFT: property info + (user-only) purchase section ── */}
               <div className="md:col-span-2 space-y-10">
                 <div>
                   <p className="text-[12px] font-black tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2"><MapPin size={16} /> {selectedProperty.location}, Kosovo</p>
@@ -390,7 +395,6 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                   <div className="flex items-center gap-3"><Bath size={24} className="text-white/40"/> <span className="text-xl font-bold">{selectedProperty.bathrooms || 0} Baths</span></div>
                   <div className="flex items-center gap-3"><Maximize size={24} className="text-white/40"/> <span className="text-xl font-bold">{selectedProperty.area} m²</span></div>
                 </div>
-
                 {propertyFeatures.length > 0 ? (
                   <div>
                     <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6">Property Features</h3>
@@ -404,127 +408,211 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                     </div>
                   </div>
                 ) : (
-                  <div className="pb-2 border-b border-white/10">
+                  <div>
                     <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6">About this property</h3>
                     <p className="text-xl text-white/70 leading-relaxed font-medium">{selectedProperty.description ? selectedProperty.description : `A beautiful property located in the heart of ${selectedProperty.location}. Contact our elite agents to schedule a viewing and learn more about this exclusive listing.`}</p>
                   </div>
                 )}
 
-                {/* Purchase section — only for logged-in users */}
-                {role === 'user' && (
-                  <div>
+                {/* ── Buy This Property — shown for signed-in users only ── */}
+                {role === 'user' &&
+                 getTypeDisplay(selectedProperty.type) === 'SALE' &&
+                 getStatusDisplay(selectedProperty.status) === 'AVAILABLE' && (
+                  <div className="border-t border-white/10 pt-10">
                     <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6 flex items-center gap-2">
-                      <ShoppingBag size={14} /> Purchase This Property
+                      <Banknote size={14} /> Purchase This Property
                     </h3>
-                    <div className="bg-white/5 border border-white/10 rounded-[30px] p-8 space-y-5">
-                      {/* Price breakdown */}
-                      <div className="flex items-center justify-between text-white/70 text-sm font-medium">
-                        <span>Full Property Price</span>
-                        <span className="text-white font-black text-lg">€{Number(selectedProperty.price).toLocaleString()}</span>
-                      </div>
-                      <div className="bg-black/60 rounded-2xl p-5 flex items-center justify-between">
+
+                    {purchaseSuccess ? (
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-8 flex items-center gap-6">
+                        <ShieldCheck size={40} className="text-green-400 shrink-0" />
                         <div>
-                          <p className="text-[9px] font-black tracking-widest uppercase text-white/40 mb-1">Required Deposit</p>
-                          <p className="text-[10px] text-white/30 font-bold">20% of purchase price</p>
+                          <p className="font-black text-white text-xl mb-1">Purchase Initiated!</p>
+                          {contractData?.contract_number && (
+                            <p className="text-[10px] text-green-400/70 font-bold uppercase tracking-widest mb-2">
+                              {contractData.contract_number}
+                            </p>
+                          )}
+                          {contractData?.deposit_amount && (
+                            <p className="text-[10px] text-white/40 font-bold mb-2">
+                              Deposit due: €{Number(contractData.deposit_amount).toLocaleString('en')}
+                            </p>
+                          )}
+                          <p className="text-white/50 text-sm leading-relaxed">
+                            Your contract is <span className="text-yellow-400 font-bold">Pending Signature</span>. A deposit payment has been logged — your agent will confirm receipt and guide you through signing.
+                          </p>
                         </div>
-                        <span className="text-3xl font-black text-white">€{Math.round(Number(selectedProperty.price) * 0.2).toLocaleString()}</span>
                       </div>
-                      <div className="flex items-center justify-between text-white/50 text-sm font-medium">
-                        <span>Remaining balance</span>
-                        <span className="font-bold text-white/80">€{Math.round(Number(selectedProperty.price) * 0.8).toLocaleString()}</span>
-                      </div>
+                    ) : (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8">
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
 
-                      {purchaseResult === 'ok' && (
-                        <p className="text-green-400 text-xs font-bold bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
-                          Purchase request submitted! The agent will be in touch.
-                        </p>
-                      )}
-                      {purchaseResult === 'error' && (
-                        <p className="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                          Something went wrong. Please try again.
-                        </p>
-                      )}
+                          {/* Price breakdown */}
+                          <div className="flex-1 space-y-3">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-white/50">Full Property Price</span>
+                              <span className="font-bold text-white">€{Number(selectedProperty.price).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/10 border border-white/10 rounded-2xl px-5 py-4">
+                              <div>
+                                <p className="text-[9px] font-black tracking-widest uppercase text-white/50 mb-0.5">Required Deposit</p>
+                                <p className="text-[10px] font-bold text-white/40">20% of purchase price</p>
+                              </div>
+                              <span className="font-black text-white text-3xl tracking-tight">
+                                €{(Number(selectedProperty.price) * 0.2).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-white/40">Remaining balance</span>
+                              <span className="font-bold text-white/60">€{(Number(selectedProperty.price) * 0.8).toLocaleString()}</span>
+                            </div>
+                          </div>
 
-                      <div>
-                        <button
-                          onClick={() => handleInitiatePurchase(selectedProperty)}
-                          disabled={purchaseSubmitting || purchaseResult === 'ok'}
-                          className="w-full bg-white text-black py-4 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
-                        >
-                          <ShoppingBag size={16} />
-                          {purchaseSubmitting ? 'Submitting…' : purchaseResult === 'ok' ? 'Request Sent' : 'Initiate Purchase'}
-                        </button>
-                        <p className="text-center text-[9px] font-bold tracking-widest uppercase text-white/20 mt-3">
-                          No commitment until deposit is confirmed
-                        </p>
+                          {/* Action */}
+                          <div className="shrink-0 flex flex-col items-center gap-3">
+                            {purchaseError && (
+                              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 mb-1 max-w-[220px] text-center">
+                                {purchaseError}
+                              </p>
+                            )}
+                            <button
+                              onClick={handleInitiatePurchase}
+                              disabled={purchaseLoading}
+                              className="bg-white text-black px-10 py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                            >
+                              {purchaseLoading
+                                ? <><Loader size={14} className="animate-spin" /> Processing…</>
+                                : <><ShieldCheck size={14} /> Initiate Purchase</>}
+                            </button>
+                            <p className="text-[9px] text-white/25 font-bold tracking-widest uppercase text-center">
+                              No commitment until deposit is confirmed
+                            </p>
+                          </div>
+
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
-
-              {/* ── RIGHT: Schedule Visit (user) or Contact Agent (guest/agent) ── */}
               <div>
                 {role === 'user' ? (
-                  <div className="bg-[#111] border border-white/10 p-8 rounded-[30px] sticky top-32">
-                    <h3 className="text-3xl font-black uppercase italic tracking-tighter leading-tight mb-2">Schedule a Visit</h3>
-                    <p className="text-sm text-white/40 font-medium mb-8">Pick a date and time — the agent will confirm your booking.</p>
+                  /* ── Visit booking form — signed-in users only ── */
+                  <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
+                      Schedule a Visit
+                    </h3>
+                    <p className="text-sm text-white/50 font-medium mb-7">
+                      Pick a date and time — the agent will confirm your booking.
+                    </p>
 
-                    {visitResult === 'ok' && (
-                      <p className="text-green-400 text-xs font-bold mb-5 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
-                        Visit request submitted! The agent will confirm shortly.
-                      </p>
-                    )}
-                    {visitResult === 'error' && (
-                      <p className="text-red-400 text-xs font-bold mb-5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                        Something went wrong. Please try again.
-                      </p>
-                    )}
-
-                    <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-2">Select Date</p>
-                    <input
-                      type="date"
-                      value={visitDate}
-                      onChange={(e) => setVisitDate(e.target.value)}
-                      className="w-full bg-black/60 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 mb-6 [color-scheme:dark]"
-                    />
-
-                    <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-3">Select Time</p>
-                    <div className="grid grid-cols-3 gap-2 mb-7">
-                      {TIME_SLOTS.map((slot) => (
+                    {visitSuccess ? (
+                      /* ── Success state ── */
+                      <div className="flex flex-col items-center gap-4 py-6 text-center">
+                        <CheckCircle size={48} className="text-green-400" />
+                        <p className="font-bold text-white">Visit Requested!</p>
+                        <p className="text-white/50 text-sm">
+                          The agent will confirm your appointment shortly.
+                        </p>
                         <button
-                          key={slot}
-                          onClick={() => setVisitTime(slot)}
-                          className={`py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all border ${
-                            visitTime === slot
-                              ? 'bg-white text-black border-white'
-                              : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'
-                          }`}
+                          onClick={() => { setVisitSuccess(false); setVisitDate(''); setVisitTime(''); }}
+                          className="text-[10px] font-bold tracking-widest uppercase text-white/40 hover:text-white transition mt-2"
                         >
-                          {slot}
+                          Book another date
                         </button>
-                      ))}
-                    </div>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleVisitSubmit} className="space-y-5">
+                        {/* Date */}
+                        <div>
+                          <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
+                            Select Date
+                          </label>
+                          <input
+                            type="date"
+                            min={today}
+                            value={visitDate}
+                            onChange={(e) => setVisitDate(e.target.value)}
+                            required
+                            className="w-full bg-black/40 border border-white/10 text-white rounded-2xl px-4 py-3 text-sm
+                                       focus:outline-none focus:border-white/30 transition [color-scheme:dark]"
+                          />
+                        </div>
 
-                    <button
-                      onClick={() => handleScheduleVisit(selectedProperty)}
-                      disabled={visitSubmitting || !visitDate || !visitTime}
-                      className="w-full bg-white text-black py-4 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 disabled:opacity-40"
-                    >
-                      <CalendarCheck size={16} />
-                      {visitSubmitting ? 'Submitting…' : 'Confirm Visit'}
-                    </button>
+                        {/* Time slots */}
+                        <div>
+                          <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
+                            Select Time
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {TIME_SLOTS.map((slot) => (
+                              <button
+                                key={slot}
+                                type="button"
+                                onClick={() => setVisitTime(slot)}
+                                className={`py-2 rounded-xl text-[10px] font-black tracking-wider transition border ${
+                                  visitTime === slot
+                                    ? 'bg-white text-black border-white'
+                                    : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30 hover:text-white'
+                                }`}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {visitError && (
+                          <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
+                            {visitError}
+                          </p>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={visitSubmitting}
+                          className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em]
+                                     uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {visitSubmitting
+                            ? <><Loader size={14} className="animate-spin" /> Submitting…</>
+                            : <><CalendarCheck size={14} /> Confirm Visit</>}
+                        </button>
+                      </form>
+                    )}
                   </div>
                 ) : (
+                  /* ── Interested? panel — guests & agents ── */
                   <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
-                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-2">Interested?</h3>
-                    <p className="text-sm text-white/50 font-medium mb-8">Contact an elite agent to schedule a private viewing.</p>
-                    <button className="w-full bg-white text-black py-5 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors mb-4 flex items-center justify-center gap-3"><User size={18} /> Contact Agent</button>
-                    <button className="w-full bg-transparent border border-white/20 text-white py-5 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-white/10 transition-colors flex items-center justify-center gap-3"><Phone size={18} /> Call Now</button>
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
+                      Interested?
+                    </h3>
+                    <p className="text-sm text-white/50 font-medium mb-7">
+                      Sign in or reach out directly to schedule a viewing or learn more.
+                    </p>
+                    <div className="space-y-4">
+                      <a
+                        href="tel:+38344000000"
+                        className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                      >
+                        <Phone size={14} /> Call Now
+                      </a>
+                      <button
+                        onClick={() => handleNavigation('signin')}
+                        className="w-full bg-white/10 border border-white/20 text-white py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-white/20 transition flex items-center justify-center gap-2"
+                      >
+                        <User size={14} /> Sign In to Book a Visit
+                      </button>
+                      <button
+                        onClick={() => handleNavigation('agents')}
+                        className="w-full border border-white/10 text-white/60 py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:text-white hover:border-white/30 transition flex items-center justify-center gap-2"
+                      >
+                        <ShoppingBag size={14} /> Browse Our Agents
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         ) : (
