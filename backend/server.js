@@ -49,10 +49,134 @@ db.connect((err) => {
     }
     console.log('✅ Successfully connected to the MySQL Database!');
 
-    const fixDatabaseQuery = "ALTER TABLE properties ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'BUY'";
-    db.query(fixDatabaseQuery, (err) => {
-        if (!err) console.log('✅ Properties table verified!');
+    // Ensure 'type' column exists
+    db.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'BUY'", (err) => {
+        if (!err) console.log('✅ Properties.type column verified!');
     });
+
+    // Ensure 'agent_id' column exists (links a property to the agent who listed it)
+    db.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS agent_id INT DEFAULT NULL", (err) => {
+        if (!err) console.log('✅ Properties.agent_id column verified!');
+    });
+
+    // Ensure 'visits' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS visits (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            agent_id    INT          DEFAULT NULL,
+            property_id INT          DEFAULT NULL,
+            user_id     INT          DEFAULT NULL,
+            visit_date  DATE         NOT NULL,
+            visit_time  VARCHAR(10)  NOT NULL,
+            notes       TEXT         DEFAULT NULL,
+            status      VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+            created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ visits table verified!');
+        else console.error('Error verifying visits table:', err.message);
+    });
+
+    // Ensure 'contracts' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS contracts (
+            id                INT           AUTO_INCREMENT PRIMARY KEY,
+            contract_number   VARCHAR(30)   NOT NULL DEFAULT '',
+            user_id           INT           NOT NULL,
+            property_id       INT           NOT NULL,
+            agent_id          INT           DEFAULT NULL,
+            type              VARCHAR(10)   NOT NULL DEFAULT 'Sale',
+            property_price    DECIMAL(12,2) NOT NULL DEFAULT 0,
+            deposit_amount    DECIMAL(12,2) NOT NULL DEFAULT 0,
+            remaining_balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+            signed_by_buyer   TINYINT(1)    NOT NULL DEFAULT 0,
+            signed_by_agent   TINYINT(1)    NOT NULL DEFAULT 0,
+            notes             TEXT          DEFAULT NULL,
+            status            VARCHAR(30)   NOT NULL DEFAULT 'Pending Signature',
+            created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+            updated_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ contracts table verified!');
+        else console.error('Error verifying contracts table:', err.message);
+    });
+
+    // Ensure 'certifications' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS certifications (
+            id           INT          AUTO_INCREMENT PRIMARY KEY,
+            agent_id     INT          NOT NULL,
+            document_url VARCHAR(255) NOT NULL,
+            type         VARCHAR(80)  NOT NULL DEFAULT 'Passport / ID',
+            status       VARCHAR(30)  NOT NULL DEFAULT 'Pending',
+            expires_at   DATE         DEFAULT NULL,
+            created_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ certifications table verified!');
+        else console.error('Error verifying certifications table:', err.message);
+    });
+
+    // Migrate existing contracts table — add new columns if missing
+    const contractMigrations = [
+        "ALTER TABLE contracts ADD COLUMN IF NOT EXISTS contract_number   VARCHAR(30)   NOT NULL DEFAULT ''",
+        "ALTER TABLE contracts ADD COLUMN IF NOT EXISTS property_price    DECIMAL(12,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE contracts ADD COLUMN IF NOT EXISTS deposit_amount    DECIMAL(12,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE contracts ADD COLUMN IF NOT EXISTS remaining_balance DECIMAL(12,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE contracts ADD COLUMN IF NOT EXISTS signed_by_buyer   TINYINT(1)    NOT NULL DEFAULT 0",
+        "ALTER TABLE contracts ADD COLUMN IF NOT EXISTS signed_by_agent   TINYINT(1)    NOT NULL DEFAULT 0",
+        "ALTER TABLE contracts ADD COLUMN IF NOT EXISTS notes             TEXT          DEFAULT NULL",
+    ];
+    contractMigrations.forEach((sql) => db.query(sql, () => {}));
+
+    // Ensure 'transactions' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS transactions (
+            id           INT            AUTO_INCREMENT PRIMARY KEY,
+            contract_id  INT            NOT NULL,
+            payment_type VARCHAR(30)    NOT NULL DEFAULT 'Deposit',
+            amount       DECIMAL(12,2)  NOT NULL,
+            payment_date DATE           NOT NULL,
+            method       VARCHAR(50)    NOT NULL DEFAULT 'Bank Transfer',
+            status       VARCHAR(20)    NOT NULL DEFAULT 'Pending',
+            notes        TEXT           DEFAULT NULL,
+            created_at   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ transactions table verified!');
+        else console.error('Error verifying transactions table:', err.message);
+    });
+
+    // Migrate existing transactions table
+    const txMigrations = [
+        "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS payment_type VARCHAR(30) NOT NULL DEFAULT 'Deposit' AFTER contract_id",
+        "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL AFTER status",
+    ];
+    txMigrations.forEach((sql) => db.query(sql, () => {}));
+
+    // Ensure 'contact_inquiries' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS contact_inquiries (
+            id           INT           AUTO_INCREMENT PRIMARY KEY,
+            agent_id     INT           DEFAULT NULL,
+            client_name  VARCHAR(150)  NOT NULL,
+            client_email VARCHAR(150)  DEFAULT NULL,
+            message      TEXT          NOT NULL,
+            reply        TEXT          DEFAULT NULL,
+            status       VARCHAR(30)   NOT NULL DEFAULT 'new',
+            created_at   TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ contact_inquiries table verified!');
+        else console.error('Error verifying contact_inquiries table:', err.message);
+    });
+
+    // Migrate contact_inquiries — add columns if missing
+    const inquiryMigrations = [
+        "ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS reply  TEXT       DEFAULT NULL  AFTER message",
+        "ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS status VARCHAR(30) NOT NULL DEFAULT 'new' AFTER reply",
+    ];
+    inquiryMigrations.forEach((sql) => db.query(sql, () => {}));
 
     const createImagesTableQuery = `
         CREATE TABLE IF NOT EXISTS propertyimages (
@@ -126,31 +250,53 @@ const authRoutes        = require('./routes/authRoutes');
 const agentRoutes       = require('./routes/agentRoutes');
 const featureRoutes     = require('./routes/featureRoutes.js');
 const userRoutes        = require('./routes/userRoutes');
+const visitRoutes       = require('./routes/visitRoutes');
 const testimonialRoutes = require('./routes/testimonialRoutes');
 const searchAlertRoutes = require('./routes/searchAlertRoutes');
-const favoriteRoutes    = require('./routes/favoriteRoutes');
-const ratingRoutes      = require('./routes/ratingRoutes');
+const contractRoutes        = require('./routes/contractRoutes');
+const transactionRoutes     = require('./routes/transactionRoutes');
+const inquiryRoutes         = require('./routes/inquiryRoutes');
+const certificationRoutes   = require('./routes/certificationRoutes');
+const favoriteRoutes        = require('./routes/favoriteRoutes');
+const ratingRoutes          = require('./routes/ratingRoutes');
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/agents',        agentRoutes);
 app.use('/api/properties',    featureRoutes);
 app.use('/api/users',         userRoutes);
+app.use('/api/visits',        visitRoutes);
 app.use('/api/testimonials',  testimonialRoutes);
 app.use('/api/search-alerts', searchAlertRoutes);
-app.use('/api/favorites',     favoriteRoutes);
-app.use('/api/ratings',       ratingRoutes);
+app.use('/api/contracts',      contractRoutes);
+app.use('/api/transactions',   transactionRoutes);
+app.use('/api/inquiries',      inquiryRoutes);
+app.use('/api/certifications', certificationRoutes);
+app.use('/api/favorites',      favoriteRoutes);
+app.use('/api/ratings',        ratingRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT
 // ==========================================
 app.get('/api/properties', (req, res) => {
-    db.query("SELECT * FROM properties", (err, results) => {
+    db.query("SELECT * FROM properties ORDER BY id DESC", (err, results) => {
         if (err) {
             console.error("❌ SQL Error (GET):", err.message);
             return res.status(500).json({ error: err.message });
         }
         res.status(200).json(results);
     });
+});
+
+// ── Agent-scoped: must come BEFORE /:id ──
+app.get('/api/properties/agent/:agent_id', (req, res) => {
+    db.query(
+        "SELECT * FROM properties WHERE agent_id = ? ORDER BY id DESC",
+        [req.params.agent_id],
+        (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(200).json(results);
+        }
+    );
 });
 
 app.get('/api/properties/:id', (req, res) => {
@@ -163,9 +309,11 @@ app.get('/api/properties/:id', (req, res) => {
 });
 
 app.post('/api/properties', (req, res) => {
-    const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-    const sql = "INSERT INTO properties (title, price, location, status, type, image, rooms, bathrooms, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    db.query(sql, [title, price, location, status, type, image, rooms, bathrooms, area], (err, result) => {
+    const { title, price, location, status, type, image, rooms, bathrooms, area, agent_id } = req.body;
+    const sql = `INSERT INTO properties
+                   (title, price, location, status, type, image, rooms, bathrooms, area, agent_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [title, price, location, status, type, image || '', rooms, bathrooms, area, agent_id || null], (err, result) => {
         if (err) {
             console.error("❌ SQL Error (POST):", err.message);
             return res.status(500).json({ error: err.message });
@@ -176,17 +324,20 @@ app.post('/api/properties', (req, res) => {
 
 app.put('/api/properties/:id', (req, res) => {
     const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
-    const sql = "UPDATE properties SET title = ?, price = ?, location = ?, status = ?, type = ?, image = ?, rooms = bathrooms = ?, area = ? WHERE id = ?";
-    db.query(sql, [title, price, location, status, type, image, rooms, bathrooms, area, req.params.id], (err) => {
+    const sql = `UPDATE properties
+                 SET title = ?, price = ?, location = ?, status = ?, type = ?,
+                     image = ?, rooms = ?, bathrooms = ?, area = ?
+                 WHERE id = ?`;
+    db.query(sql, [title, price, location, status, type, image || '', rooms, bathrooms, area, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "U përditësua me sukses!" });
+        res.status(200).json({ message: "Updated successfully!" });
     });
 });
 
 app.delete('/api/properties/:id', (req, res) => {
     db.query("DELETE FROM properties WHERE id = ?", [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "U fshi me sukses!" });
+        res.status(200).json({ message: "Deleted successfully!" });
     });
 });
 

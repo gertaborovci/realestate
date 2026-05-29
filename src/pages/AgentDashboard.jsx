@@ -1,13 +1,19 @@
 import React, { useState, useRef } from 'react';
 import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
-import AddProperty from './AddProperty';
 
+<<<<<<< HEAD
+import AgentVisits from '../components/AgentVisits';
+import AgentProperties from '../components/AgentProperties';
+import AgentContractsView from '../components/AgentContractsView';
+import AgentTransactionsView from '../components/AgentTransactionsView';
+=======
 import TransactionDashboard from '../components/TransactionDashboard';
 import MaintenanceVisits from '../components/MaintenanceVisits';
 import { getCurrentUser, setCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import { Camera, Trash2, User } from 'lucide-react';
+>>>>>>> origin/main
 
 const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
   const [view, setView] = useState('list');
@@ -50,6 +56,15 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
         <div>
           <h1 className="text-xl font-extrabold uppercase tracking-tight mb-12">FIND HOME</h1>
           <div className="space-y-8 text-[12px] font-bold uppercase tracking-widest text-white/50">
+<<<<<<< HEAD
+            <p onClick={() => setView('profile')} className={`cursor-pointer transition-colors ${view === 'profile' ? 'text-white font-black' : 'hover:text-white'}`}>Profile</p>
+            <p onClick={() => setView('list')} className={`cursor-pointer transition-colors ${view === 'list' ? 'text-white font-black' : 'hover:text-white'}`}>Properties</p>
+            <p onClick={() => setView('contracts')} className={`cursor-pointer transition-colors ${view === 'contracts' ? 'text-white font-black' : 'hover:text-white'}`}>Contracts</p>
+            <p onClick={() => setView('payments')} className={`cursor-pointer transition-colors ${view === 'payments' ? 'text-white font-black' : 'hover:text-white'}`}>Payments</p>
+            <p onClick={() => setView('visits')} className={`cursor-pointer transition-colors ${view === 'visits' ? 'text-white font-black' : 'hover:text-white'}`}>Visits</p>
+            <p onClick={() => setView('certifications')} className={`cursor-pointer transition-colors ${view === 'certifications' ? 'text-white font-black' : 'hover:text-white'}`}>Certifications</p>
+            <p onClick={() => setView('inquiries')} className={`cursor-pointer transition-colors ${view === 'inquiries' ? 'text-white font-black' : 'hover:text-white'}`}>Contact Inquiries</p>
+=======
             <p
               onClick={() => setView('list')}
               className={`cursor-pointer transition-colors ${view === 'list' ? 'text-white font-black' : 'hover:text-white'}`}
@@ -80,6 +95,7 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
             >
               Contact Inquiries
             </p>
+>>>>>>> origin/main
           </div>
         </div>
 
@@ -88,6 +104,18 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto relative">
 
+<<<<<<< HEAD
+        {view === 'list' && <AgentProperties />}
+
+        {view === 'contracts' && <AgentContractsView />}
+
+        {view === 'payments' && <AgentTransactionsView />}
+
+        {view === 'visits' && (
+          <AgentVisits />
+        )}
+
+=======
         {view === 'list' && (
           <div className="p-10">
             <h2 className="text-4xl font-extrabold uppercase tracking-tight mb-10">MY PROPERTIES</h2>
@@ -113,6 +141,7 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
 
         {view === 'transactions' && <TransactionDashboard />}
         {view === 'visits' && <MaintenanceVisits />}
+>>>>>>> origin/main
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}
         {view === 'inquiries' && <div className="p-10"><ContactInquiries /></div>}
 
