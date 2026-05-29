@@ -3,7 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { setCurrentUser, normalizeRole, DASHBOARD_VIEWS } from '../lib/auth';
 
-const SignIn = ({ onNavigate }) => {
+const SignIn = ({ onNavigate, onSignIn }) => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,6 +21,7 @@ const SignIn = ({ onNavigate }) => {
       });
       const user = { ...data.user, role: normalizeRole(data.user.role) };
       setCurrentUser(user);
+      if (onSignIn) onSignIn(user);
       if (user.role === 'admin') onNavigate(DASHBOARD_VIEWS.admin);
       else if (user.role === 'agent') onNavigate(DASHBOARD_VIEWS.agent);
       else onNavigate('user-dashboard');

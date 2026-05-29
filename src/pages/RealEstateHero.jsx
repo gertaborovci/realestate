@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
 import { canAccessAgentDashboard, DASHBOARD_VIEWS } from '../lib/auth';
 
-const RealEstateHero = ({ onNavigate }) => {
+const RealEstateHero = ({ onNavigate, onSignOut, currentUser }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
+  const user = currentUser;
   const scrollRef = useRef(null);
 
   // Smart Scroll Detector (Fixed for snap scrolling)
@@ -87,19 +88,29 @@ const RealEstateHero = ({ onNavigate }) => {
         </div>
 
         {/* Right: User Actions */}
-        <div className="flex items-center gap-6">
-          <div 
+        <div className="flex items-center gap-4">
+          <div
             className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
-            onClick={() => onNavigate('user-profile')}
+            onClick={() => user ? onNavigate('user-dashboard') : onNavigate('signin')}
+            title={user ? (user.username || 'My Profile') : 'Sign in'}
           >
             <User size={20} className="text-white" />
           </div>
-          <button 
-            onClick={() => onNavigate('signin')}
-            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase"
-          >
-            Login
-          </button>
+          {user ? (
+            <button
+              onClick={() => { if (onSignOut) onSignOut(); onNavigate('hero'); }}
+              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase"
+            >
+              Sign Out
+            </button>
+          ) : (
+            <button
+              onClick={() => onNavigate('signin')}
+              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase"
+            >
+              Login
+            </button>
+          )}
         </div>
       </nav>
 
