@@ -5,6 +5,26 @@ import {
 import { getCurrentUser, setCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 
+const inputCls =
+  'w-full bg-black/50 border border-zinc-700 focus:border-zinc-400 text-white text-sm rounded-xl px-4 py-3 outline-none transition placeholder:text-white/20';
+
+function Field({ label, optional, name, placeholder, textarea, form, setForm }) {
+  return (
+    <div>
+      <label className="block text-[10px] font-black tracking-[0.25em] uppercase text-white/40 mb-2">
+        {label}{optional && <span className="text-white/20 normal-case tracking-normal font-normal ml-1">(optional)</span>}
+      </label>
+      {textarea ? (
+        <textarea rows={4} value={form[name]} onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+          placeholder={placeholder} className={`${inputCls} resize-none`} />
+      ) : (
+        <input type="text" value={form[name]} onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+          placeholder={placeholder} className={inputCls} />
+      )}
+    </div>
+  );
+}
+
 function roleBadge(role) {
   if (role === 'agent') return 'Real Estate Agent';
   if (role === 'admin') return 'Administrator';
@@ -121,9 +141,6 @@ export default function UserProfile({ currentUser, onUserChange }) {
     }
   };
 
-  const inputCls =
-    'w-full bg-black/50 border border-zinc-700 focus:border-zinc-400 text-white text-sm rounded-xl px-4 py-3 outline-none transition placeholder:text-white/20';
-
   /* ── View mode ── */
   if (!editing) {
     return (
@@ -182,21 +199,6 @@ export default function UserProfile({ currentUser, onUserChange }) {
   }
 
   /* ── Edit mode ── */
-  const Field = ({ label, optional, name, placeholder, textarea }) => (
-    <div>
-      <label className="block text-[10px] font-black tracking-[0.25em] uppercase text-white/40 mb-2">
-        {label}{optional && <span className="text-white/20 normal-case tracking-normal font-normal ml-1">(optional)</span>}
-      </label>
-      {textarea ? (
-        <textarea rows={4} value={form[name]} onChange={(e) => setForm({ ...form, [name]: e.target.value })}
-          placeholder={placeholder} className={`${inputCls} resize-none`} />
-      ) : (
-        <input type="text" value={form[name]} onChange={(e) => setForm({ ...form, [name]: e.target.value })}
-          placeholder={placeholder} className={inputCls} />
-      )}
-    </div>
-  );
-
   return (
     <div className="max-w-2xl mx-auto bg-zinc-900/40 border border-white/5 rounded-2xl p-8 space-y-6">
       <div className="flex items-center justify-between mb-2">
@@ -206,14 +208,14 @@ export default function UserProfile({ currentUser, onUserChange }) {
         </button>
       </div>
 
-      <Field label="Full Name"    name="name"  placeholder="Your full name" />
-      <Field label="Phone Number" optional name="phone" placeholder="+383 44 000 000" />
+      <Field label="Full Name"    name="name"  placeholder="Your full name" form={form} setForm={setForm} />
+      <Field label="Phone Number" optional name="phone" placeholder="+383 44 000 000" form={form} setForm={setForm} />
 
       {isAgent && (
         <>
-          <Field label="License ID"     optional name="license_id"     placeholder="e.g. KS-AGT-001" />
-          <Field label="Specialization" optional name="specialization" placeholder="e.g. Residential, Commercial..." />
-          <Field label="Bio"            optional name="bio"            placeholder="A short bio about yourself..." textarea />
+          <Field label="License ID"     optional name="license_id"     placeholder="e.g. KS-AGT-001" form={form} setForm={setForm} />
+          <Field label="Specialization" optional name="specialization" placeholder="e.g. Residential, Commercial..." form={form} setForm={setForm} />
+          <Field label="Bio"            optional name="bio"            placeholder="A short bio about yourself..." textarea form={form} setForm={setForm} />
 
           {/* Photo section — agents only */}
           <div className="border-t border-white/5 pt-6">
