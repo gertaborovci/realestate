@@ -2,25 +2,26 @@ const db = require('../db');
 
 async function getByUser(req, res) {
   const [rows] = await db.query(
-    'SELECT id, property_id, property_data FROM favorites WHERE user_id = ? ORDER BY created_at DESC',
+    `SELECT f.id AS favoriteRowId,
+            p.id, p.title, p.price, p.location, p.rooms,
+            p.bathrooms, p.area, p.status, p.image, p.type, p.agent_id
+     FROM favorites f
+     JOIN properties p ON f.property_id = p.id
+     WHERE f.client_id = ?
+     ORDER BY f.id DESC`,
     [req.params.user_id]
   );
-  // property_data is stored as JSON — mysql2 may already parse it
-  const favorites = rows.map((r) => ({
-    favoriteRowId: r.id,
-    ...(typeof r.property_data === 'object' ? r.property_data : JSON.parse(r.property_data)),
-  }));
-  res.json(favorites);
+  res.json(rows);
 }
 
 async function create(req, res) {
-  const { user_id, property_id, property_data } = req.body;
-  if (!user_id || !property_id || !property_data) {
-    return res.status(400).json({ error: 'user_id, property_id and property_data are required.' });
+  const { user_id, property_id } = req.body;
+  if (!user_id || !property_id) {
+    return res.status(400).json({ error: 'user_id and property_id are required.' });
   }
   await db.query(
-    'INSERT IGNORE INTO favorites (user_id, property_id, property_data) VALUES (?, ?, ?)',
-    [user_id, property_id, JSON.stringify(property_data)]
+    'INSERT IGNORE INTO favorites (client_id, property_id) VALUES (?, ?)',
+    [user_id, property_id]
   );
   res.status(201).json({ message: 'Favorite added.' });
 }
@@ -28,7 +29,7 @@ async function create(req, res) {
 async function removeByProperty(req, res) {
   const { user_id, property_id } = req.body;
   await db.query(
-    'DELETE FROM favorites WHERE user_id = ? AND property_id = ?',
+    'DELETE FROM favorites WHERE client_id = ? AND property_id = ?',
     [user_id, property_id]
   );
   res.json({ message: 'Favorite removed.' });
