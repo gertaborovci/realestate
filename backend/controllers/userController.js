@@ -4,7 +4,8 @@ const { normalizeRole } = require('../utils/roles');
 
 async function getAll(req, res) {
   const [users] = await db.query(
-    'SELECT id, username, email, role, created_at FROM users ORDER BY id ASC'
+    `SELECT id, username, email, phone, bio, license_id, specialization, photo_url, role, created_at
+     FROM users ORDER BY id ASC`
   );
   res.json(users);
 }
@@ -62,7 +63,7 @@ async function login(req, res) {
   }
 
   const [users] = await db.query(
-    'SELECT id, username, email, password, role FROM users WHERE email = ?',
+    'SELECT id, username, email, phone, bio, license_id, specialization, photo_url, password, role FROM users WHERE email = ?',
     [email]
   );
   if (!users.length) return res.status(401).json({ error: 'Invalid credentials.' });
@@ -77,9 +78,46 @@ async function login(req, res) {
       id: user.id,
       username: user.username,
       email: user.email,
+      phone: user.phone || null,
+      bio: user.bio || null,
+      license_id: user.license_id || null,
+      specialization: user.specialization || null,
+      photo_url: user.photo_url || null,
       role: normalizeRole(user.role),
     },
   });
 }
 
-module.exports = { getAll, updateRole, remove, register, login };
+async function updateProfile(req, res) {
+  const { name, phone, bio, license_id, specialization } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required.' });
+  }
+  const [result] = await db.query(
+    'UPDATE users SET username = ?, phone = ?, bio = ?, license_id = ?, specialization = ? WHERE id = ?',
+    [
+      name.trim(),
+      phone?.trim() || null,
+      bio?.trim() || null,
+      license_id?.trim() || null,
+      specialization?.trim() || null,
+      req.params.id,
+    ]
+  );
+  if (!result.affectedRows) return res.status(404).json({ error: 'User not found.' });
+  res.json({ message: 'Profile updated.' });
+}
+
+async function uploadPhoto(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
+  const photoUrl = `/uploads/profiles/${req.file.filename}`;
+  await db.query('UPDATE users SET photo_url = ? WHERE id = ?', [photoUrl, req.params.id]);
+  res.json({ message: 'Photo updated.', photo_url: photoUrl });
+}
+
+async function deletePhoto(req, res) {
+  await db.query('UPDATE users SET photo_url = NULL WHERE id = ?', [req.params.id]);
+  res.json({ message: 'Photo removed.' });
+}
+
+module.exports = { getAll, updateRole, remove, register, login, updateProfile, uploadPhoto, deletePhoto };

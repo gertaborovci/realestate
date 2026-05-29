@@ -1,186 +1,106 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Globe, Mail, Phone } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { getCurrentUser } from '../lib/auth';
 
+import Navbar from '../components/Navbar';
 import UserProfile from '../components/UserProfile';
 import UserFavorites from '../components/UserFavorites';
 import UserStories from '../components/UserStories';
 import UserRating from '../components/UserRating';
 
-export default function UserDashboard({ onBack, favorites = [], onRemoveFavorite, onViewProperty }) {
+export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUser, onUserChange, favorites = [], onRemoveFavorite, onViewProperty }) {
+  const user = currentUser || getCurrentUser();
   const [activeSection, setActiveSection] = useState('profile');
 
-  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
-
-  const [showNotification, setShowNotification] = useState(false);
   const [removedNotification, setRemovedNotification] = useState(false);
 
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
-  const [ratingName, setRatingName] = useState('');
-  const [agentName, setAgentName] = useState('');
-
-  const [alertData, setAlertData] = useState({ city: '', maxPrice: '' });
-  const [newStory, setNewStory] = useState({ text: '', client: '', isAnonymous: false });
   const [testimonials, setTestimonials] = useState([]);
+  const [ratings, setRatings] = useState([]);
 
-  // Load testimonials from backend on mount
+  // Redirect to sign-in if not logged in
+  useEffect(() => {
+    if (!user) {
+      onNavigate('signin');
+    }
+  }, []);
+
+  // Load testimonials
   useEffect(() => {
     apiFetch('/api/testimonials')
       .then((data) =>
-        setTestimonials(
-          data.map((t) => ({ id: t.id, text: t.teksti, client: t.klienti_emri }))
-        )
+        setTestimonials(data.map((t) => ({ id: t.id, text: t.teksti, client: t.klienti_emri })))
       )
       .catch(console.error);
   }, []);
 
-  const onlyLetters = (value) => value.replace(/[^a-zA-ZçÇëË\s]/g, '');
+  // Load user's own ratings
+  useEffect(() => {
+    if (!user) return;
+    apiFetch(`/api/ratings/user/${user.id}`)
+      .then(setRatings)
+      .catch(console.error);
+  }, []);
 
-  // --- HANDLERS ---
   const handleRemoveFavorite = (id) => {
     if (onRemoveFavorite) onRemoveFavorite(id);
     setRemovedNotification(true);
     setTimeout(() => setRemovedNotification(false), 3000);
   };
 
-  const handleSubmitRating = (e) => {
-    e.preventDefault();
-    if (!agentName.trim()) { alert("Please enter the agent's name!"); return; }
-    if (rating === 0 && comment.trim() === '') { alert('Please add a star rating or write a comment!'); return; }
-
-    apiFetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agent_id: 1, client_id: 1, vleresimi: rating, komenti: comment }),
-    })
-      .then(() => alert(`Thank you! Your rating for ${agentName} was submitted successfully.`))
-      .catch((err) => alert(err.message));
-
-    setRating(0); setComment(''); setRatingName(''); setAgentName('');
-  };
-
-  const handleSaveAlert = () => {
-    if (!alertData.city.trim() && !alertData.maxPrice.trim()) {
-      alert('Please enter a city or a maximum price!');
-      return;
-    }
-    apiFetch('/api/search-alerts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: 1, qyteti: alertData.city, cmimi_max: alertData.maxPrice || null }),
-    })
-      .then(() => {
-        alert('Alert saved successfully!');
-        setIsAlertModalOpen(false);
-        setAlertData({ city: '', maxPrice: '' });
-      })
-      .catch((err) => alert(err.message));
-  };
-
-  const handleSaveStory = () => {
-    if (!newStory.text.trim()) { alert('Please write your story text!'); return; }
+  const handleSaveStory = (newStory) => {
     const finalName = newStory.isAnonymous ? 'Anonymous' : (newStory.client || 'User');
-
     apiFetch('/api/testimonials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ klienti_emri: finalName, teksti: newStory.text }),
     })
       .then((created) => {
-        setTestimonials([...testimonials, { id: created.id, text: newStory.text, client: finalName }]);
+        setTestimonials((prev) => [...prev, { id: created.id, text: newStory.text, client: finalName }]);
         setIsStoryModalOpen(false);
-        setNewStory({ text: '', client: '', isAnonymous: false });
       })
       .catch((err) => alert(err.message));
   };
 
-  return (
-    <div className="h-screen overflow-y-auto bg-[#0a0a0a] text-zinc-100 font-sans">
+  if (!user) return null;
 
-      {/* Alert Modal */}
-      {isAlertModalOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 p-6 rounded-2xl w-full max-w-md border border-zinc-800">
-            <div className="flex justify-between mb-4">
-              <h3 className="font-bold text-lg">Create Alert</h3>
-              <button onClick={() => setIsAlertModalOpen(false)}><X /></button>
-            </div>
-            <input
-              placeholder="City..."
-              className="w-full bg-black p-3 rounded-lg mb-3 border border-zinc-700"
-              value={alertData.city}
-              onChange={(e) => setAlertData({ ...alertData, city: onlyLetters(e.target.value) })}
-            />
-            <input
-              placeholder="Maximum price..."
-              type="number"
-              className="w-full bg-black p-3 rounded-lg mb-4 border border-zinc-700"
-              value={alertData.maxPrice}
-              onChange={(e) => setAlertData({ ...alertData, maxPrice: e.target.value })}
-            />
-            <button className="w-full bg-white text-black py-3 rounded-lg font-bold" onClick={handleSaveAlert}>
-              Save Alert
-            </button>
-          </div>
-        </div>
-      )}
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans">
+
+      {/* Shared navbar */}
+      <Navbar
+        onNavigate={onNavigate}
+        isScrolled={true}
+        currentView="user-dashboard"
+        onSignOut={onSignOut}
+      />
 
       {/* Story Modal */}
       {isStoryModalOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 p-6 rounded-2xl w-full max-w-md border border-zinc-800">
-            <div className="flex justify-between mb-4">
-              <h3 className="font-bold text-lg">Add Your Story</h3>
-              <button onClick={() => setIsStoryModalOpen(false)}><X /></button>
-            </div>
-            <textarea
-              placeholder="Write your story..."
-              className="w-full bg-black p-3 rounded-lg mb-3 border border-zinc-700 h-32"
-              onChange={(e) => setNewStory({ ...newStory, text: e.target.value })}
-            />
-            <input
-              placeholder="Your name..."
-              disabled={newStory.isAnonymous}
-              className="w-full bg-black p-3 rounded-lg mb-3 border border-zinc-700 disabled:opacity-30"
-              value={newStory.client}
-              onChange={(e) => setNewStory({ ...newStory, client: onlyLetters(e.target.value) })}
-            />
-            <label className="flex items-center gap-2 mb-4 text-sm">
-              <input type="checkbox" onChange={(e) => setNewStory({ ...newStory, isAnonymous: e.target.checked })} />
-              Post anonymously
-            </label>
-            <button className="w-full bg-white text-black py-2 rounded-lg font-bold" onClick={handleSaveStory}>
-              Publish
-            </button>
-          </div>
+        <StoryModal
+          onClose={() => setIsStoryModalOpen(false)}
+          onSave={handleSaveStory}
+        />
+      )}
+
+      {removedNotification && (
+        <div className="fixed top-20 right-5 z-50 bg-red-500 text-white px-5 py-3 rounded-xl shadow-lg">
+          Property removed!
         </div>
       )}
 
-      {/* Dashboard UI */}
-      <div className="max-w-7xl mx-auto px-8 py-10 pb-24">
-        <button
-          onClick={onBack}
-          className="mb-8 flex items-center gap-2 text-zinc-500 hover:text-white transition-all font-bold uppercase tracking-widest text-sm"
-        >
-          ← Back to Home
-        </button>
+      {/* Main content */}
+      <div className="max-w-7xl mx-auto px-8 pt-36 pb-24">
 
-        {showNotification && (
-          <div className="fixed top-5 right-5 z-50 bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-lg">
-            Changes saved!
-          </div>
-        )}
-        {removedNotification && (
-          <div className="fixed top-20 right-5 z-50 bg-red-500 text-white px-5 py-3 rounded-xl shadow-lg">
-            Property removed!
-          </div>
-        )}
-
+        {/* Header */}
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-white mb-3">My Profile</h1>
-          <p className="text-zinc-500">Manage your profile and saved properties</p>
+          <h1 className="text-4xl font-black text-white mb-3">
+            {user.emri || user.username || 'My Profile'}
+          </h1>
+          <p className="text-zinc-500 uppercase tracking-widest text-xs font-bold">
+            {user.role === 'agent' ? 'Real Estate Agent' : user.role === 'admin' ? 'Administrator' : 'Member'}
+          </p>
         </div>
 
         {/* Tab Navigation */}
@@ -204,7 +124,7 @@ export default function UserDashboard({ onBack, favorites = [], onRemoveFavorite
         </div>
 
         {/* Sections */}
-        {activeSection === 'profile' && <UserProfile />}
+        {activeSection === 'profile' && <UserProfile currentUser={user} onUserChange={onUserChange} onNavigate={onNavigate} />}
         {activeSection === 'favorites' && (
           <UserFavorites
             favorites={favorites}
@@ -216,19 +136,101 @@ export default function UserDashboard({ onBack, favorites = [], onRemoveFavorite
           <UserStories testimonials={testimonials} setIsStoryModalOpen={setIsStoryModalOpen} />
         )}
         {activeSection === 'rating' && (
-          <UserRating
-            agentName={agentName}
-            setAgentName={setAgentName}
-            rating={rating}
-            setRating={setRating}
-            ratingName={ratingName}
-            setRatingName={setRatingName}
-            comment={comment}
-            setComment={setComment}
-            handleSubmitRating={handleSubmitRating}
-          />
+          <UserRating ratings={ratings} setRatings={setRatings} />
         )}
       </div>
+
+      {/* About Us Footer */}
+      <AboutUsFooter onNavigate={onNavigate} />
     </div>
+  );
+}
+
+/* ── Story modal ─────────────────────────────────────────────────────────────── */
+function StoryModal({ onClose, onSave }) {
+  const [text, setText] = useState('');
+  const [client, setClient] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const onlyLetters = (v) => v.replace(/[^a-zA-ZçÇëË\s]/g, '');
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-zinc-900 p-6 rounded-2xl w-full max-w-md border border-zinc-800">
+        <div className="flex justify-between mb-4">
+          <h3 className="font-bold text-lg">Add Your Story</h3>
+          <button onClick={onClose}><X /></button>
+        </div>
+        <textarea
+          placeholder="Write your story..."
+          className="w-full bg-black p-3 rounded-lg mb-3 border border-zinc-700 h-32"
+          onChange={(e) => setText(e.target.value)}
+        />
+        <input
+          placeholder="Your name..."
+          disabled={isAnonymous}
+          className="w-full bg-black p-3 rounded-lg mb-3 border border-zinc-700 disabled:opacity-30"
+          value={client}
+          onChange={(e) => setClient(onlyLetters(e.target.value))}
+        />
+        <label className="flex items-center gap-2 mb-4 text-sm">
+          <input type="checkbox" onChange={(e) => setIsAnonymous(e.target.checked)} />
+          Post anonymously
+        </label>
+        <button
+          className="w-full bg-white text-black py-2 rounded-lg font-bold"
+          onClick={() => { if (!text.trim()) { alert('Write your story first!'); return; } onSave({ text, client, isAnonymous }); }}
+        >
+          Publish
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── About Us footer (same as RealEstateHero) ───────────────────────────────── */
+function AboutUsFooter({ onNavigate }) {
+  return (
+    <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between">
+      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-20 py-10">
+        <div className="space-y-10">
+          <h2 className="text-6xl font-black tracking-tighter uppercase leading-[0.8]">About Us</h2>
+          <p className="text-2xl font-medium tracking-tight leading-relaxed max-w-lg opacity-60">
+            KosovaNest is the leading premium real estate network in Kosovo. We specialize in identifying
+            architectural legacies and providing elite, transparent service to buyers, sellers, and investors
+            across the region.
+          </p>
+          <div className="flex gap-10 pt-4">
+            <Globe className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+            <Mail  className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+            <Phone className="text-white/40 hover:text-white transition-colors cursor-pointer" size={24} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-12 pt-4">
+          <div className="space-y-8">
+            <h4 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40">Operations</h4>
+            <ul className="space-y-4 text-[13px] font-bold uppercase tracking-widest opacity-80">
+              <li className="hover:opacity-100 cursor-pointer transition-all">Local Market</li>
+              <li className="hover:opacity-100 cursor-pointer transition-all">Portfolio</li>
+              <li className="hover:opacity-100 cursor-pointer transition-all">Press Room</li>
+            </ul>
+          </div>
+          <div className="space-y-8">
+            <h4 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40">Legal</h4>
+            <ul className="space-y-4 text-[13px] font-bold uppercase tracking-widest opacity-80">
+              <li className="hover:opacity-100 cursor-pointer transition-all">Privacy Policy</li>
+              <li className="hover:opacity-100 cursor-pointer transition-all">Terms of Service</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto w-full pt-16 mt-16 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] font-black tracking-[0.6em] uppercase opacity-40">
+        <span>© 2026 KosovaNest. All Rights Reserved.</span>
+        <div className="flex gap-8">
+          <span>Premium Properties</span>
+          <span>•</span>
+          <span>Elite Service</span>
+        </div>
+      </div>
+    </section>
   );
 }

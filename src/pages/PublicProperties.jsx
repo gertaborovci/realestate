@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck } from 'lucide-react';
+import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 
@@ -32,6 +32,10 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
   const pageTopRef = useRef(null);
+
+  // Derive current user & role once per render for conditional UI
+  const currentUser = getCurrentUser();
+  const role = currentUser?.role || null;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState('newest');
@@ -410,8 +414,9 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                   </div>
                 )}
 
-                {/* ── Buy This Property — shown below the description, left column ── */}
-                {getTypeDisplay(selectedProperty.type) === 'SALE' &&
+                {/* ── Buy This Property — shown for signed-in users only ── */}
+                {role === 'user' &&
+                 getTypeDisplay(selectedProperty.type) === 'SALE' &&
                  getStatusDisplay(selectedProperty.status) === 'AVAILABLE' && (
                   <div className="border-t border-white/10 pt-10">
                     <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6 flex items-center gap-2">
@@ -491,90 +496,122 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                 )}
               </div>
               <div>
-                <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
-                  <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
-                    Schedule a Visit
-                  </h3>
-                  <p className="text-sm text-white/50 font-medium mb-7">
-                    Pick a date and time — the agent will confirm your booking.
-                  </p>
+                {role === 'user' ? (
+                  /* ── Visit booking form — signed-in users only ── */
+                  <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
+                      Schedule a Visit
+                    </h3>
+                    <p className="text-sm text-white/50 font-medium mb-7">
+                      Pick a date and time — the agent will confirm your booking.
+                    </p>
 
-                  {visitSuccess ? (
-                    /* ── Success state ── */
-                    <div className="flex flex-col items-center gap-4 py-6 text-center">
-                      <CheckCircle size={48} className="text-green-400" />
-                      <p className="font-bold text-white">Visit Requested!</p>
-                      <p className="text-white/50 text-sm">
-                        The agent will confirm your appointment shortly.
-                      </p>
-                      <button
-                        onClick={() => { setVisitSuccess(false); setVisitDate(''); setVisitTime(''); }}
-                        className="text-[10px] font-bold tracking-widest uppercase text-white/40 hover:text-white transition mt-2"
+                    {visitSuccess ? (
+                      /* ── Success state ── */
+                      <div className="flex flex-col items-center gap-4 py-6 text-center">
+                        <CheckCircle size={48} className="text-green-400" />
+                        <p className="font-bold text-white">Visit Requested!</p>
+                        <p className="text-white/50 text-sm">
+                          The agent will confirm your appointment shortly.
+                        </p>
+                        <button
+                          onClick={() => { setVisitSuccess(false); setVisitDate(''); setVisitTime(''); }}
+                          className="text-[10px] font-bold tracking-widest uppercase text-white/40 hover:text-white transition mt-2"
+                        >
+                          Book another date
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleVisitSubmit} className="space-y-5">
+                        {/* Date */}
+                        <div>
+                          <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
+                            Select Date
+                          </label>
+                          <input
+                            type="date"
+                            min={today}
+                            value={visitDate}
+                            onChange={(e) => setVisitDate(e.target.value)}
+                            required
+                            className="w-full bg-black/40 border border-white/10 text-white rounded-2xl px-4 py-3 text-sm
+                                       focus:outline-none focus:border-white/30 transition [color-scheme:dark]"
+                          />
+                        </div>
+
+                        {/* Time slots */}
+                        <div>
+                          <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
+                            Select Time
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {TIME_SLOTS.map((slot) => (
+                              <button
+                                key={slot}
+                                type="button"
+                                onClick={() => setVisitTime(slot)}
+                                className={`py-2 rounded-xl text-[10px] font-black tracking-wider transition border ${
+                                  visitTime === slot
+                                    ? 'bg-white text-black border-white'
+                                    : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30 hover:text-white'
+                                }`}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {visitError && (
+                          <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
+                            {visitError}
+                          </p>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={visitSubmitting}
+                          className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em]
+                                     uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {visitSubmitting
+                            ? <><Loader size={14} className="animate-spin" /> Submitting…</>
+                            : <><CalendarCheck size={14} /> Confirm Visit</>}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                ) : (
+                  /* ── Interested? panel — guests & agents ── */
+                  <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
+                      Interested?
+                    </h3>
+                    <p className="text-sm text-white/50 font-medium mb-7">
+                      Sign in or reach out directly to schedule a viewing or learn more.
+                    </p>
+                    <div className="space-y-4">
+                      <a
+                        href="tel:+38344000000"
+                        className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-gray-200 transition flex items-center justify-center gap-2"
                       >
-                        Book another date
+                        <Phone size={14} /> Call Now
+                      </a>
+                      <button
+                        onClick={() => handleNavigation('signin')}
+                        className="w-full bg-white/10 border border-white/20 text-white py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-white/20 transition flex items-center justify-center gap-2"
+                      >
+                        <User size={14} /> Sign In to Book a Visit
+                      </button>
+                      <button
+                        onClick={() => handleNavigation('agents')}
+                        className="w-full border border-white/10 text-white/60 py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:text-white hover:border-white/30 transition flex items-center justify-center gap-2"
+                      >
+                        <ShoppingBag size={14} /> Browse Our Agents
                       </button>
                     </div>
-                  ) : (
-                    <form onSubmit={handleVisitSubmit} className="space-y-5">
-                      {/* Date */}
-                      <div>
-                        <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
-                          Select Date
-                        </label>
-                        <input
-                          type="date"
-                          min={today}
-                          value={visitDate}
-                          onChange={(e) => setVisitDate(e.target.value)}
-                          required
-                          className="w-full bg-black/40 border border-white/10 text-white rounded-2xl px-4 py-3 text-sm
-                                     focus:outline-none focus:border-white/30 transition [color-scheme:dark]"
-                        />
-                      </div>
-
-                      {/* Time slots */}
-                      <div>
-                        <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
-                          Select Time
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {TIME_SLOTS.map((slot) => (
-                            <button
-                              key={slot}
-                              type="button"
-                              onClick={() => setVisitTime(slot)}
-                              className={`py-2 rounded-xl text-[10px] font-black tracking-wider transition border ${
-                                visitTime === slot
-                                  ? 'bg-white text-black border-white'
-                                  : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30 hover:text-white'
-                              }`}
-                            >
-                              {slot}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {visitError && (
-                        <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
-                          {visitError}
-                        </p>
-                      )}
-
-                      <button
-                        type="submit"
-                        disabled={visitSubmitting}
-                        className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em]
-                                   uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {visitSubmitting
-                          ? <><Loader size={14} className="animate-spin" /> Submitting…</>
-                          : <><CalendarCheck size={14} /> Confirm Visit</>}
-                      </button>
-                    </form>
-                  )}
-                </div>
-
+                  </div>
+                )}
               </div>
             </div>
           </div>
