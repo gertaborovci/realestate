@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { LogOut } from 'lucide-react';
 import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
-import AddProperty from './AddProperty';
 
-import TransactionDashboard from '../components/TransactionDashboard';
-import MaintenanceVisits from '../components/MaintenanceVisits';
+import AgentVisits from '../components/AgentVisits';
+import AgentProperties from '../components/AgentProperties';
+import AgentContractsView from '../components/AgentContractsView';
+import AgentTransactionsView from '../components/AgentTransactionsView';
 
 const AgentProfile = () => {
   const [profile, setProfile] = useState({
@@ -75,7 +76,8 @@ const AgentDashboard = ({ onBack }) => {
           <div className="space-y-8 text-[12px] font-bold uppercase tracking-widest text-white/50">
             <p onClick={() => setView('profile')} className={`cursor-pointer transition-colors ${view === 'profile' ? 'text-white font-black' : 'hover:text-white'}`}>Profile</p>
             <p onClick={() => setView('list')} className={`cursor-pointer transition-colors ${view === 'list' ? 'text-white font-black' : 'hover:text-white'}`}>Properties</p>
-            <p onClick={() => setView('transactions')} className={`cursor-pointer transition-colors ${view === 'transactions' ? 'text-white font-black' : 'hover:text-white'}`}>Transactions</p>
+            <p onClick={() => setView('contracts')} className={`cursor-pointer transition-colors ${view === 'contracts' ? 'text-white font-black' : 'hover:text-white'}`}>Contracts</p>
+            <p onClick={() => setView('payments')} className={`cursor-pointer transition-colors ${view === 'payments' ? 'text-white font-black' : 'hover:text-white'}`}>Payments</p>
             <p onClick={() => setView('visits')} className={`cursor-pointer transition-colors ${view === 'visits' ? 'text-white font-black' : 'hover:text-white'}`}>Visits</p>
             <p onClick={() => setView('certifications')} className={`cursor-pointer transition-colors ${view === 'certifications' ? 'text-white font-black' : 'hover:text-white'}`}>Certifications</p>
             <p onClick={() => setView('inquiries')} className={`cursor-pointer transition-colors ${view === 'inquiries' ? 'text-white font-black' : 'hover:text-white'}`}>Contact Inquiries</p>
@@ -90,32 +92,14 @@ const AgentDashboard = ({ onBack }) => {
         
         {view === 'profile' && <AgentProfile />}
 
-        {view === 'list' && (
-          <div className="p-10">
-            <h2 className="text-4xl font-extrabold uppercase tracking-tight mb-10">MY PROPERTIES</h2>
-            <button onClick={() => setView('add')} className="bg-white text-black px-8 py-3 rounded-full font-bold text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-all">
-                + Add Property
-            </button>
-          </div>
-        )}
+        {view === 'list' && <AgentProperties />}
 
-        {view === 'add' && (
-          <div className="fixed inset-0 z-50 bg-[#050505] p-20 overflow-y-auto">
-             <div className="max-w-4xl mx-auto">
-                <AddProperty 
-                    onBack={() => setView('list')} 
-                    onAdd={() => setView('list')} 
-                />
-             </div>
-          </div>
-        )}
+        {view === 'contracts' && <AgentContractsView />}
 
-        {view === 'transactions' && (
-          <TransactionDashboard />
-        )}
+        {view === 'payments' && <AgentTransactionsView />}
 
         {view === 'visits' && (
-          <MaintenanceVisits />
+          <AgentVisits />
         )}
 
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}

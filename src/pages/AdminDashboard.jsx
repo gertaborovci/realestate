@@ -6,7 +6,6 @@ import AddProperty from './AddProperty';
 import ManageAgents from './ManageAgents';
 import ManageUsers from './ManageUsers';
 import AgentProfile from './AgentProfile';
-import TransactionDashboard from '../TransactionDashboard';
 import { API_BASE, apiFetch } from '../lib/api';
 import { Home, Users, DollarSign, Clock, Calendar } from 'lucide-react';
 
@@ -152,59 +151,110 @@ const AdminDashboard = ({ onBack }) => {
               />
             )}
 
-            {activeTab === 'transactions' && <TransactionDashboard />}
-
             {activeTab === 'visits' && (
               <>
-                <h1 className="text-5xl font-bold mb-12">PROPERTY VISITS</h1>
+                <div className="flex justify-between items-center mb-12">
+                  <h1 className="text-5xl font-bold">CONSULTATIONS & VISITS</h1>
+                  <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">
+                    {visits.filter((v) => v.status === 'PENDING').length} pending
+                  </span>
+                </div>
+
                 {visitsLoading ? (
-                  <p className="text-gray-400">Loading visits...</p>
+                  <p className="text-gray-400 animate-pulse">Loading visits…</p>
                 ) : visits.length === 0 ? (
-                  <p className="text-gray-500">No scheduled visits yet.</p>
+                  <p className="text-gray-500">No scheduled visits or consultations yet.</p>
                 ) : (
                   <div className="bg-[#121212] border border-gray-800 rounded-2xl overflow-hidden">
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-gray-800 text-xs font-bold text-gray-400 uppercase tracking-wider">
                           <th className="p-5">ID</th>
-                          <th className="p-5">Property</th>
-                          <th className="p-5">User</th>
-                          <th className="p-5">Date</th>
-                          <th className="p-5">Time</th>
+                          <th className="p-5">Type</th>
+                          <th className="p-5">Agent</th>
+                          <th className="p-5">Client</th>
+                          <th className="p-5">Date & Time</th>
+                          <th className="p-5">Notes</th>
                           <th className="p-5">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-900">
-                        {visits.map((visit) => (
-                          <tr key={visit.id} className="hover:bg-[#1a1a1a]/30">
-                            <td className="p-5 text-gray-400">#{visit.id}</td>
-                            <td className="p-5 font-semibold text-white">
-                              {visit.property_title || `Property #${visit.property_id}`}
-                            </td>
-                            <td className="p-5 text-gray-300">
-                              {visit.user_name || `User #${visit.user_id}`}
-                            </td>
-                            <td className="p-5 text-gray-300">
-                              {visit.visit_date
-                                ? new Date(visit.visit_date).toLocaleDateString()
-                                : '—'}
-                            </td>
-                            <td className="p-5 text-gray-300">{visit.visit_time || '—'}</td>
-                            <td className="p-5">
-                              <select
-                                value={visit.status}
-                                onChange={(e) =>
-                                  handleVisitStatusChange(visit.id, e.target.value)
-                                }
-                                className="bg-[#1a1a1a] border border-gray-800 text-white px-3 py-1.5 rounded-xl text-xs"
-                              >
-                                <option value="PENDING">PENDING</option>
-                                <option value="APPROVED">APPROVED</option>
-                                <option value="CANCELLED">CANCELLED</option>
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
+                        {visits.map((visit) => {
+                          const isConsultation = !!visit.agent_id && !visit.property_id;
+                          const statusColors = {
+                            PENDING:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+                            APPROVED:  'bg-green-500/10  text-green-400  border-green-500/20',
+                            CANCELLED: 'bg-red-500/10    text-red-400    border-red-500/20',
+                          };
+                          return (
+                            <tr key={visit.id} className="hover:bg-[#1a1a1a]/50 transition">
+                              <td className="p-5 text-gray-500 text-xs">#{visit.id}</td>
+
+                              {/* Type badge */}
+                              <td className="p-5">
+                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase border ${
+                                  isConsultation
+                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                    : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                }`}>
+                                  {isConsultation ? 'Consultation' : 'Property Visit'}
+                                </span>
+                              </td>
+
+                              {/* Agent */}
+                              <td className="p-5 font-semibold text-white">
+                                {visit.agent_name
+                                  ? visit.agent_name.toUpperCase()
+                                  : visit.property_title
+                                    ? visit.property_title
+                                    : '—'}
+                              </td>
+
+                              {/* Client */}
+                              <td className="p-5">
+                                <div className="text-gray-200 font-medium">
+                                  {visit.user_name || `User #${visit.user_id}`}
+                                </div>
+                                {visit.user_email && (
+                                  <div className="text-gray-500 text-xs mt-0.5">{visit.user_email}</div>
+                                )}
+                              </td>
+
+                              {/* Date & Time */}
+                              <td className="p-5 text-gray-300">
+                                <div>
+                                  {visit.visit_date
+                                    ? new Date(visit.visit_date).toLocaleDateString('en-GB', {
+                                        day: '2-digit', month: 'short', year: 'numeric',
+                                      })
+                                    : '—'}
+                                </div>
+                                <div className="text-gray-500 text-xs mt-0.5">{visit.visit_time || ''}</div>
+                              </td>
+
+                              {/* Notes */}
+                              <td className="p-5 text-gray-500 text-xs max-w-[160px]">
+                                <span className="line-clamp-2">{visit.notes || '—'}</span>
+                              </td>
+
+                              {/* Status dropdown */}
+                              <td className="p-5">
+                                <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase border mb-2 ${statusColors[visit.status] || ''}`}>
+                                  {visit.status}
+                                </span>
+                                <select
+                                  value={visit.status}
+                                  onChange={(e) => handleVisitStatusChange(visit.id, e.target.value)}
+                                  className="block w-full bg-[#1a1a1a] border border-gray-800 text-white px-3 py-1.5 rounded-xl text-xs focus:outline-none focus:border-gray-600"
+                                >
+                                  <option value="PENDING">PENDING</option>
+                                  <option value="APPROVED">APPROVED</option>
+                                  <option value="CANCELLED">CANCELLED</option>
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

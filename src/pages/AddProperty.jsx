@@ -1,19 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropertyFeatures from './PropertyFeatures';
-import { API_BASE } from '../lib/api';
+import { API_BASE, apiFetch } from '../lib/api';
+import { getCurrentUser } from '../lib/auth';
 import { ArrowLeft, Euro, MapPin, Image as ImageIcon, DoorOpen, Bath, Maximize, Activity, Home, UploadCloud, X, CheckCircle } from 'lucide-react';
 
 const AddProperty = ({ onBack, onAdd, editData }) => {
+  const [agentId, setAgentId] = useState(null);
+
   const [formData, setFormData] = useState({
-    title: '', 
-    price: '', 
-    location: '', 
-    type: 'Shitje', 
-    status: 'E Lirë', 
-    rooms: '', 
-    bathrooms: '', 
+    title: '',
+    price: '',
+    location: '',
+    type: 'Shitje',
+    status: 'E Lirë',
+    rooms: '',
+    bathrooms: '',
     area: ''
   });
+
+  // Resolve the logged-in agent's agents.id so it can be stored on the property
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user?.id && user?.role === 'agent') {
+      apiFetch(`/api/agents/by-user/${user.id}`)
+        .then((a) => setAgentId(a.id))
+        .catch(() => {}); // non-fatal — admin adding a property without an agent profile
+    }
+  }, []);
 
   const [step, setStep] = useState(1); // Step 1: Base Form, Step 2: Features
   const [savedId, setSavedId] = useState(editData ? editData.id : null);
@@ -39,7 +52,7 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({...formData, image: ''}), 
+        body: JSON.stringify({ ...formData, image: '', ...(agentId ? { agent_id: agentId } : {}) }),
       });
 
       if (!response.ok) {
