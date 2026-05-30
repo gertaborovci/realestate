@@ -8,6 +8,7 @@ import {
   Wrench,
   MapPin,
   Receipt,
+  Bell,
 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
@@ -52,6 +53,11 @@ const Sidebar = ({ onTabChange, activeTab }) => {
       id: 'expenses',
       icon: <Receipt size={18} />,
       label: 'EXPENSES'
+    },
+    {
+      id: 'notifications',
+      icon: <Bell size={18} />,
+      label: 'NOTIFICATIONS'
     },
   ];
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Building2 } from 'lucide-react';
 import { setCurrentUser } from '../lib/auth';
+import NotificationBell from './NotificationBell';
 
 const Navbar = ({ onNavigate, isScrolled, currentView, onSignOut, currentUser }) => {
   const user = currentUser;
@@ -62,8 +63,11 @@ const Navbar = ({ onNavigate, isScrolled, currentView, onSignOut, currentUser })
         ))}
       </div>
 
-      {/* Right: user icon + sign out or login */}
+      {/* Right: bell (logged-in only) + user icon + sign out or login */}
       <div className="flex items-center gap-4">
+        {user && (
+          <NotificationBell userId={user.id} onNavigate={onNavigate} />
+        )}
         <div
           className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
           onClick={handleUserClick}

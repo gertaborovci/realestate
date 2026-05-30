@@ -76,6 +76,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
         onNavigate={onNavigate}
         isScrolled={true}
         currentView="user-dashboard"
+        currentUser={user}
         onSignOut={onSignOut}
       />
 

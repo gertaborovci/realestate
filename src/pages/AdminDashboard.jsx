@@ -12,7 +12,131 @@ import ManageNeighborhoods from './ManageNeighborhoods';
 import ManageExpenses from './ManageExpenses';
 import MaintenanceVisits from '../components/MaintenanceVisits';
 import { API_BASE, apiFetch } from '../lib/api';
-import { Home, Users, DollarSign, Clock, Calendar } from 'lucide-react';
+import { Home, Users, DollarSign, Clock, Calendar, Bell, Send } from 'lucide-react';
+
+/* ─── Broadcast Panel ────────────────────────────────────────────── */
+const BroadcastPanel = () => {
+  const [form, setForm]       = useState({ title: '', message: '', link: '' });
+  const [sending, setSending] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError]     = useState('');
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim() || !form.message.trim()) {
+      setError('Title and message are required.');
+      return;
+    }
+    setSending(true);
+    setError('');
+    try {
+      const result = await apiFetch('/api/notifications/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': 'admin' },
+        body: JSON.stringify({
+          title:   form.title.trim(),
+          message: form.message.trim(),
+          link:    form.link.trim() || null,
+        }),
+      });
+      setSuccess(`✅ Broadcast sent to ${result.count} user${result.count !== 1 ? 's' : ''}.`);
+      setForm({ title: '', message: '', link: '' });
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.message || 'Failed to send broadcast.');
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="space-y-10">
+      <div className="flex items-center gap-4">
+        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+          <Bell size={24} className="text-amber-400" />
+        </div>
+        <div>
+          <h1 className="text-4xl font-black tracking-tight text-white">NOTIFICATIONS</h1>
+          <p className="text-white/40 text-xs font-bold tracking-widest uppercase mt-1">
+            Broadcast messages to all users
+          </p>
+        </div>
+      </div>
+
+      {/* Compose */}
+      <div className="bg-[#111] border border-white/8 rounded-2xl p-8 space-y-6">
+        <h2 className="text-xs font-black tracking-widest uppercase text-white/60 flex items-center gap-2">
+          <Send size={13} /> Compose Broadcast
+        </h2>
+
+        {success && (
+          <div className="bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-3 rounded-xl font-semibold">
+            {success}
+          </div>
+        )}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl font-semibold">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSend} className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-2">
+              Title *
+            </label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="e.g. New Properties Available!"
+              className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/30 transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-2">
+              Message *
+            </label>
+            <textarea
+              value={form.message}
+              onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+              placeholder="Write your broadcast message here…"
+              rows={4}
+              className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/30 transition resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-2">
+              Link <span className="text-white/20 normal-case font-normal tracking-normal">(optional — page to navigate to)</span>
+            </label>
+            <input
+              type="text"
+              value={form.link}
+              onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))}
+              placeholder="e.g. properties"
+              className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/30 transition"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-white/30 text-xs">
+              This message will be sent to <strong className="text-white/50">all registered users</strong>.
+            </p>
+            <button
+              type="submit"
+              disabled={sending}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black text-xs font-black px-8 py-3 rounded-full transition tracking-widest uppercase"
+            >
+              <Send size={14} />
+              {sending ? 'Sending…' : 'Send Broadcast'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const AdminDashboard = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -264,6 +388,7 @@ const AdminDashboard = ({ onBack }) => {
             {activeTab === 'users'          && <ManageUsers />}
             {activeTab === 'neighborhoods'  && <ManageNeighborhoods />}
             {activeTab === 'expenses'       && <ManageExpenses />}
+            {activeTab === 'notifications'  && <BroadcastPanel />}
 
             {activeTab === 'agent-profile' && (
               <AgentProfile
