@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, X, Pencil, Trash2, Loader, FileCheck, ShieldCheck } from 'lucide-react';
+import { Upload, X, Pencil, Trash2, Loader, FileCheck, ShieldCheck, AlertCircle } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 
@@ -236,6 +236,19 @@ const AgentCertifications = () => {
                     ? new Date(cert.expires_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                     : '—'}
                 </span>
+
+                {/* Rejection reason — shown below when rejected */}
+                {cert.status === 'Rejected' && cert.rejection_reason && (
+                  <div className="w-full flex items-start gap-2 bg-red-500/5 border border-red-500/15 rounded-xl px-3 py-2 mt-1 -mx-1">
+                    <AlertCircle size={12} className="text-red-400/70 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[9px] font-black tracking-widest uppercase text-red-400/60 mb-0.5">
+                        Reason for rejection
+                      </p>
+                      <p className="text-xs text-red-300/70 italic">"{cert.rejection_reason}"</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">

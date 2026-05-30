@@ -69,6 +69,7 @@ db.connect((err) => {
             visit_date  DATE         NOT NULL,
             visit_time  VARCHAR(10)  NOT NULL,
             notes       TEXT         DEFAULT NULL,
+            agent_notes TEXT         DEFAULT NULL,
             status      VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
             created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
         )
@@ -76,6 +77,31 @@ db.connect((err) => {
         if (!err) console.log('✅ visits table verified!');
         else console.error('Error verifying visits table:', err.message);
     });
+
+    // Ensure agent_notes column exists on existing visits tables
+    db.query("ALTER TABLE visits ADD COLUMN IF NOT EXISTS agent_notes TEXT DEFAULT NULL", (err) => {
+        if (!err) console.log('✅ visits.agent_notes column ready!');
+    });
+
+    // Ensure rejection_reason column exists on certifications table
+    db.query("ALTER TABLE certifications ADD COLUMN IF NOT EXISTS rejection_reason TEXT DEFAULT NULL", (err) => {
+        if (!err) console.log('✅ certifications.rejection_reason column ready!');
+    });
+
+    // Ensure profile columns exist on users table
+    const userProfileColumns = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS license_id VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS specialization VARCHAR(150) DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_url VARCHAR(255) DEFAULT NULL",
+    ];
+    userProfileColumns.forEach(sql => {
+        db.query(sql, (err) => {
+            if (err) console.error('Error adding users column:', err.message);
+        });
+    });
+    console.log('✅ users profile columns verified!');
 
     // Ensure 'contracts' table exists
     db.query(`
@@ -239,6 +265,29 @@ db.connect((err) => {
         if (!err) console.log('✅ agent_ratings table is ready!');
         else console.error('Error creating agent_ratings table:', err);
     });
+
+    // Ensure 'maintenance_requests' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS maintenance_requests (
+            id                   INT AUTO_INCREMENT PRIMARY KEY,
+            property_id          INT           DEFAULT NULL,
+            user_id              INT           DEFAULT NULL,
+            title                VARCHAR(200)  NOT NULL,
+            description          TEXT          NOT NULL,
+            category             VARCHAR(50)   NOT NULL DEFAULT 'General',
+            priority             VARCHAR(20)   NOT NULL DEFAULT 'Medium',
+            status               VARCHAR(30)   NOT NULL DEFAULT 'Pending',
+            admin_notes          TEXT          DEFAULT NULL,
+            assigned_technician  VARCHAR(150)  DEFAULT NULL,
+            cost                 DECIMAL(10,2) DEFAULT NULL,
+            media_url            VARCHAR(500)  DEFAULT NULL,
+            created_at           TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+            updated_at           TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ maintenance_requests table verified!');
+        else console.error('Error creating maintenance_requests table:', err.message);
+    });
 });
 
 // ==========================================
@@ -261,6 +310,7 @@ const favoriteRoutes        = require('./routes/favoriteRoutes');
 const ratingRoutes          = require('./routes/ratingRoutes');
 const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
 const expenseRoutes         = require('./routes/expenseRoutes');
+const maintenanceRoutes     = require('./routes/maintenanceRoutes');
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/agents',        agentRoutes);
@@ -277,6 +327,7 @@ app.use('/api/favorites',      favoriteRoutes);
 app.use('/api/ratings',        ratingRoutes);
 app.use('/api/neighborhoods',  neighborhoodRoutes);
 app.use('/api/expenses',       expenseRoutes);
+app.use('/api/maintenance',    maintenanceRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT

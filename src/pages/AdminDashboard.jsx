@@ -10,6 +10,7 @@ import RentalRequests from './RentalRequests';
 import AdminAnalytics from './AdminAnalytics';
 import ManageNeighborhoods from './ManageNeighborhoods';
 import ManageExpenses from './ManageExpenses';
+import MaintenanceVisits from '../components/MaintenanceVisits';
 import { API_BASE, apiFetch } from '../lib/api';
 import { Home, Users, DollarSign, Clock, Calendar } from 'lucide-react';
 
@@ -248,6 +249,8 @@ const AdminDashboard = ({ onBack }) => {
                 )}
               </>
             )}
+
+            {activeTab === 'maintenance' && <MaintenanceVisits />}
 
             {activeTab === 'agents' && (
               <ManageAgents
