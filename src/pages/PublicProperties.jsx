@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, Phone, Mail, Globe, Heart, CalendarCheck, ShoppingBag } from 'lucide-react';
+import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 import RentalCalendar from '../components/RentalCalendar';
@@ -7,7 +7,6 @@ import PropertyMap    from '../components/PropertyMap';
 
 // ─── Fuzzy search helpers ─────────────────────────────────────────────────────
 
-/** Levenshtein distance between two strings */
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
   const dp = Array.from({ length: m + 1 }, (_, i) =>
@@ -21,34 +20,20 @@ function levenshtein(a, b) {
   return dp[m][n];
 }
 
-/**
- * Returns true if `query` fuzzy-matches `text`.
- * - Exact substring match always passes.
- * - Otherwise allows 1 error per 4 characters in the query term.
- */
 function fuzzyMatch(text, query) {
   if (!text || !query) return false;
   const t = text.toLowerCase().trim();
   const q = query.toLowerCase().trim();
   if (!q) return true;
   if (t.includes(q)) return true;
-
-  // Try each word in text against each word in query
   const textWords  = t.split(/[\s,.-]+/).filter(Boolean);
   const queryWords = q.split(/\s+/).filter(Boolean);
-
   return queryWords.every(qw => {
     const maxDist = Math.max(1, Math.floor(qw.length / 4));
-    return textWords.some(tw => levenshtein(tw, qw) <= maxDist) ||
-           t.includes(qw);
+    return textWords.some(tw => levenshtein(tw, qw) <= maxDist) || t.includes(qw);
   });
 }
 
-/**
- * Returns true if a property's city loosely matches a neighbourhood city.
- * Extracts the primary city token (before the first comma) and compares
- * with up to 2 edit distance tolerance.
- */
 function cityMatch(location, nbCity) {
   if (!location || !nbCity) return false;
   const locCity = (location.split(',')[0] || location).toLowerCase().trim();
@@ -56,6 +41,8 @@ function cityMatch(location, nbCity) {
   if (locCity.includes(nb) || nb.includes(locCity)) return true;
   return levenshtein(locCity, nb) <= 2;
 }
+
+const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
 const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened, initialCityFilter = '', onCityFilterConsumed }) => {
   const [properties, setProperties] = useState([]);
@@ -65,7 +52,21 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [gallery, setGallery] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mainImages, setMainImages] = useState({});
-  const [propertyFeatures, setPropertyFeatures] = useState([]); 
+  const [propertyFeatures, setPropertyFeatures] = useState([]);
+
+  // ── Schedule a Visit state ──────────────────────────────────────────────
+  const [visitDate,       setVisitDate]       = useState('');
+  const [visitTime,       setVisitTime]       = useState('');
+  const [visitSubmitting, setVisitSubmitting] = useState(false);
+  const [visitSuccess,    setVisitSuccess]    = useState(false);
+  const [visitError,      setVisitError]      = useState('');
+  const today = new Date().toISOString().split('T')[0];
+
+  // ── Initiate Purchase (20% deposit) state ───────────────────────────────
+  const [purchaseLoading,  setPurchaseLoading]  = useState(false);
+  const [purchaseSuccess,  setPurchaseSuccess]  = useState(false);
+  const [purchaseError,    setPurchaseError]    = useState('');
+  const [contractData,     setContractData]     = useState(null);
 
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
@@ -75,23 +76,15 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [currentUser] = useState(() => getCurrentUser());
   const role = currentUser ? 'user' : null;
 
-  // Visit booking form state
-  const [visitDate, setVisitDate] = useState('');
-  const [visitTime, setVisitTime] = useState('');
-  const [visitSubmitting, setVisitSubmitting] = useState(false);
-  const [visitResult, setVisitResult] = useState(null); // 'ok' | 'error'
-
   // Rental date state
-  const [checkInDate,   setCheckInDate]   = useState('');
-  const [checkOutDate,  setCheckOutDate]  = useState('');
-  const [userNote,      setUserNote]      = useState('');
-  const [blockedRanges, setBlockedRanges] = useState([]);
-
-  // Purchase / rental state
-  const [purchaseSubmitting, setPurchaseSubmitting] = useState(false);
-  const [purchaseResult, setPurchaseResult] = useState(null); // 'ok' | 'error'
-  const [purchaseError,    setPurchaseError]    = useState('');
-  const [rentalError,      setRentalError]      = useState('');
+  const [checkInDate,        setCheckInDate]        = useState('');
+  const [checkOutDate,       setCheckOutDate]        = useState('');
+  const [userNote,           setUserNote]            = useState('');
+  const [blockedRanges,      setBlockedRanges]       = useState([]);
+  const [visitResult,        setVisitResult]         = useState(null);
+  const [purchaseSubmitting, setPurchaseSubmitting]  = useState(false);
+  const [purchaseResult,     setPurchaseResult]      = useState(null);
+  const [rentalError,        setRentalError]         = useState('');
 
   const [searchQuery, setSearchQuery] = useState(initialCityFilter || '');
   const [sortConfig, setSortConfig] = useState('newest');
@@ -302,10 +295,10 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     }
   };
 
-  // Auto-open a specific property when navigated from favorites
+  // Auto-open a specific property when arriving from the favorites page
   useEffect(() => {
     if (initialPropertyId && properties.length > 0) {
-      const prop = properties.find(p => p.id === Number(initialPropertyId));
+      const prop = properties.find((p) => p.id === Number(initialPropertyId));
       if (prop) {
         openPropertyDetails(prop);
         if (onPropertyOpened) onPropertyOpened();
@@ -347,7 +340,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
 
     return results.slice(0, 6);
   }, [searchQuery, neighborhoods, properties]);
-  
+
   const renderDynamicCategories = () => {
     if (!Array.isArray(properties) || properties.length === 0) return null;
 
@@ -381,8 +374,6 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
       </div>
     );
   };
-
-  const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
   const handleInitiatePurchase = async (property) => {
     // Always read a fresh copy so stale component state can't cause null errors
@@ -530,7 +521,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   };
 
   const PropertyCard = ({ property }) => {
-    const isFavorited = favorites.some(f => f.id === property.id);
+    const isFavorited = favorites.some((f) => f.id === property.id);
     const handleFavoriteToggle = (e) => {
       e.stopPropagation();
       if (onToggleFavorite) onToggleFavorite({ ...property, mainImage: mainImages[property.id] });
@@ -636,8 +627,6 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
-
-              {/* ── LEFT: property info + (user-only) purchase section ── */}
               <div className="md:col-span-2 space-y-10">
                 <div>
                   <p className="text-[12px] font-black tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2"><MapPin size={16} /> {shortLocation(selectedProperty.location)}, Kosovo</p>
@@ -648,7 +637,6 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                   <div className="flex items-center gap-3"><Bath size={24} className="text-white/40"/> <span className="text-xl font-bold">{selectedProperty.bathrooms || 0} Baths</span></div>
                   <div className="flex items-center gap-3"><Maximize size={24} className="text-white/40"/> <span className="text-xl font-bold">{selectedProperty.area} m²</span></div>
                 </div>
-
                 {propertyFeatures.length > 0 ? (
                   <div>
                     <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6">Property Features</h3>
@@ -662,7 +650,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                     </div>
                   </div>
                 ) : (
-                  <div className="pb-2 border-b border-white/10">
+                  <div>
                     <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6">About this property</h3>
                     <p className="text-xl text-white/70 leading-relaxed font-medium">{selectedProperty.description ? selectedProperty.description : `A beautiful property located in the heart of ${selectedProperty.location}. Contact our elite agents to schedule a viewing and learn more about this exclusive listing.`}</p>
                   </div>
@@ -905,14 +893,35 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                   );
                 })() : (
                   <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
-                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-2">Interested?</h3>
-                    <p className="text-sm text-white/50 font-medium mb-8">Contact an elite agent to schedule a private viewing.</p>
-                    <button className="w-full bg-white text-black py-5 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors mb-4 flex items-center justify-center gap-3"><User size={18} /> Contact Agent</button>
-                    <button className="w-full bg-transparent border border-white/20 text-white py-5 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-white/10 transition-colors flex items-center justify-center gap-3"><Phone size={18} /> Call Now</button>
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
+                      Interested?
+                    </h3>
+                    <p className="text-sm text-white/50 font-medium mb-7">
+                      Sign in or reach out directly to schedule a viewing or learn more.
+                    </p>
+                    <div className="space-y-4">
+                      <a
+                        href="tel:+38344000000"
+                        className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                      >
+                        <Phone size={14} /> Call Now
+                      </a>
+                      <button
+                        onClick={() => handleNavigation('signin')}
+                        className="w-full bg-white/10 border border-white/20 text-white py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-white/20 transition flex items-center justify-center gap-2"
+                      >
+                        <User size={14} /> Sign In to Book a Visit
+                      </button>
+                      <button
+                        onClick={() => handleNavigation('agents')}
+                        className="w-full border border-white/10 text-white/60 py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:text-white hover:border-white/30 transition flex items-center justify-center gap-2"
+                      >
+                        <ShoppingBag size={14} /> Browse Our Agents
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-
             </div>
 
             {/* ── Neighbourhood info ── */}
