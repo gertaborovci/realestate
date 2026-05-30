@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
 import { canAccessAgentDashboard, DASHBOARD_VIEWS } from '../lib/auth';
+import HeroSearch from '../components/HeroSearch';
 
-const RealEstateHero = ({ onNavigate, onSignOut, currentUser }) => {
+const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const user = currentUser;
@@ -132,13 +133,23 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser }) => {
         <div className="h-full w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
           <div className="absolute inset-0 bg-black/40"></div>
           
-          <div className="absolute bottom-32 left-16 md:left-24">
-            <h1 className="text-white text-[6vw] font-bold tracking-tighter leading-[0.8] mb-8 uppercase">
-              DREAM HOME
+          <div className="absolute bottom-20 left-16 md:left-24">
+            <h1 className="text-white text-[6vw] font-black tracking-tighter leading-[0.85] mb-5">
+              Find Your Nest
             </h1>
-            <p className="text-white/80 text-[10px] max-w-xl font-semibold tracking-[0.3em] uppercase opacity-80 leading-relaxed">
-              KosovaNest is the premier real estate agency in the region, connecting clients with architectural excellence and modern living spaces across Kosovo.
+            <p className="text-white/70 text-sm max-w-lg font-medium leading-relaxed mb-8">
+              Welcome to KosovaNest. Discover premium properties, modern apartments,
+              and architectural excellence across Kosovo.
             </p>
+            <button
+              onClick={() => onNavigate('properties')}
+              className="inline-flex items-center gap-3 bg-white text-black px-10 py-4 rounded-full
+                         font-black text-[11px] uppercase tracking-widest
+                         hover:bg-zinc-100 transition-all hover:gap-5 duration-300 shadow-2xl"
+            >
+              Start Your Next Chapter
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </section>

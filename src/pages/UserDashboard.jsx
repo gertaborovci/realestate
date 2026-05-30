@@ -8,6 +8,7 @@ import UserProfile from '../components/UserProfile';
 import UserFavorites from '../components/UserFavorites';
 import UserStories from '../components/UserStories';
 import UserRating from '../components/UserRating';
+import UserRequests from '../components/UserRequests';
 
 export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUser, onUserChange, favorites = [], onRemoveFavorite, onViewProperty }) {
   const user = currentUser || getCurrentUser();
@@ -110,6 +111,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
             { key: 'favorites', label: `Favorites (${favorites.length})` },
             { key: 'stories',   label: 'Stories' },
             { key: 'rating',    label: 'Ratings' },
+            { key: 'requests',  label: 'My Requests' },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -138,6 +140,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
         {activeSection === 'rating' && (
           <UserRating ratings={ratings} setRatings={setRatings} />
         )}
+        {activeSection === 'requests' && <UserRequests />}
       </div>
 
       {/* About Us Footer */}

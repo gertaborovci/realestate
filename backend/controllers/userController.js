@@ -39,10 +39,20 @@ async function register(req, res) {
       'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
       [name, email, hash, mappedRole]
     );
+    const newUserId = result.insertId;
+
+    // Automatically create the agents profile row for agent accounts
+    if (mappedRole === 'agent') {
+      await db.query(
+        'INSERT INTO agents (user_id, status) VALUES (?, ?)',
+        [newUserId, 'Active']
+      );
+    }
+
     res.status(201).json({
       message: 'Account created successfully.',
       user: {
-        id: result.insertId,
+        id: newUserId,
         username: name,
         email,
         role: normalizeRole(mappedRole),

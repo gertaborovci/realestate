@@ -3,15 +3,21 @@ import PropertyFeatures from './PropertyFeatures';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 import { ArrowLeft, Euro, MapPin, Image as ImageIcon, DoorOpen, Bath, Maximize, Activity, Home, UploadCloud, X, CheckCircle } from 'lucide-react';
+import LocationAutocomplete from '../components/LocationAutocomplete';
 
 const AddProperty = ({ onBack, onAdd, editData }) => {
-  const [agentId, setAgentId] = useState(null);
+  const [agentId,       setAgentId]       = useState(null);
+  const [neighborhoods, setNeighborhoods] = useState([]);
 
   const [formData, setFormData] = useState({
     title: '',
     price: '',
     location: '',
+    latitude: '',
+    longitude: '',
     type: 'Shitje',
+    home_type: '',
+    neighborhood_id: '',
     status: 'E Lirë',
     rooms: '',
     bathrooms: '',
@@ -26,6 +32,13 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
         .then((a) => setAgentId(a.id))
         .catch(() => {}); // non-fatal — admin adding a property without an agent profile
     }
+  }, []);
+
+  // Load neighbourhoods for the dropdown
+  useEffect(() => {
+    apiFetch('/api/neighborhoods')
+      .then(data => setNeighborhoods(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
   const [step, setStep] = useState(1); // Step 1: Base Form, Step 2: Features
@@ -158,18 +171,24 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
           </div>
 
           <div className="space-y-3">
-            <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Location / Address</label>
-            <div className="relative">
-              <MapPin size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
-              <input 
-                type="text" 
-                value={formData.location} 
-                onChange={(e) => setFormData({...formData, location: e.target.value})} 
-                placeholder="E.g. Pristina, Sunny Hill"
-                required
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-white focus:border-white/30 outline-none transition-all" 
-              />
-            </div>
+            <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">
+              Location / Address
+              {formData.latitude && formData.longitude && (
+                <span className="ml-2 text-emerald-400 text-[9px] font-bold normal-case tracking-normal">
+                  ✓ Coordinates saved
+                </span>
+              )}
+            </label>
+            <LocationAutocomplete
+              value={formData.location}
+              onChange={(address, lat, lon) =>
+                setFormData(f => ({ ...f, location: address, latitude: lat, longitude: lon }))
+              }
+              placeholder="Start typing an address…"
+            />
+            {/* Hidden inputs so lat/lng are submitted with the form */}
+            <input type="hidden" value={formData.latitude}  onChange={() => {}} />
+            <input type="hidden" value={formData.longitude} onChange={() => {}} />
           </div>
 
           <div className="space-y-3">
@@ -201,6 +220,49 @@ const AddProperty = ({ onBack, onAdd, editData }) => {
               </select>
             </div>
           </div>
+
+          <div className="space-y-3">
+            <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Property Category</label>
+            <div className="relative">
+              <Home size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
+              <select
+                value={formData.home_type}
+                onChange={(e) => setFormData({...formData, home_type: e.target.value})}
+                className="w-full bg-[#0F0F0F] border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-white focus:border-white/30 outline-none appearance-none cursor-pointer"
+              >
+                <option value="">— Select category —</option>
+                <option value="House">House</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Villa">Villa</option>
+                <option value="Townhouse">Townhouse</option>
+                <option value="Mansion">Mansion</option>
+                <option value="Penthouse">Penthouse</option>
+                <option value="Duplex">Duplex</option>
+                <option value="Studio">Studio</option>
+                <option value="Cabin">Cabin</option>
+                <option value="Condo">Condo</option>
+              </select>
+            </div>
+          </div>
+
+          {neighborhoods.length > 0 && (
+            <div className="space-y-3">
+              <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Neighbourhood</label>
+              <div className="relative">
+                <MapPin size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
+                <select
+                  value={formData.neighborhood_id}
+                  onChange={(e) => setFormData({...formData, neighborhood_id: e.target.value})}
+                  className="w-full bg-[#0F0F0F] border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-white focus:border-white/30 outline-none appearance-none cursor-pointer"
+                >
+                  <option value="">— No neighbourhood selected —</option>
+                  {neighborhoods.map(n => (
+                    <option key={n.id} value={n.id}>{n.name} — {n.city}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3 md:col-span-2">
             <label className="text-white/40 text-[11px] font-bold tracking-[0.2em] px-2 uppercase">Current Property Status</label>

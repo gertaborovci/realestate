@@ -259,6 +259,8 @@ const inquiryRoutes         = require('./routes/inquiryRoutes');
 const certificationRoutes   = require('./routes/certificationRoutes');
 const favoriteRoutes        = require('./routes/favoriteRoutes');
 const ratingRoutes          = require('./routes/ratingRoutes');
+const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
+const expenseRoutes         = require('./routes/expenseRoutes');
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/agents',        agentRoutes);
@@ -273,6 +275,8 @@ app.use('/api/inquiries',      inquiryRoutes);
 app.use('/api/certifications', certificationRoutes);
 app.use('/api/favorites',      favoriteRoutes);
 app.use('/api/ratings',        ratingRoutes);
+app.use('/api/neighborhoods',  neighborhoodRoutes);
+app.use('/api/expenses',       expenseRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT
@@ -482,28 +486,7 @@ app.delete('/api/maintenance/:id', (req, res) => {
     });
 });
 
-app.get('/api/expenses', (req, res) => {
-    db.query("SELECT * FROM agencyexpenses ORDER BY expense_date DESC", (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.status(200).json(results);
-    });
-});
-
-app.post('/api/expenses', (req, res) => {
-    const { category, amount, description, expense_date } = req.body;
-    db.query("INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, ?)", 
-    [category, amount, description, expense_date], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.status(201).json({ id: result.insertId, ...req.body });
-    });
-});
-
-app.delete('/api/expenses/:id', (req, res) => {
-    db.query("DELETE FROM agencyexpenses WHERE id = ?", [req.params.id], (err) => {
-        if (err) return res.status(500).json(err);
-        res.status(200).json({ message: "Shpenzimi u fshi!" });
-    });
-});
+// Expenses are now handled by /routes/expenseRoutes.js
 
 app.get('/api/financial-summary', (req, res) => {
     const queryTotalPayments = "SELECT COALESCE(SUM(amount), 0) as total_income FROM payments WHERE status = 'PAID'";

@@ -69,26 +69,43 @@ async function create(req, res) {
     return res.status(400).json({ error: 'user_id and property_id are required.' });
   }
 
-  // Prevent duplicate open contracts
-  const [existing] = await db.query(
-    `SELECT id FROM contracts
-     WHERE user_id = ? AND property_id = ? AND status NOT IN ('Cancelled','Finalized')`,
-    [user_id, property_id]
-  );
-  if (existing.length > 0) {
-    return res.status(409).json({
-      error: 'An active contract already exists for this property.',
-      contract_id: existing[0].id,
-    });
+  const contractType = (type || 'Sale');
+  const isRent = contractType.toLowerCase() === 'rent';
+
+  // For Sale contracts, prevent duplicates; Rent allows multiple (different date ranges)
+  if (!isRent) {
+    const [existing] = await db.query(
+      `SELECT id FROM contracts
+       WHERE user_id = ? AND property_id = ? AND status NOT IN ('Cancelled','Finalized')`,
+      [user_id, property_id]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({
+        error: 'An active contract already exists for this property.',
+        contract_id: existing[0].id,
+      });
+    }
   }
 
-  // Fetch property price
-  const [[property]] = await db.query('SELECT price FROM properties WHERE id = ?', [property_id]);
+  // Fetch property — also check it's still available (only block Sale, not Rent)
+  const [[property]] = await db.query('SELECT price, status FROM properties WHERE id = ?', [property_id]);
   if (!property) return res.status(404).json({ error: 'Property not found.' });
 
-  const propertyPrice    = Number(property.price);
-  const depositAmount    = parseFloat((propertyPrice * 0.2).toFixed(2));
-  const remainingBalance = parseFloat((propertyPrice * 0.8).toFixed(2));
+  if (!isRent) {
+    const propStatus = (property.status || '').toUpperCase();
+    if (propStatus === 'SOLD' || propStatus.includes('SHITUR')) {
+      return res.status(409).json({ error: 'This property is no longer available — it has already been sold.' });
+    }
+  }
+
+  const propertyPrice = Number(property.price);
+  // Rent: security deposit = 1 month rent; Sale: 20% deposit
+  const depositAmount    = isRent
+    ? propertyPrice
+    : parseFloat((propertyPrice * 0.2).toFixed(2));
+  const remainingBalance = isRent
+    ? 0
+    : parseFloat((propertyPrice * 0.8).toFixed(2));
   const contractNumber   = await generateContractNumber();
   const today            = new Date().toISOString().split('T')[0];
 
@@ -99,7 +116,7 @@ async function create(req, res) {
         property_price, deposit_amount, remaining_balance, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending Signature')`,
     [contractNumber, user_id, property_id, agent_id || null,
-     type || 'Sale', propertyPrice, depositAmount, remainingBalance]
+     contractType, propertyPrice, depositAmount, remainingBalance]
   );
   const contractId = result.insertId;
 
@@ -159,11 +176,30 @@ async function updateStatus(req, res) {
   if (!valid.includes(status)) {
     return res.status(400).json({ error: `Invalid status. Must be one of: ${valid.join(', ')}` });
   }
-  const [result] = await db.query(
-    'UPDATE contracts SET status = ? WHERE id = ?',
-    [status, req.params.id]
+
+  // Fetch contract so we know the property_id and type before updating
+  const [[contract]] = await db.query(
+    'SELECT property_id, type FROM contracts WHERE id = ?',
+    [req.params.id]
   );
-  if (!result.affectedRows) return res.status(404).json({ error: 'Contract not found.' });
+  if (!contract) return res.status(404).json({ error: 'Contract not found.' });
+
+  await db.query('UPDATE contracts SET status = ? WHERE id = ?', [status, req.params.id]);
+
+  // Sync property status
+  if (contract.property_id) {
+    let propertyStatus = null;
+    if (status === 'Active' || status === 'Finalized') {
+      propertyStatus = contract.type === 'Rent' ? 'Rented' : 'Sold';
+    } else if (status === 'Cancelled') {
+      propertyStatus = 'Available';
+    }
+    if (propertyStatus) {
+      await db.query('UPDATE properties SET status = ? WHERE id = ?',
+        [propertyStatus, contract.property_id]);
+    }
+  }
+
   res.json({ message: 'Status updated.' });
 }
 
@@ -173,19 +209,31 @@ async function markSigned(req, res) {
   if (!['buyer', 'agent'].includes(party)) {
     return res.status(400).json({ error: "party must be 'buyer' or 'agent'." });
   }
+
   const col = party === 'buyer' ? 'signed_by_buyer' : 'signed_by_agent';
   await db.query(`UPDATE contracts SET ${col} = 1 WHERE id = ?`, [req.params.id]);
 
-  // Auto-finalize when both have signed
+  // Fetch full contract for post-sign logic
   const [[c]] = await db.query(
-    'SELECT signed_by_buyer, signed_by_agent, status FROM contracts WHERE id = ?',
+    'SELECT signed_by_buyer, signed_by_agent, status, property_id, type FROM contracts WHERE id = ?',
     [req.params.id]
   );
+
   let finalized = false;
+
+  // When agent signs → immediately mark property as sold / rented
+  if (party === 'agent' && c?.property_id) {
+    const propertyStatus = c.type === 'Rent' ? 'Rented' : 'Sold';
+    await db.query('UPDATE properties SET status = ? WHERE id = ?',
+      [propertyStatus, c.property_id]);
+  }
+
+  // Auto-finalize when both have signed
   if (c && c.signed_by_buyer && c.signed_by_agent && c.status !== 'Cancelled') {
     await db.query("UPDATE contracts SET status = 'Finalized' WHERE id = ?", [req.params.id]);
     finalized = true;
   }
+
   res.json({ message: `Signed by ${party}.`, finalized });
 }
 
@@ -207,7 +255,15 @@ async function remove(req, res) {
   res.json({ message: 'Contract deleted.' });
 }
 
+async function getByProperty(req, res) {
+  const [rows] = await db.query(
+    JOINED + ' WHERE c.property_id = ? ORDER BY c.created_at DESC',
+    [req.params.property_id]
+  );
+  res.json(rows);
+}
+
 module.exports = {
-  getAll, getByAgent, getByBuyer, getOne,
+  getAll, getByAgent, getByBuyer, getByProperty, getOne,
   create, update, updateStatus, markSigned, updateNotes, remove,
 };
