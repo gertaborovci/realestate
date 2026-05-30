@@ -115,18 +115,6 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
         </div>
       </nav>
 
-      {/* AGENT PANEL BUTTON — only visible when logged in as agent */}
-      {canAccessAgentDashboard() && (
-        <div className="fixed bottom-8 left-8 z-[100]">
-          <button
-            onClick={() => onNavigate(DASHBOARD_VIEWS.agent)}
-            className="bg-[#1f1f1f] border border-white/10 text-white px-8 py-4 rounded-full flex items-center gap-3 shadow-lg hover:bg-[#2a2a2a] transition-all"
-          >
-            <div className="bg-white text-black p-1.5 rounded-full"><ShieldCheck size={16} /></div>
-            <span className="font-bold tracking-widest text-[10px] uppercase">AGENT PANEL</span>
-          </button>
-        </div>
-      )}
 
       {/* Hero Section: FULL SCREEN */}
       <section className="h-screen w-full relative">

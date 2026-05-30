@@ -9,6 +9,7 @@ import {
   MapPin,
   Receipt,
   Bell,
+  LifeBuoy,
 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
@@ -58,6 +59,11 @@ const Sidebar = ({ onTabChange, activeTab }) => {
       id: 'notifications',
       icon: <Bell size={18} />,
       label: 'NOTIFICATIONS'
+    },
+    {
+      id: 'support',
+      icon: <LifeBuoy size={18} />,
+      label: 'SUPPORT'
     },
   ];
 

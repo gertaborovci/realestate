@@ -7,6 +7,7 @@ import AgentProperties from '../components/AgentProperties';
 import AgentContractsView from '../components/AgentContractsView';
 import AgentTransactionsView from '../components/AgentTransactionsView';
 import AgentRentalRequests from '../components/AgentRentalRequests';
+import UserSupport from '../components/UserSupport';
 import { getCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import { Camera, Trash2, User } from 'lucide-react';
@@ -60,6 +61,7 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
             <p onClick={() => setView('certifications')} className={`cursor-pointer transition-colors ${view === 'certifications' ? 'text-white font-black' : 'hover:text-white'}`}>Certifications</p>
             <p onClick={() => setView('inquiries')} className={`cursor-pointer transition-colors ${view === 'inquiries' ? 'text-white font-black' : 'hover:text-white'}`}>Contact Inquiries</p>
             <p onClick={() => setView('rentals')} className={`cursor-pointer transition-colors ${view === 'rentals' ? 'text-white font-black' : 'hover:text-white'}`}>Rental Requests</p>
+            <p onClick={() => setView('support')} className={`cursor-pointer transition-colors ${view === 'support' ? 'text-white font-black' : 'hover:text-white'}`}>Support</p>
           </div>
         </div>
 
@@ -74,7 +76,8 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
         {view === 'visits' && <AgentVisits />}
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}
         {view === 'inquiries' && <div className="p-10"><ContactInquiries /></div>}
-        {view === 'rentals' && <AgentRentalRequests />}
+        {view === 'rentals'   && <AgentRentalRequests />}
+        {view === 'support'   && <div className="p-10"><UserSupport /></div>}
 
       </div>
     </div>
