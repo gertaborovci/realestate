@@ -88,6 +88,23 @@ db.connect((err) => {
         if (!err) console.log('✅ certifications.rejection_reason column ready!');
     });
 
+    // Ensure 'notifications' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS notifications (
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            user_id    INT           NOT NULL,
+            type       VARCHAR(50)   NOT NULL DEFAULT 'system',
+            title      VARCHAR(150)  NOT NULL,
+            message    TEXT          NOT NULL,
+            is_read    TINYINT(1)    NOT NULL DEFAULT 0,
+            link       VARCHAR(255)  DEFAULT NULL,
+            created_at TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ notifications table verified!');
+        else console.error('Error creating notifications table:', err.message);
+    });
+
     // Ensure profile columns exist on users table
     const userProfileColumns = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL",
@@ -311,6 +328,7 @@ const ratingRoutes          = require('./routes/ratingRoutes');
 const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
 const expenseRoutes         = require('./routes/expenseRoutes');
 const maintenanceRoutes     = require('./routes/maintenanceRoutes');
+const notificationRoutes    = require('./routes/notificationRoutes');
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/agents',        agentRoutes);
@@ -328,6 +346,7 @@ app.use('/api/ratings',        ratingRoutes);
 app.use('/api/neighborhoods',  neighborhoodRoutes);
 app.use('/api/expenses',       expenseRoutes);
 app.use('/api/maintenance',    maintenanceRoutes);
+app.use('/api/notifications',  notificationRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT

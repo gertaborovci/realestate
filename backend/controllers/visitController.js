@@ -1,4 +1,5 @@
 const db = require('../db');
+const { createNotification } = require('../utils/notify');
 
 async function getAll(req, res) {
   const [rows] = await db.query(`
@@ -170,6 +171,30 @@ async function update(req, res) {
     `UPDATE visits SET agent_notes=? WHERE id=?`,
     [agent_notes, req.params.id]
   ).catch(() => {});
+
+  // Notify the user when an agent/admin changes the visit status
+  if (req.body.status && req.body.status !== current.status && current.user_id) {
+    const VISIT_MSGS = {
+      APPROVED: {
+        title:   'Visit Approved ✅',
+        message: 'Your property visit has been confirmed. See you there!',
+      },
+      CANCELLED: {
+        title:   'Visit Cancelled',
+        message: 'Your visit request has been declined by the agent.',
+      },
+    };
+    const msg = VISIT_MSGS[req.body.status];
+    if (msg) {
+      await createNotification({
+        user_id: current.user_id,
+        type:    'visit_update',
+        title:   msg.title,
+        message: msg.message,
+        link:    'user-dashboard',
+      });
+    }
+  }
 
   res.json({ message: 'Visit updated successfully.' });
 }
