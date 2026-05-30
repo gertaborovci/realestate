@@ -27,6 +27,7 @@ const EMPTY_FORM = {
   visit_date:  '',
   visit_time:  '',
   notes:       '',
+  agent_notes: '',
   status:      'PENDING',
 };
 
@@ -117,7 +118,8 @@ const AgentVisits = () => {
         ? new Date(visit.visit_date).toISOString().split('T')[0]
         : '',
       visit_time:  visit.visit_time  || '',
-      notes:       visit.notes       || '',
+      notes:       visit.notes       || '',   // user's note — shown read-only in modal
+      agent_notes: visit.agent_notes || '',   // agent's reply — editable
       status:      visit.status      || 'PENDING',
     });
     setFormError('');
@@ -180,10 +182,10 @@ const AgentVisits = () => {
           'x-user-id':   String(currentUser?.id || ''),
         },
         body: JSON.stringify({
-          visit_date: form.visit_date,
-          visit_time: form.visit_time,
-          notes:      form.notes || null,
-          status:     form.status,
+          visit_date:  form.visit_date,
+          visit_time:  form.visit_time,
+          agent_notes: form.agent_notes || null,  // agent reply — user's notes field is never overwritten
+          status:      form.status,
         }),
       });
       closeModal();
@@ -319,48 +321,55 @@ const AgentVisits = () => {
               )}
 
               {/* Info grid */}
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex items-start gap-2">
-                  <User size={13} className="text-white/30 mt-0.5 shrink-0" />
-                  <div>
-                    <Label>Client</Label>
-                    <p className="text-sm font-semibold text-white">
-                      {visit.user_name || (visit.user_id ? `User #${visit.user_id}` : '—')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <Mail size={13} className="text-white/30 mt-0.5 shrink-0" />
-                  <div>
-                    <Label>Email</Label>
-                    <p className="text-sm text-white/60">{visit.user_email || '—'}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <Calendar size={13} className="text-white/30 mt-0.5 shrink-0" />
-                  <div>
-                    <Label>Date &amp; Time</Label>
-                    <p className="text-sm font-semibold text-white">
-                      {visit.visit_date
-                        ? new Date(visit.visit_date).toLocaleDateString('en-GB', {
-                            day: '2-digit', month: 'short', year: 'numeric',
-                          })
-                        : '—'}
-                    </p>
-                    <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
-                      <Clock size={11} /> {visit.visit_time || ''}
-                    </p>
-                  </div>
-                </div>
-
-                {visit.notes && (
+              <div className="flex-1 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="flex items-start gap-2">
-                    <MessageSquare size={13} className="text-white/30 mt-0.5 shrink-0" />
+                    <User size={13} className="text-white/30 mt-0.5 shrink-0" />
                     <div>
-                      <Label>Notes</Label>
-                      <p className="text-xs text-white/60 line-clamp-2">{visit.notes}</p>
+                      <Label>Client</Label>
+                      <p className="text-sm font-semibold text-white">
+                        {visit.user_name || (visit.user_id ? `User #${visit.user_id}` : '—')}
+                      </p>
+                      <p className="text-xs text-white/40">{visit.user_email || ''}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Calendar size={13} className="text-white/30 mt-0.5 shrink-0" />
+                    <div>
+                      <Label>Date &amp; Time</Label>
+                      <p className="text-sm font-semibold text-white">
+                        {visit.visit_date
+                          ? new Date(visit.visit_date).toLocaleDateString('en-GB', {
+                              day: '2-digit', month: 'short', year: 'numeric',
+                            })
+                          : '—'}
+                      </p>
+                      <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
+                        <Clock size={11} /> {visit.visit_time || ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Client's booking note */}
+                  {visit.notes && (
+                    <div className="flex items-start gap-2">
+                      <MessageSquare size={13} className="text-white/30 mt-0.5 shrink-0" />
+                      <div>
+                        <Label>Client's Note</Label>
+                        <p className="text-xs text-white/60 italic line-clamp-2">"{visit.notes}"</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Agent's note to client */}
+                {visit.agent_notes && (
+                  <div className="flex items-start gap-2 bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2">
+                    <MessageSquare size={12} className="text-blue-400/60 mt-0.5 shrink-0" />
+                    <div>
+                      <Label>My Note to Client</Label>
+                      <p className="text-xs text-blue-300/70 italic">"{visit.agent_notes}"</p>
                     </div>
                   </div>
                 )}
@@ -530,17 +539,43 @@ const AgentVisits = () => {
                 </select>
               </div>
 
-              {/* Notes */}
-              <div>
-                <Label>Notes (optional)</Label>
-                <textarea
-                  rows={3}
-                  value={form.notes}
-                  onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                  placeholder="Any additional details…"
-                  className={`${inputCls} resize-none`}
-                />
-              </div>
+              {/* Client's note — read-only, only in edit mode */}
+              {modal.mode === 'edit' && form.notes && (
+                <div>
+                  <Label>Client's Note</Label>
+                  <div className="bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs text-white/50 italic">
+                    "{form.notes}"
+                  </div>
+                </div>
+              )}
+
+              {/* Create mode: general note (stored as notes) */}
+              {modal.mode === 'create' && (
+                <div>
+                  <Label>Note (optional)</Label>
+                  <textarea
+                    rows={3}
+                    value={form.notes}
+                    onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                    placeholder="Any additional details…"
+                    className={`${inputCls} resize-none`}
+                  />
+                </div>
+              )}
+
+              {/* Agent's reply — shown in edit mode; appears on user's dashboard */}
+              {modal.mode === 'edit' && (
+                <div>
+                  <Label>Note to Client <span className="text-white/20 normal-case font-normal tracking-normal">(visible on client's dashboard)</span></Label>
+                  <textarea
+                    rows={3}
+                    value={form.agent_notes}
+                    onChange={(e) => setForm((p) => ({ ...p, agent_notes: e.target.value }))}
+                    placeholder="Leave a message for the client — e.g. parking info, entry code, reminders…"
+                    className={`${inputCls} resize-none`}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Buttons */}

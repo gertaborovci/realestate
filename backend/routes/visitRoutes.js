@@ -12,7 +12,7 @@ router.get('/agent/:agent_id/consultations', asyncHandler(visitController.getCon
 router.get('/property/:property_id', asyncHandler(visitController.getByProperty));
 router.get('/:id', asyncHandler(visitController.getById));
 router.post('/', asyncHandler(visitController.create));
-router.put('/:id', requireRole('admin', 'agent'), asyncHandler(visitController.update));
+router.put('/:id', requireRole('admin', 'agent', 'user'), asyncHandler(visitController.update));
 router.delete('/:id', requireRole('admin', 'agent', 'user'), asyncHandler(visitController.remove));
 
 module.exports = router;

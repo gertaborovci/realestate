@@ -6,6 +6,8 @@ import { getCurrentUser } from '../lib/auth';
 import Navbar from '../components/Navbar';
 import UserProfile from '../components/UserProfile';
 import UserFavorites from '../components/UserFavorites';
+import UserVisits from '../components/UserVisits';
+import UserContracts from '../components/UserContracts';
 import UserStories from '../components/UserStories';
 import UserRating from '../components/UserRating';
 import UserRequests from '../components/UserRequests';
@@ -45,9 +47,9 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
   }, []);
 
   const handleRemoveFavorite = (id) => {
-    if (onRemoveFavorite) onRemoveFavorite(id);
+    setFavorites(favorites.filter((item) => item.id !== id));
     setRemovedNotification(true);
-    setTimeout(() => setRemovedNotification(false), 3000);
+    setTimeout(() => { setRemovedNotification(false); }, 3000);
   };
 
   const handleSaveStory = (newStory) => {
@@ -109,9 +111,10 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
           {[
             { key: 'profile',   label: 'Profile' },
             { key: 'favorites', label: `Favorites (${favorites.length})` },
+            { key: 'visits',    label: 'My Visits' },
+            { key: 'contracts', label: 'My Contracts' },
             { key: 'stories',   label: 'Stories' },
             { key: 'rating',    label: 'Ratings' },
-            { key: 'requests',  label: 'My Requests' },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -126,7 +129,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
         </div>
 
         {/* Sections */}
-        {activeSection === 'profile' && <UserProfile currentUser={user} onUserChange={onUserChange} onNavigate={onNavigate} />}
+        {activeSection === 'profile'   && <UserProfile currentUser={user} onUserChange={onUserChange} onNavigate={onNavigate} />}
         {activeSection === 'favorites' && (
           <UserFavorites
             favorites={favorites}
@@ -134,13 +137,14 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
             onViewProperty={onViewProperty}
           />
         )}
-        {activeSection === 'stories' && (
+        {activeSection === 'visits'    && <UserVisits />}
+        {activeSection === 'contracts' && <UserContracts />}
+        {activeSection === 'stories'   && (
           <UserStories testimonials={testimonials} setIsStoryModalOpen={setIsStoryModalOpen} />
         )}
-        {activeSection === 'rating' && (
+        {activeSection === 'rating'    && (
           <UserRating ratings={ratings} setRatings={setRatings} />
         )}
-        {activeSection === 'requests' && <UserRequests />}
       </div>
 
       {/* About Us Footer */}

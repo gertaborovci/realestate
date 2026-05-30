@@ -1,7 +1,26 @@
 const db = require('../db');
 
 async function getAll(req, res) {
-  const [rows] = await db.query('SELECT * FROM certifications ORDER BY created_at DESC');
+  // JOIN through agents → users to get the agent's name & email for the admin review panel
+  const [rows] = await db.query(`
+    SELECT c.*,
+           u.username AS agent_name,
+           u.email    AS agent_email
+    FROM certifications c
+    LEFT JOIN agents a ON c.agent_id = a.id
+    LEFT JOIN users  u ON a.user_id  = u.id
+    ORDER BY
+      FIELD(c.status, 'Pending', 'Rejected', 'Verified'),
+      c.created_at DESC
+  `);
+  res.json(rows);
+}
+
+async function getByAgent(req, res) {
+  const [rows] = await db.query(
+    'SELECT * FROM certifications WHERE agent_id = ? ORDER BY created_at DESC',
+    [req.params.agent_id]
+  );
   res.json(rows);
 }
 
@@ -43,16 +62,19 @@ async function update(req, res) {
   );
   if (!current) return res.status(404).json({ error: 'Certification not found.' });
 
-  const type       = req.body.type       ?? current.type;
-  const status     = req.body.status     ?? current.status;
-  const expires_at = 'expires_at' in req.body ? (req.body.expires_at || null) : current.expires_at;
+  const type             = req.body.type             ?? current.type;
+  const status           = req.body.status           ?? current.status;
+  const expires_at       = 'expires_at'       in req.body ? (req.body.expires_at       || null) : current.expires_at;
+  const rejection_reason = 'rejection_reason' in req.body ? (req.body.rejection_reason || null) : current.rejection_reason;
 
-  // If a new file was uploaded, replace the document_url; otherwise keep the old one
+  // If a new file was uploaded replace the url; otherwise keep existing
   const documentUrl = req.file ? `/uploads/${req.file.filename}` : current.document_url;
 
   await db.query(
-    'UPDATE certifications SET type=?, status=?, expires_at=?, document_url=? WHERE id=?',
-    [type, status, expires_at, documentUrl, req.params.id]
+    `UPDATE certifications
+     SET type=?, status=?, expires_at=?, document_url=?, rejection_reason=?
+     WHERE id=?`,
+    [type, status, expires_at, documentUrl, rejection_reason, req.params.id]
   );
 
   res.json({ message: 'Certification updated.', document_url: documentUrl });

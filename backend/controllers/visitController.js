@@ -11,8 +11,8 @@ async function getAll(req, res) {
     FROM visits v
     LEFT JOIN properties p  ON v.property_id = p.id
     LEFT JOIN users      u  ON v.user_id     = u.id
-    LEFT JOIN agents     ag ON v.agent_id    = ag.id
-    LEFT JOIN users      au ON ag.user_id    = au.id
+    LEFT JOIN Agents     a  ON v.agent_id    = a.id
+    LEFT JOIN users      au ON a.user_id     = au.id
     ORDER BY v.created_at DESC
   `);
   res.json(rows);
@@ -21,13 +21,14 @@ async function getAll(req, res) {
 async function getById(req, res) {
   const [rows] = await db.query(
     `SELECT v.*,
-            p.title    AS property_title,
-            u.username AS user_name,
-            a.username AS agent_name
+            p.title     AS property_title,
+            u.username  AS user_name,
+            au.username AS agent_name
      FROM visits v
-     LEFT JOIN properties p ON v.property_id = p.id
-     LEFT JOIN users      u ON v.user_id     = u.id
-     LEFT JOIN Agents     a ON v.agent_id    = a.id
+     LEFT JOIN properties p  ON v.property_id = p.id
+     LEFT JOIN users      u  ON v.user_id     = u.id
+     LEFT JOIN Agents     a  ON v.agent_id    = a.id
+     LEFT JOIN users      au ON a.user_id     = au.id
      WHERE v.id = ?`,
     [req.params.id]
   );
@@ -38,12 +39,13 @@ async function getById(req, res) {
 async function getByUser(req, res) {
   const [rows] = await db.query(
     `SELECT v.*,
-            p.title    AS property_title,
+            p.title     AS property_title,
+            p.location  AS property_location,
             au.username AS agent_name
      FROM visits v
      LEFT JOIN properties p  ON v.property_id = p.id
-     LEFT JOIN agents     ag ON v.agent_id    = ag.id
-     LEFT JOIN users      au ON ag.user_id    = au.id
+     LEFT JOIN Agents     a  ON v.agent_id    = a.id
+     LEFT JOIN users      au ON a.user_id     = au.id
      WHERE v.user_id = ?
      ORDER BY v.visit_date DESC`,
     [req.params.user_id]
@@ -87,7 +89,7 @@ async function getConsultationsByAgent(req, res) {
 }
 
 async function create(req, res) {
-  const { agent_id, property_id, user_id, visit_date, visit_time, notes, status } = req.body;
+  let { agent_id, property_id, user_id, visit_date, visit_time, notes, agent_notes, status } = req.body;
 
   if (!visit_date || !visit_time) {
     return res.status(400).json({
@@ -100,19 +102,39 @@ async function create(req, res) {
     });
   }
 
+  // Auto-assign agent_id from the property if not explicitly provided.
+  // This ensures user-booked visits always appear on the correct agent's dashboard.
+  if (!agent_id && property_id) {
+    const [[prop]] = await db.query(
+      'SELECT agent_id FROM properties WHERE id = ?',
+      [property_id]
+    );
+    if (prop?.agent_id) {
+      agent_id = prop.agent_id;
+    }
+  }
+
   const [result] = await db.query(
     `INSERT INTO visits (agent_id, property_id, user_id, visit_date, visit_time, notes, status)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
-      agent_id    || null,
-      property_id || null,
+      agent_id     || null,
+      property_id  || null,
       user_id,
       visit_date,
       visit_time,
-      notes       || null,
-      status      || 'PENDING',
+      notes        || null,
+      status       || 'PENDING',
     ]
   );
+
+  // If agent_notes was provided (agent creating directly), update right away.
+  // Kept as a separate query so it's safe even if the column doesn't exist yet.
+  if (agent_notes) {
+    await db.query('UPDATE visits SET agent_notes = ? WHERE id = ?', [agent_notes, result.insertId])
+      .catch(() => {}); // silently skip if column not migrated yet
+  }
+
   res.status(201).json({
     id:          result.insertId,
     agent_id:    agent_id    || null,
@@ -120,8 +142,9 @@ async function create(req, res) {
     user_id,
     visit_date,
     visit_time,
-    notes:       notes || null,
-    status:      status || 'PENDING',
+    notes:       notes       || null,
+    agent_notes: agent_notes || null,
+    status:      status      || 'PENDING',
   });
 }
 
@@ -129,15 +152,25 @@ async function update(req, res) {
   const [[current]] = await db.query('SELECT * FROM visits WHERE id = ?', [req.params.id]);
   if (!current) return res.status(404).json({ error: 'Visit not found.' });
 
-  const status     = req.body.status     ?? current.status;
-  const visit_date = req.body.visit_date ?? current.visit_date;
-  const visit_time = req.body.visit_time ?? current.visit_time;
-  const notes      = 'notes' in req.body ? (req.body.notes || null) : current.notes;
+  const status      = req.body.status      ?? current.status;
+  const visit_date  = req.body.visit_date  ?? current.visit_date;
+  const visit_time  = req.body.visit_time  ?? current.visit_time;
+  // notes = user's booking note; agent_notes = agent's reply to the user
+  const notes       = 'notes'       in req.body ? (req.body.notes       || null) : current.notes;
+  const agent_notes = 'agent_notes' in req.body ? (req.body.agent_notes || null) : current.agent_notes;
 
+  // Base update (always safe — these columns always exist)
   await db.query(
     `UPDATE visits SET status=?, visit_date=?, visit_time=?, notes=? WHERE id=?`,
     [status, visit_date, visit_time, notes, req.params.id]
   );
+
+  // agent_notes update — silently skipped if the column hasn't been migrated yet
+  await db.query(
+    `UPDATE visits SET agent_notes=? WHERE id=?`,
+    [agent_notes, req.params.id]
+  ).catch(() => {});
+
   res.json({ message: 'Visit updated successfully.' });
 }
 
