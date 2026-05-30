@@ -9,6 +9,8 @@ const router = express.Router();
 router.get('/', asyncHandler(propertyController.getAll));
 router.post('/', asyncHandler(propertyController.create));
 
+router.get('/agent/:agentId', asyncHandler(propertyController.getByAgent)); // must be before /:id
+
 router.get('/:id/images', asyncHandler(imageController.getByProperty));
 router.post('/:id/images', upload.single('image'), asyncHandler(imageController.upload));
 router.delete('/images/:image_id', asyncHandler(imageController.remove));

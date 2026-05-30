@@ -7,11 +7,12 @@ async function getAll(req, res) {
            p.location     AS property_location,
            u.username     AS user_name,
            u.email        AS user_email,
-           a.username     AS agent_name
+           au.username    AS agent_name
     FROM visits v
-    LEFT JOIN properties p ON v.property_id = p.id
-    LEFT JOIN users      u ON v.user_id     = u.id
-    LEFT JOIN Agents     a ON v.agent_id    = a.id
+    LEFT JOIN properties p  ON v.property_id = p.id
+    LEFT JOIN users      u  ON v.user_id     = u.id
+    LEFT JOIN agents     ag ON v.agent_id    = ag.id
+    LEFT JOIN users      au ON ag.user_id    = au.id
     ORDER BY v.created_at DESC
   `);
   res.json(rows);
@@ -38,10 +39,11 @@ async function getByUser(req, res) {
   const [rows] = await db.query(
     `SELECT v.*,
             p.title    AS property_title,
-            a.username AS agent_name
+            au.username AS agent_name
      FROM visits v
-     LEFT JOIN properties p ON v.property_id = p.id
-     LEFT JOIN Agents     a ON v.agent_id    = a.id
+     LEFT JOIN properties p  ON v.property_id = p.id
+     LEFT JOIN agents     ag ON v.agent_id    = ag.id
+     LEFT JOIN users      au ON ag.user_id    = au.id
      WHERE v.user_id = ?
      ORDER BY v.visit_date DESC`,
     [req.params.user_id]
@@ -140,9 +142,30 @@ async function update(req, res) {
 }
 
 async function remove(req, res) {
-  const [result] = await db.query('DELETE FROM visits WHERE id = ?', [req.params.id]);
-  if (!result.affectedRows) return res.status(404).json({ error: 'Visit not found.' });
-  res.json({ message: 'Visit deleted successfully.' });
+  const [[visit]] = await db.query('SELECT * FROM visits WHERE id = ?', [req.params.id]);
+  if (!visit) return res.status(404).json({ error: 'Visit not found.' });
+
+  // Regular users can only delete their own requests
+  const authUser = req.authUser;
+  if (authUser?.role === 'user' && Number(visit.user_id) !== Number(authUser.id)) {
+    return res.status(403).json({ error: 'You can only delete your own requests.' });
+  }
+
+  await db.query('DELETE FROM visits WHERE id = ?', [req.params.id]);
+  res.json({ message: 'Request deleted successfully.' });
 }
 
-module.exports = { getAll, getById, getByUser, getByAgent, getConsultationsByAgent, create, update, remove };
+async function getByProperty(req, res) {
+  const [rows] = await db.query(
+    `SELECT v.id, v.visit_date, v.visit_time, v.notes, v.status,
+            u.username AS user_name, u.email AS user_email
+     FROM visits v
+     LEFT JOIN users u ON v.user_id = u.id
+     WHERE v.property_id = ?
+     ORDER BY v.visit_date ASC`,
+    [req.params.property_id]
+  );
+  res.json(rows);
+}
+
+module.exports = { getAll, getById, getByUser, getByAgent, getConsultationsByAgent, getByProperty, create, update, remove };

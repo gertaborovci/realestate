@@ -6,20 +6,19 @@ const Navbar = ({ onNavigate, isScrolled, currentView, onSignOut, currentUser })
   const user = currentUser;
 
   const navLinks = [
-    { name: 'HOME',     view: 'hero' },
-    { name: 'BUY',      view: 'properties' },
-    { name: 'RENT',     view: 'properties' },
-    { name: 'SELL',     view: 'hero' },
-    { name: 'MORTGAGE', view: 'hero' },
-    { name: 'AGENTS',   view: 'agents' },
+    { name: 'HOME',           view: 'hero'          },
+    { name: 'BUY',            view: 'properties'    },
+    { name: 'RENT',           view: 'properties'    },
+    { name: 'SELL',           view: 'hero'          },
+    { name: 'AGENTS',         view: 'agents'        },
+    { name: 'NEIGHBOURHOODS', view: 'neighborhoods' },
   ];
 
   const handleUserClick = () => {
-    if (user) {
-      onNavigate('user-dashboard');
-    } else {
-      onNavigate('signin');
-    }
+    if (!user) { onNavigate('signin'); return; }
+    if (user.role === 'admin') onNavigate('dashboard');
+    else if (user.role === 'agent') onNavigate('agent-dashboard');
+    else onNavigate('user-dashboard');
   };
 
   const handleSignOut = () => {

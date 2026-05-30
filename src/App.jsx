@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import RealEstateHero from './pages/RealEstateHero';
 import PublicProperties from './pages/PublicProperties';
 import PublicAgents from './pages/PublicAgents';
+import PublicNeighborhoods from './pages/PublicNeighborhoods';
 import Signin from './pages/signin';
 import Signup from './pages/signup';
 import UserDashboard from './pages/UserDashboard';
@@ -27,6 +28,7 @@ const VIEWS_WITHOUT_NAVBAR = [
   'hero',
   'properties',
   'agents',
+  'neighborhoods',
   'agent-details',
   'user-dashboard',
   'user-profile',
@@ -48,7 +50,8 @@ function App() {
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('kn_favorites') || '[]'); } catch { return []; }
   });
-  const [initialPropertyId, setInitialPropertyId] = useState(null);
+  const [initialPropertyId,  setInitialPropertyId]  = useState(null);
+  const [initialCityFilter,  setInitialCityFilter]  = useState('');
   const favLoadedForUser = useRef(null);
 
   useEffect(() => {
@@ -103,6 +106,18 @@ function App() {
     navigateTo('properties');
   };
 
+  const viewPropertiesInCity = (city) => {
+    setInitialCityFilter(city);
+    navigateTo('properties');
+  };
+
+  // Called by HeroSearch — combines city + keyword into the properties search bar
+  const handleHeroSearch = (city, keyword) => {
+    const combined = [city, keyword].filter(Boolean).join(' ');
+    setInitialCityFilter(combined);
+    navigateTo('properties');
+  };
+
   const navigateTo = (newView, options = {}) => {
     if (options.agentId != null) setSelectedAgentId(options.agentId);
     setView(newView);
@@ -146,6 +161,7 @@ function App() {
             onNavigate={navigateTo}
             currentUser={currentUser}
             onSignOut={handleSignOut}
+            onSearch={handleHeroSearch}
           />
         )}
 
@@ -157,6 +173,15 @@ function App() {
             onToggleFavorite={toggleFavorite}
             initialPropertyId={initialPropertyId}
             onPropertyOpened={() => setInitialPropertyId(null)}
+            initialCityFilter={initialCityFilter}
+            onCityFilterConsumed={() => setInitialCityFilter('')}
+          />
+        )}
+
+        {view === 'neighborhoods' && (
+          <PublicNeighborhoods
+            onNavigate={navigateTo}
+            onViewPropertiesInCity={viewPropertiesInCity}
           />
         )}
 

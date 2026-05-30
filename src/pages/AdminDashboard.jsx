@@ -6,6 +6,10 @@ import AddProperty from './AddProperty';
 import ManageAgents from './ManageAgents';
 import ManageUsers from './ManageUsers';
 import AgentProfile from './AgentProfile';
+import RentalRequests from './RentalRequests';
+import AdminAnalytics from './AdminAnalytics';
+import ManageNeighborhoods from './ManageNeighborhoods';
+import ManageExpenses from './ManageExpenses';
 import { API_BASE, apiFetch } from '../lib/api';
 import { Home, Users, DollarSign, Clock, Calendar } from 'lucide-react';
 
@@ -97,24 +101,7 @@ const AdminDashboard = ({ onBack }) => {
         ) : (
           <>
             {activeTab === 'dashboard' && (
-              <>
-                <div className="flex justify-between items-center mb-12">
-                  <h1 className="text-5xl font-bold">DASHBOARD</h1>
-                  <button
-                    type="button"
-                    onClick={onBack}
-                    className="text-xs font-bold tracking-widest text-gray-500 hover:text-white uppercase"
-                  >
-                    ← Exit Admin
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-6">
-                  <StatCard title="Total Properties" value={properties.length} icon={<Home size={20} />} />
-                  <StatCard title="Pending Visits" value={pendingVisits} icon={<Calendar size={20} />} />
-                  <StatCard title="Revenue" value="$120K" icon={<DollarSign size={20} />} />
-                  <StatCard title="Pending" value="8" icon={<Clock size={20} />} />
-                </div>
-              </>
+              <AdminAnalytics onBack={onBack} />
             )}
 
             {activeTab === 'properties' && (
@@ -271,7 +258,9 @@ const AdminDashboard = ({ onBack }) => {
               />
             )}
 
-            {activeTab === 'users' && <ManageUsers />}
+            {activeTab === 'users'          && <ManageUsers />}
+            {activeTab === 'neighborhoods'  && <ManageNeighborhoods />}
+            {activeTab === 'expenses'       && <ManageExpenses />}
 
             {activeTab === 'agent-profile' && (
               <AgentProfile

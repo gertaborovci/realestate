@@ -2,10 +2,49 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import RentalCalendar from '../components/RentalCalendar';
+import PropertyMap    from '../components/PropertyMap';
+
+// ─── Fuzzy search helpers ─────────────────────────────────────────────────────
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+  return dp[m][n];
+}
+
+function fuzzyMatch(text, query) {
+  if (!text || !query) return false;
+  const t = text.toLowerCase().trim();
+  const q = query.toLowerCase().trim();
+  if (!q) return true;
+  if (t.includes(q)) return true;
+  const textWords  = t.split(/[\s,.-]+/).filter(Boolean);
+  const queryWords = q.split(/\s+/).filter(Boolean);
+  return queryWords.every(qw => {
+    const maxDist = Math.max(1, Math.floor(qw.length / 4));
+    return textWords.some(tw => levenshtein(tw, qw) <= maxDist) || t.includes(qw);
+  });
+}
+
+function cityMatch(location, nbCity) {
+  if (!location || !nbCity) return false;
+  const locCity = (location.split(',')[0] || location).toLowerCase().trim();
+  const nb      = nbCity.toLowerCase().trim();
+  if (locCity.includes(nb) || nb.includes(locCity)) return true;
+  return levenshtein(locCity, nb) <= 2;
+}
 
 const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
-const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened }) => {
+const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened, initialCityFilter = '', onCityFilterConsumed }) => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -33,13 +72,52 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const scrollRef = useRef(null);
   const pageTopRef = useRef(null);
 
-  // Derive current user & role once per render for conditional UI
-  const currentUser = getCurrentUser();
-  const role = currentUser?.role || null;
+  // Resolve current user once so the whole component reacts to it
+  const [currentUser] = useState(() => getCurrentUser());
+  const role = currentUser ? 'user' : null;
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // Rental date state
+  const [checkInDate,        setCheckInDate]        = useState('');
+  const [checkOutDate,       setCheckOutDate]        = useState('');
+  const [userNote,           setUserNote]            = useState('');
+  const [blockedRanges,      setBlockedRanges]       = useState([]);
+  const [visitResult,        setVisitResult]         = useState(null);
+  const [purchaseSubmitting, setPurchaseSubmitting]  = useState(false);
+  const [purchaseResult,     setPurchaseResult]      = useState(null);
+  const [rentalError,        setRentalError]         = useState('');
+
+  const [searchQuery, setSearchQuery] = useState(initialCityFilter || '');
   const [sortConfig, setSortConfig] = useState('newest');
-  const [filterType, setFilterType] = useState('ALL'); 
+  const [filterType, setFilterType] = useState('ALL');
+  const [filterHomeType, setFilterHomeType] = useState('ALL');
+  const [agentInfo,          setAgentInfo]          = useState(null);
+  const [neighborhoods,      setNeighborhoods]      = useState([]);
+  const [showSuggestions,    setShowSuggestions]    = useState(false);
+  const searchWrapRef = useRef(null);
+
+  // Consume the city filter once (so navigating away and back doesn't re-apply it)
+  useEffect(() => {
+    if (initialCityFilter && onCityFilterConsumed) onCityFilterConsumed();
+  }, []);
+
+  // Fetch neighborhoods once for the property detail section + suggestions
+  useEffect(() => {
+    apiFetch('/api/neighborhoods')
+      .then(data => setNeighborhoods(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const MAX_SLIDER_PRICE = 2500000;
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(MAX_SLIDER_PRICE);
@@ -105,7 +183,18 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     if (!Array.isArray(properties)) return [];
     let items = [...properties];
     if (searchQuery) {
-      items = items.filter(p => (p.title && p.title.toLowerCase().includes(searchQuery.toLowerCase())) || (p.location && p.location.toLowerCase().includes(searchQuery.toLowerCase())));
+      items = items.filter(p => {
+        if (fuzzyMatch(p.title      || '', searchQuery)) return true;
+        if (fuzzyMatch(p.location   || '', searchQuery)) return true;
+        if (fuzzyMatch(p.home_type  || '', searchQuery)) return true;
+        if (fuzzyMatch(p.agent_name || '', searchQuery)) return true;
+        // Also match via the linked neighbourhood name / city
+        if (p.neighborhood_id) {
+          const nb = neighborhoods.find(n => n.id === Number(p.neighborhood_id));
+          if (nb && (fuzzyMatch(nb.name || '', searchQuery) || fuzzyMatch(nb.city || '', searchQuery))) return true;
+        }
+        return false;
+      });
     }
     if (filterType !== 'ALL') {
       items = items.filter(p => {
@@ -114,6 +203,11 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
         if (filterType === 'RENT') return typeMatch === 'QIRA' || typeMatch === 'RENT';
         return false;
       });
+    }
+    if (filterHomeType !== 'ALL') {
+      items = items.filter(p =>
+        (p.home_type || '').toLowerCase() === filterHomeType.toLowerCase()
+      );
     }
     items = items.filter(p => {
       const price = Number(p.price);
@@ -124,6 +218,15 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     if (sortConfig === 'newest') items.sort((a, b) => b.id - a.id);
     return items;
   }, [properties, sortConfig, searchQuery, filterType, minPrice, maxPrice]);
+
+  // Trim a Nominatim full address down to "Neighbourhood, City"
+  const shortLocation = (loc) => {
+    if (!loc) return '';
+    const parts = loc.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length <= 2) return parts.join(', ');
+    // Skip POI / street (index 0-1), take neighbourhood + city (index 2-3)
+    return parts.slice(2, 4).join(', ');
+  };
 
   const getStatusDisplay = (status) => {
     if (!status) return 'AVAILABLE';
@@ -152,18 +255,41 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const openPropertyDetails = async (property) => {
     setSelectedProperty(property);
     setCurrentImageIndex(0);
-    // Reset visit form for fresh property
-    setVisitDate(''); setVisitTime(''); setVisitSuccess(false); setVisitError('');
-    setPurchaseSuccess(false); setPurchaseError(''); setContractData(null);
+    // Reset per-property form/result state
+    setVisitDate(''); setVisitTime('');
+    setCheckInDate(''); setCheckOutDate('');
+    setUserNote(''); setBlockedRanges([]); setAgentInfo(null);
+    setVisitResult(null); setVisitSubmitting(false); setRentalError('');
+    setPurchaseResult(null); setPurchaseSubmitting(false); setPurchaseError('');
     try {
-      const [imagesRes, featuresRes] = await Promise.all([
+      const fetches = [
         fetch(`${API_BASE}/api/properties/${property.id}/images`),
-        fetch(`${API_BASE}/api/properties/${property.id}/features`)
-      ]);
-      const images = await imagesRes.json();
+        fetch(`${API_BASE}/api/properties/${property.id}/features`),
+        fetch(`${API_BASE}/api/visits/property/${property.id}`),
+      ];
+      if (property.agent_id) {
+        fetches.push(fetch(`${API_BASE}/api/agents/${property.agent_id}`));
+      }
+      const [imagesRes, featuresRes, visitsRes, agentRes] = await Promise.all(fetches);
+      const images   = await imagesRes.json();
       const features = await featuresRes.json();
+      const visitsData = await visitsRes.json();
       setGallery(images);
-      setPropertyFeatures(features); 
+      setPropertyFeatures(features);
+      if (agentRes) {
+        const agentData = await agentRes.json().catch(() => null);
+        if (agentData && !agentData.error) setAgentInfo(agentData);
+      }
+      // Extract blocked ranges from APPROVED rental visits
+      const blocked = (Array.isArray(visitsData) ? visitsData : [])
+        .filter(v => v.status === 'APPROVED' && v.notes?.startsWith('Rental request'))
+        .map(v => {
+          const cin  = v.notes.match(/Check-in:\s*(\d{4}-\d{2}-\d{2})/);
+          const cout = v.notes.match(/Check-out:\s*(\d{4}-\d{2}-\d{2})/);
+          return cin && cout ? { start: cin[1], end: cout[1] } : null;
+        })
+        .filter(Boolean);
+      setBlockedRanges(blocked);
     } catch (error) {
       console.error("Failed to load property details", error);
     }
@@ -180,75 +306,40 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     }
   }, [initialPropertyId, properties]);
 
-  const isActivelyFiltering = searchQuery !== "" || filterType !== "ALL" || minPrice > 0 || maxPrice < MAX_SLIDER_PRICE;
+  const isActivelyFiltering = searchQuery !== "" || filterType !== "ALL" || filterHomeType !== "ALL" || minPrice > 0 || maxPrice < MAX_SLIDER_PRICE;
 
-  // ── Schedule a Visit submit ─────────────────────────────────────────────
-  const handleVisitSubmit = async (e) => {
-    e.preventDefault();
-    if (!visitDate || !visitTime) {
-      setVisitError('Please select both a date and a time slot.');
-      return;
-    }
-    const user = getCurrentUser();
-    if (!user?.id) {
-      setVisitError('Please sign in to schedule a visit.');
-      return;
-    }
-    setVisitSubmitting(true);
-    setVisitError('');
-    try {
-      await apiFetch('/api/visits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          property_id: selectedProperty.id,
-          agent_id:    selectedProperty.agent_id || null,
-          user_id:     user.id,
-          visit_date:  visitDate,
-          visit_time:  visitTime,
-        }),
-      });
-      setVisitSuccess(true);
-    } catch (err) {
-      setVisitError(err.message || 'Failed to schedule visit. Please try again.');
-    } finally {
-      setVisitSubmitting(false);
-    }
-  };
+  // Location-aware suggestions shown under the search bar while typing
+  const locationSuggestions = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q || q.length < 2) return [];
+    const seen = new Set();
+    const results = [];
 
-  // ── Initiate purchase handler ────────────────────────────────────────────
-  const handleInitiatePurchase = async () => {
-    const user = getCurrentUser();
-    if (!user?.id) {
-      setPurchaseError('Please sign in to initiate a purchase.');
-      return;
-    }
-    setPurchaseLoading(true);
-    setPurchaseError('');
-    try {
-      const result = await apiFetch('/api/contracts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id:     user.id,
-          property_id: selectedProperty.id,
-          agent_id:    selectedProperty.agent_id || null,
-          type:        'Sale',
-        }),
-      });
-      setContractData(result);
-      setPurchaseSuccess(true);
-    } catch (err) {
-      // If a contract already exists, surface it gracefully
-      if (err.message?.includes('already exists')) {
-        setPurchaseError('You already have an active purchase contract for this property. Contact your agent for next steps.');
-      } else {
-        setPurchaseError(err.message || 'Failed to initiate purchase. Please try again.');
+    const add = (label, type, sub) => {
+      if (!seen.has(label.toLowerCase())) {
+        seen.add(label.toLowerCase());
+        results.push({ label, type, sub });
       }
-    } finally {
-      setPurchaseLoading(false);
-    }
-  };
+    };
+
+    // Neighbourhood names + cities from DB
+    neighborhoods.forEach(n => {
+      if (fuzzyMatch(n.name || '', q)) add(n.name, 'neighbourhood', n.city);
+      if (fuzzyMatch(n.city || '', q)) add(n.city, 'city');
+    });
+
+    // Unique short locations from loaded properties
+    properties.forEach(p => {
+      const loc = shortLocation(p.location);
+      if (loc && fuzzyMatch(loc, q)) add(loc, 'area');
+      // Also check city portion alone
+      const city = (p.location || '').split(',').at(-2)?.trim() ||
+                   (p.location || '').split(',')[0]?.trim();
+      if (city && city.length > 2 && fuzzyMatch(city, q)) add(city, 'city');
+    });
+
+    return results.slice(0, 6);
+  }, [searchQuery, neighborhoods, properties]);
 
   const renderDynamicCategories = () => {
     if (!Array.isArray(properties) || properties.length === 0) return null;
@@ -284,6 +375,151 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     );
   };
 
+  const handleInitiatePurchase = async (property) => {
+    // Always read a fresh copy so stale component state can't cause null errors
+    const user = getCurrentUser();
+    if (!user?.id) {
+      setPurchaseError('You must be signed in to initiate a purchase.');
+      setPurchaseResult('error');
+      return;
+    }
+
+    setPurchaseResult(null);
+    setPurchaseError('');
+    setPurchaseSubmitting(true);
+    try {
+      await apiFetch('/api/contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': user.role,
+          'x-user-id':   String(user.id),
+        },
+        body: JSON.stringify({
+          user_id:    user.id,
+          property_id: property.id,
+          agent_id:   property.agent_id || null,
+          type: (property.type || '').toUpperCase() === 'QIRA' || (property.type || '').toUpperCase() === 'RENT' ? 'Rent' : 'Sale',
+        }),
+      });
+      setPurchaseResult('ok');
+    } catch (err) {
+      console.error(err);
+      setPurchaseError(err.message || 'Something went wrong. Please try again.');
+      setPurchaseResult('error');
+    } finally {
+      setPurchaseSubmitting(false);
+    }
+  };
+
+  const handleScheduleVisit = async (property) => {
+    if (!visitDate || !visitTime) return;
+    setVisitResult(null);
+    setVisitSubmitting(true);
+    try {
+      await apiFetch('/api/visits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': currentUser.role,
+          'x-user-id': String(currentUser.id),
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          property_id: property.id,
+          agent_id: property.agent_id || null,
+          visit_date: visitDate,
+          visit_time: visitTime,
+          status: 'PENDING',
+        }),
+      });
+      setVisitResult('ok');
+      setVisitDate('');
+      setVisitTime('');
+    } catch (err) {
+      console.error(err);
+      setVisitResult('error');
+    } finally {
+      setVisitSubmitting(false);
+    }
+  };
+
+  const handleRequestRental = async (property) => {
+    if (!checkInDate || !checkOutDate) return;
+
+    // Check for overlap with already-booked dates
+    const cin  = new Date(checkInDate  + 'T00:00:00');
+    const cout = new Date(checkOutDate + 'T00:00:00');
+    const overlap = blockedRanges.some(r => {
+      const s = new Date(r.start + 'T00:00:00');
+      const e = new Date(r.end   + 'T00:00:00');
+      return cin <= e && cout >= s;
+    });
+    if (overlap) {
+      alert('Your selected dates overlap with an existing booking. Please choose different dates — the blocked ones are shown in red on the calendar.');
+      return;
+    }
+
+    const noteLine = userNote.trim() ? `\n\nNote: "${userNote.trim()}"` : '';
+    const confirmed = window.confirm(
+      `Are you sure you want to request a rental for "${property.title}"?\n\nCheck-in:  ${checkInDate}\nCheck-out: ${checkOutDate}${noteLine}\n\nThe agent will review and confirm your request.`
+    );
+    if (!confirmed) return;
+    setVisitResult(null);
+    setRentalError('');
+    setVisitSubmitting(true);
+    try {
+      const rentalNotes = `Rental request — Check-in: ${checkInDate}, Check-out: ${checkOutDate}${userNote.trim() ? ` | Note: ${userNote.trim()}` : ''}`;
+
+      // 1. Create visit (shows in agent's Rental Requests panel)
+      await apiFetch('/api/visits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': currentUser.role,
+          'x-user-id':   String(currentUser.id),
+        },
+        body: JSON.stringify({
+          user_id:     currentUser.id,
+          property_id: property.id,
+          agent_id:    property.agent_id || null,
+          visit_date:  checkInDate,
+          visit_time:  '09:00',
+          notes:       rentalNotes,
+          status:      'PENDING',
+        }),
+      });
+
+      // 2. Create contract (shows in Contracts + Payments sections)
+      await apiFetch('/api/contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': currentUser.role,
+          'x-user-id':   String(currentUser.id),
+        },
+        body: JSON.stringify({
+          user_id:    currentUser.id,
+          property_id: property.id,
+          agent_id:   property.agent_id || null,
+          type:       'Rent',
+          notes:      rentalNotes,
+        }),
+      });
+
+      setVisitResult('ok');
+      setCheckInDate('');
+      setCheckOutDate('');
+      setUserNote('');
+    } catch (err) {
+      console.error(err);
+      setRentalError(err.message || 'Something went wrong. Please try again.');
+      setVisitResult('error');
+    } finally {
+      setVisitSubmitting(false);
+    }
+  };
+
   const PropertyCard = ({ property }) => {
     const isFavorited = favorites.some((f) => f.id === property.id);
     const handleFavoriteToggle = (e) => {
@@ -300,7 +536,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
         </div>
         <div className="p-8 relative z-20 -mt-10 flex-1 flex flex-col justify-between">
           <div>
-            <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 mb-2 flex items-center gap-2"><MapPin size={12} /> {property.location}</p>
+            <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 mb-2 flex items-center gap-2"><MapPin size={12} /> {shortLocation(property.location)}</p>
             <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-6 line-clamp-1">{property.title}</h3>
             <div className="flex gap-6 text-white/60 text-sm font-medium mb-6">
               <div className="flex items-center gap-2"><DoorOpen size={16} /> {property.rooms || 0}</div>
@@ -345,13 +581,14 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
           </div>
         </div>
         <div className="hidden md:flex items-center gap-8">
-          {['HOME', 'BUY', 'RENT', 'SELL', 'MORTGAGE', 'AGENTS'].map((item) => {
+          {['HOME', 'BUY', 'RENT', 'SELL', 'AGENTS', 'NEIGHBOURHOODS'].map((item) => {
             const isActive = (item === 'BUY' && filterType === 'BUY') || (item === 'RENT' && filterType === 'RENT');
             return (
               <button key={item} 
                 onClick={() => {
                   if (item === 'HOME') handleNavigation('hero');
                   else if (item === 'AGENTS') handleNavigation('agents');
+                  else if (item === 'NEIGHBOURHOODS') handleNavigation('neighborhoods');
                   else handleFilterToggle(item);
                 }}
                 className={`text-[10px] font-bold tracking-widest uppercase transition-all ${isActive ? 'text-white opacity-100 border-b border-white pb-1' : 'text-white opacity-60 hover:opacity-100'}`}>
@@ -361,7 +598,12 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
           })}
         </div>
         <div className="flex items-center gap-6">
-          <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition" onClick={() => handleNavigation('user-profile')}><User size={20} className="text-white" /></div>
+          <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition" onClick={() => {
+            if (!currentUser) { handleNavigation('signin'); return; }
+            if (currentUser.role === 'admin') handleNavigation('dashboard');
+            else if (currentUser.role === 'agent') handleNavigation('agent-dashboard');
+            else handleNavigation('user-profile');
+          }}><User size={20} className="text-white" /></div>
           <button onClick={() => handleNavigation('signin')} className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">Login</button>
         </div>
       </nav>
@@ -387,7 +629,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
             <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
               <div className="md:col-span-2 space-y-10">
                 <div>
-                  <p className="text-[12px] font-black tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2"><MapPin size={16} /> {selectedProperty.location}, Kosovo</p>
+                  <p className="text-[12px] font-black tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2"><MapPin size={16} /> {shortLocation(selectedProperty.location)}, Kosovo</p>
                   <h1 className="text-6xl font-black uppercase italic tracking-tighter leading-[0.9]">{selectedProperty.title}</h1>
                 </div>
                 <div className="flex gap-10 text-white/80 pb-10 border-b border-white/10">
@@ -414,175 +656,242 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                   </div>
                 )}
 
-                {/* ── Buy This Property — shown for signed-in users only ── */}
-                {role === 'user' &&
-                 getTypeDisplay(selectedProperty.type) === 'SALE' &&
-                 getStatusDisplay(selectedProperty.status) === 'AVAILABLE' && (
-                  <div className="border-t border-white/10 pt-10">
-                    <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6 flex items-center gap-2">
-                      <Banknote size={14} /> Purchase This Property
-                    </h3>
+                {/* Purchase / Rent section — only for logged-in users on available properties */}
+                {role === 'user' && (() => {
+                  const propertyAvailable = getStatusDisplay(selectedProperty.status) === 'AVAILABLE';
+                  const isRental = getTypeDisplay(selectedProperty.type) === 'RENT';
 
-                    {purchaseSuccess ? (
-                      <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-8 flex items-center gap-6">
-                        <ShieldCheck size={40} className="text-green-400 shrink-0" />
-                        <div>
-                          <p className="font-black text-white text-xl mb-1">Purchase Initiated!</p>
-                          {contractData?.contract_number && (
-                            <p className="text-[10px] text-green-400/70 font-bold uppercase tracking-widest mb-2">
-                              {contractData.contract_number}
-                            </p>
-                          )}
-                          {contractData?.deposit_amount && (
-                            <p className="text-[10px] text-white/40 font-bold mb-2">
-                              Deposit due: €{Number(contractData.deposit_amount).toLocaleString('en')}
-                            </p>
-                          )}
-                          <p className="text-white/50 text-sm leading-relaxed">
-                            Your contract is <span className="text-yellow-400 font-bold">Pending Signature</span>. A deposit payment has been logged — your agent will confirm receipt and guide you through signing.
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8">
-                        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-
-                          {/* Price breakdown */}
-                          <div className="flex-1 space-y-3">
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-white/50">Full Property Price</span>
-                              <span className="font-bold text-white">€{Number(selectedProperty.price).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-white/10 border border-white/10 rounded-2xl px-5 py-4">
-                              <div>
-                                <p className="text-[9px] font-black tracking-widest uppercase text-white/50 mb-0.5">Required Deposit</p>
-                                <p className="text-[10px] font-bold text-white/40">20% of purchase price</p>
-                              </div>
-                              <span className="font-black text-white text-3xl tracking-tight">
-                                €{(Number(selectedProperty.price) * 0.2).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-white/40">Remaining balance</span>
-                              <span className="font-bold text-white/60">€{(Number(selectedProperty.price) * 0.8).toLocaleString()}</span>
-                            </div>
-                          </div>
-
-                          {/* Action */}
-                          <div className="shrink-0 flex flex-col items-center gap-3">
-                            {purchaseError && (
-                              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 mb-1 max-w-[220px] text-center">
-                                {purchaseError}
-                              </p>
-                            )}
-                            <button
-                              onClick={handleInitiatePurchase}
-                              disabled={purchaseLoading}
-                              className="bg-white text-black px-10 py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-                            >
-                              {purchaseLoading
-                                ? <><Loader size={14} className="animate-spin" /> Processing…</>
-                                : <><ShieldCheck size={14} /> Initiate Purchase</>}
-                            </button>
-                            <p className="text-[9px] text-white/25 font-bold tracking-widest uppercase text-center">
-                              No commitment until deposit is confirmed
-                            </p>
-                          </div>
-
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div>
-                {role === 'user' ? (
-                  /* ── Visit booking form — signed-in users only ── */
-                  <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
-                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
-                      Schedule a Visit
-                    </h3>
-                    <p className="text-sm text-white/50 font-medium mb-7">
-                      Pick a date and time — the agent will confirm your booking.
-                    </p>
-
-                    {visitSuccess ? (
-                      /* ── Success state ── */
-                      <div className="flex flex-col items-center gap-4 py-6 text-center">
-                        <CheckCircle size={48} className="text-green-400" />
-                        <p className="font-bold text-white">Visit Requested!</p>
-                        <p className="text-white/50 text-sm">
-                          The agent will confirm your appointment shortly.
+                  if (!propertyAvailable) {
+                    return (
+                      <div className="bg-white/5 border border-white/10 rounded-[30px] p-8 text-center space-y-3">
+                        <p className="text-[11px] font-black tracking-[0.3em] uppercase text-white/40">
+                          {getStatusDisplay(selectedProperty.status) === 'SOLD' ? 'Property Sold' : 'Property Rented'}
                         </p>
-                        <button
-                          onClick={() => { setVisitSuccess(false); setVisitDate(''); setVisitTime(''); }}
-                          className="text-[10px] font-bold tracking-widest uppercase text-white/40 hover:text-white transition mt-2"
-                        >
-                          Book another date
-                        </button>
+                        <p className="text-white/50 text-sm font-medium">
+                          This property is no longer available for {isRental ? 'rent' : 'purchase'}.
+                        </p>
                       </div>
-                    ) : (
-                      <form onSubmit={handleVisitSubmit} className="space-y-5">
-                        {/* Date */}
+                    );
+                  }
+                  return isRental ? (
+                    <div>
+                      <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6 flex items-center gap-2">
+                        <ShoppingBag size={14} /> Rent This House
+                      </h3>
+                      <div className="bg-white/5 border border-white/10 rounded-[30px] p-8 space-y-5">
+                        {/* Monthly rent */}
+                        <div className="flex items-center justify-between text-white/70 text-sm font-medium">
+                          <span>Monthly Rent</span>
+                          <span className="text-white font-black text-lg">€{Number(selectedProperty.price).toLocaleString()}</span>
+                        </div>
+
+                        {/* Security deposit */}
+                        <div className="bg-black/60 rounded-2xl p-5 flex items-center justify-between">
+                          <div>
+                            <p className="text-[9px] font-black tracking-widest uppercase text-white/40 mb-1">Security Deposit</p>
+                            <p className="text-[10px] text-white/30 font-bold">1 month's rent, refundable</p>
+                          </div>
+                          <span className="text-3xl font-black text-white">€{Number(selectedProperty.price).toLocaleString()}</span>
+                        </div>
+
+                        {/* Total on move-in */}
+                        <div className="flex items-center justify-between text-white/50 text-sm font-medium">
+                          <span>Total due on move-in</span>
+                          <span className="font-bold text-white/80">€{(Number(selectedProperty.price) * 2).toLocaleString()}</span>
+                        </div>
+
+                        {/* Optional note */}
                         <div>
-                          <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
-                            Select Date
+                          <label className="block text-[9px] font-black tracking-widest uppercase text-white/30 mb-2">
+                            Note for the agent <span className="text-white/20 normal-case tracking-normal font-normal">(optional)</span>
                           </label>
-                          <input
-                            type="date"
-                            min={today}
-                            value={visitDate}
-                            onChange={(e) => setVisitDate(e.target.value)}
-                            required
-                            className="w-full bg-black/40 border border-white/10 text-white rounded-2xl px-4 py-3 text-sm
-                                       focus:outline-none focus:border-white/30 transition [color-scheme:dark]"
+                          <textarea
+                            value={userNote}
+                            onChange={(e) => setUserNote(e.target.value)}
+                            rows={3}
+                            placeholder="Any special requests or questions for the agent…"
+                            className="w-full bg-black/60 border border-white/10 focus:border-white/30 text-white text-sm rounded-xl px-4 py-3 outline-none resize-none transition placeholder:text-white/20"
                           />
                         </div>
 
-                        {/* Time slots */}
-                        <div>
-                          <label className="text-[10px] font-bold tracking-widest uppercase text-white/40 block mb-2">
-                            Select Time
-                          </label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {TIME_SLOTS.map((slot) => (
-                              <button
-                                key={slot}
-                                type="button"
-                                onClick={() => setVisitTime(slot)}
-                                className={`py-2 rounded-xl text-[10px] font-black tracking-wider transition border ${
-                                  visitTime === slot
-                                    ? 'bg-white text-black border-white'
-                                    : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30 hover:text-white'
-                                }`}
-                              >
-                                {slot}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {visitError && (
-                          <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
-                            {visitError}
+                        {visitResult === 'ok' && (
+                          <p className="text-green-400 text-xs font-bold bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+                            Rental request submitted! The agent will be in touch.
+                          </p>
+                        )}
+                        {visitResult === 'error' && (
+                          <p className="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                            {rentalError || 'Something went wrong. Please try again.'}
                           </p>
                         )}
 
-                        <button
-                          type="submit"
-                          disabled={visitSubmitting}
-                          className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em]
-                                     uppercase hover:bg-gray-200 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          {visitSubmitting
-                            ? <><Loader size={14} className="animate-spin" /> Submitting…</>
-                            : <><CalendarCheck size={14} /> Confirm Visit</>}
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                ) : (
-                  /* ── Interested? panel — guests & agents ── */
+                        <div>
+                          <button
+                            onClick={() => handleRequestRental(selectedProperty)}
+                            disabled={visitSubmitting || !checkInDate || !checkOutDate || visitResult === 'ok'}
+                            className="w-full bg-white text-black py-4 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 disabled:opacity-40"
+                          >
+                            <ShoppingBag size={16} />
+                            {visitSubmitting ? 'Submitting…' : visitResult === 'ok' ? 'Request Sent' : 'Rent This House'}
+                          </button>
+                          <p className="text-center text-[9px] font-bold tracking-widest uppercase text-white/20 mt-3">
+                            Select dates on the right before confirming
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-[11px] font-black tracking-[0.4em] uppercase text-white/40 mb-6 flex items-center gap-2">
+                        <ShoppingBag size={14} /> Purchase This Property
+                      </h3>
+                      <div className="bg-white/5 border border-white/10 rounded-[30px] p-8 space-y-5">
+                        <div className="flex items-center justify-between text-white/70 text-sm font-medium">
+                          <span>Full Property Price</span>
+                          <span className="text-white font-black text-lg">€{Number(selectedProperty.price).toLocaleString()}</span>
+                        </div>
+                        <div className="bg-black/60 rounded-2xl p-5 flex items-center justify-between">
+                          <div>
+                            <p className="text-[9px] font-black tracking-widest uppercase text-white/40 mb-1">Required Deposit</p>
+                            <p className="text-[10px] text-white/30 font-bold">20% of purchase price</p>
+                          </div>
+                          <span className="text-3xl font-black text-white">€{Math.round(Number(selectedProperty.price) * 0.2).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-white/50 text-sm font-medium">
+                          <span>Remaining balance</span>
+                          <span className="font-bold text-white/80">€{Math.round(Number(selectedProperty.price) * 0.8).toLocaleString()}</span>
+                        </div>
+
+                        {purchaseResult === 'ok' && (
+                          <p className="text-green-400 text-xs font-bold bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+                            Purchase request submitted! The agent will be in touch.
+                          </p>
+                        )}
+                        {purchaseResult === 'error' && (
+                          <p className="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                            {purchaseError || 'Something went wrong. Please try again.'}
+                          </p>
+                        )}
+
+                        <div>
+                          <button
+                            onClick={() => handleInitiatePurchase(selectedProperty)}
+                            disabled={purchaseSubmitting || purchaseResult === 'ok'}
+                            className="w-full bg-white text-black py-4 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
+                          >
+                            <ShoppingBag size={16} />
+                            {purchaseSubmitting ? 'Submitting…' : purchaseResult === 'ok' ? 'Request Sent' : 'Initiate Purchase'}
+                          </button>
+                          <p className="text-center text-[9px] font-bold tracking-widest uppercase text-white/20 mt-3">
+                            No commitment until deposit is confirmed
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* ── RIGHT: Map + Schedule Visit / Select Dates / Contact Agent ── */}
+              <div className="space-y-5">
+                {/* Property location map */}
+                {(selectedProperty.latitude || selectedProperty.longitude) && (
+                  <PropertyMap
+                    latitude={selectedProperty.latitude}
+                    longitude={selectedProperty.longitude}
+                    title={selectedProperty.title}
+                    height="240px"
+                  />
+                )}
+
+                {role === 'user' ? (() => {
+                  const isRental = getTypeDisplay(selectedProperty.type) === 'RENT';
+                  return isRental ? (
+                    <div className="bg-[#111] border border-white/10 p-8 rounded-[30px] sticky top-32">
+                      <h3 className="text-3xl font-black uppercase italic tracking-tighter leading-tight mb-2">Select Dates</h3>
+                      <p className="text-sm text-white/40 font-medium mb-6">Choose your check-in and check-out — then confirm using the button on the left.</p>
+
+                      {/* Availability calendar — interactive date picker */}
+                      <div className="mb-6">
+                        <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-3">Availability</p>
+                        <RentalCalendar
+                          blockedRanges={blockedRanges}
+                          checkIn={checkInDate}
+                          checkOut={checkOutDate}
+                          onCheckIn={setCheckInDate}
+                          onCheckOut={setCheckOutDate}
+                        />
+                      </div>
+
+                      <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-2">Check-in</p>
+                      <input
+                        type="date"
+                        value={checkInDate}
+                        onChange={(e) => setCheckInDate(e.target.value)}
+                        className="w-full bg-black/60 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 mb-5 [color-scheme:dark]"
+                      />
+
+                      <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-2">Check-out</p>
+                      <input
+                        type="date"
+                        value={checkOutDate}
+                        min={checkInDate || undefined}
+                        onChange={(e) => setCheckOutDate(e.target.value)}
+                        className="w-full bg-black/60 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-[#111] border border-white/10 p-8 rounded-[30px] sticky top-32">
+                      <h3 className="text-3xl font-black uppercase italic tracking-tighter leading-tight mb-2">Schedule a Visit</h3>
+                      <p className="text-sm text-white/40 font-medium mb-8">Pick a date and time — the agent will confirm your booking.</p>
+
+                      {visitResult === 'ok' && (
+                        <p className="text-green-400 text-xs font-bold mb-5 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+                          Visit request submitted! The agent will confirm shortly.
+                        </p>
+                      )}
+                      {visitResult === 'error' && (
+                        <p className="text-red-400 text-xs font-bold mb-5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                          Something went wrong. Please try again.
+                        </p>
+                      )}
+
+                      <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-2">Select Date</p>
+                      <input
+                        type="date"
+                        value={visitDate}
+                        onChange={(e) => setVisitDate(e.target.value)}
+                        className="w-full bg-black/60 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 mb-6 [color-scheme:dark]"
+                      />
+
+                      <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-3">Select Time</p>
+                      <div className="grid grid-cols-3 gap-2 mb-7">
+                        {TIME_SLOTS.map((slot) => (
+                          <button
+                            key={slot}
+                            onClick={() => setVisitTime(slot)}
+                            className={`py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all border ${
+                              visitTime === slot
+                                ? 'bg-white text-black border-white'
+                                : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            {slot}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => handleScheduleVisit(selectedProperty)}
+                        disabled={visitSubmitting || !visitDate || !visitTime}
+                        className="w-full bg-white text-black py-4 rounded-full font-black text-[12px] tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors flex items-center justify-center gap-3 disabled:opacity-40"
+                      >
+                        <CalendarCheck size={16} />
+                        {visitSubmitting ? 'Submitting…' : 'Confirm Visit'}
+                      </button>
+                    </div>
+                  );
+                })() : (
                   <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] sticky top-32">
                     <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-1">
                       Interested?
@@ -614,6 +923,117 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                 )}
               </div>
             </div>
+
+            {/* ── Neighbourhood info ── */}
+            {(() => {
+              // 1. Exact match via neighborhood_id (set when adding the property)
+              // 2. Fallback: fuzzy text match on name or city
+              const nb = neighborhoods.find(n =>
+                (selectedProperty.neighborhood_id && n.id === Number(selectedProperty.neighborhood_id)) ||
+                cityMatch(selectedProperty.location, n.name) ||
+                cityMatch(selectedProperty.location, n.city)
+              );
+              if (!nb) return null;
+              return (
+                <div className="mt-16 border-t border-white/10 pt-12">
+                  <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/30 mb-6">About this neighbourhood</p>
+                  <div className="bg-white/5 border border-white/10 rounded-[30px] p-8 space-y-5">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <MapPin size={12} className="text-white/30" />
+                        <span className="text-[10px] font-black tracking-widest uppercase text-white/40">{nb.city}</span>
+                      </div>
+                      <h3 className="text-2xl font-black uppercase italic tracking-tighter">{nb.name}</h3>
+                      {nb.description && <p className="text-white/50 text-sm mt-2 leading-relaxed">{nb.description}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {nb.safety_score && (
+                        <div className="bg-black/40 rounded-2xl p-4 space-y-2">
+                          <p className="text-[9px] font-black tracking-widest uppercase text-white/30">Safety</p>
+                          <p className="text-2xl font-black text-white">{nb.safety_score}<span className="text-white/30 text-sm"> / 10</span></p>
+                          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${Number(nb.safety_score) >= 8 ? 'bg-green-400' : Number(nb.safety_score) >= 5 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${(nb.safety_score / 10) * 100}%` }} />
+                          </div>
+                        </div>
+                      )}
+                      {nb.schools_score && (
+                        <div className="bg-black/40 rounded-2xl p-4 space-y-2">
+                          <p className="text-[9px] font-black tracking-widest uppercase text-white/30">Schools</p>
+                          <p className="text-2xl font-black text-white">{nb.schools_score}<span className="text-white/30 text-sm"> / 10</span></p>
+                          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${Number(nb.schools_score) >= 8 ? 'bg-green-400' : Number(nb.schools_score) >= 5 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${(nb.schools_score / 10) * 100}%` }} />
+                          </div>
+                        </div>
+                      )}
+                      {nb.transport_score && (
+                        <div className="bg-black/40 rounded-2xl p-4 space-y-2">
+                          <p className="text-[9px] font-black tracking-widest uppercase text-white/30">Transport</p>
+                          <p className="text-2xl font-black text-white">{nb.transport_score}<span className="text-white/30 text-sm"> / 10</span></p>
+                          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${Number(nb.transport_score) >= 8 ? 'bg-green-400' : Number(nb.transport_score) >= 5 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${(nb.transport_score / 10) * 100}%` }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {nb.avg_price && (
+                      <div className="flex items-center gap-3 pt-2 border-t border-white/5">
+                        <span className="text-[9px] font-black tracking-widest uppercase text-white/30">Avg. property price in this area:</span>
+                        <span className="text-white font-black">€{Number(nb.avg_price).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Agent info ── */}
+            {agentInfo && (
+              <div className="mt-16 border-t border-white/10 pt-12">
+                <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/30 mb-6">Listed by</p>
+                <div className="flex items-center gap-6 bg-white/5 border border-white/10 rounded-[30px] p-6">
+                  {/* Photo */}
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-white/20 bg-white/10 flex-shrink-0">
+                    {agentInfo.profile_image ? (
+                      <img
+                        src={agentInfo.profile_image.startsWith('http') ? agentInfo.profile_image : `${API_BASE}${agentInfo.profile_image}`}
+                        alt={agentInfo.username}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User size={24} className="text-white/30" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-black text-lg">{agentInfo.username}</p>
+                    {agentInfo.specialization && (
+                      <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-0.5">{agentInfo.specialization}</p>
+                    )}
+                    <div className="flex flex-wrap gap-4 mt-3">
+                      {agentInfo.email && (
+                        <a href={`mailto:${agentInfo.email}`} className="flex items-center gap-1.5 text-white/50 hover:text-white text-xs font-medium transition">
+                          <Mail size={13} /> {agentInfo.email}
+                        </a>
+                      )}
+                      {agentInfo.phone && (
+                        <a href={`tel:${agentInfo.phone}`} className="flex items-center gap-1.5 text-white/50 hover:text-white text-xs font-medium transition">
+                          <Phone size={13} /> {agentInfo.phone}
+                        </a>
+                      )}
+                      {agentInfo.zone && (
+                        <span className="flex items-center gap-1.5 text-white/40 text-xs font-medium">
+                          <MapPin size={13} /> {agentInfo.zone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         ) : (
           <div className="animate-in fade-in duration-500">
@@ -622,9 +1042,59 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
               <p className="text-[11px] font-bold tracking-[0.4em] uppercase text-white/60 max-w-xl leading-loose mb-12">Browse Kosovo's most exclusive real estate listings, from modern penthouses to historic villas.</p>
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 md:p-8 rounded-[40px] flex flex-col gap-8 shadow-2xl">
                 <div className="flex flex-col md:flex-row gap-6">
-                  <div className="flex items-center bg-black/50 px-6 py-4 rounded-full flex-1 border border-white/5 focus-within:border-white/20 transition-colors">
-                    <Search size={18} className="text-white/40 mr-3" />
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by name, city, location..." className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-white/30 tracking-wide" />
+                  <div ref={searchWrapRef} className="relative flex-1">
+                    <div className="flex items-center bg-black/50 px-6 py-4 rounded-full border border-white/5 focus-within:border-white/20 transition-colors">
+                      <Search size={18} className="text-white/40 mr-3 shrink-0" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
+                        onFocus={() => setShowSuggestions(true)}
+                        placeholder="Search by name, area, neighbourhood…"
+                        className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-white/30 tracking-wide"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => { setSearchQuery(''); setShowSuggestions(false); }}
+                          className="text-white/30 hover:text-white ml-2 transition shrink-0"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Location suggestions dropdown */}
+                    {showSuggestions && locationSuggestions.length > 0 && (
+                      <div className="absolute z-[999] top-full left-0 right-0 mt-2 bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                        <p className="px-4 pt-3 pb-1 text-[9px] font-black tracking-widest uppercase text-white/25">
+                          Location suggestions
+                        </p>
+                        {locationSuggestions.map((s, i) => {
+                          const icons = { neighbourhood: '🏘', city: '🏙', area: '📍' };
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onMouseDown={e => {
+                                e.preventDefault(); // prevent blur before click
+                                setSearchQuery(s.label);
+                                setShowSuggestions(false);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition text-left border-b border-white/5 last:border-0"
+                            >
+                              <span className="text-base">{icons[s.type] || '📍'}</span>
+                              <div>
+                                <span className="text-white text-sm font-semibold">{s.label}</span>
+                                {s.sub && <span className="text-white/40 text-xs ml-2">{s.sub}</span>}
+                                <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-white/25">
+                                  {s.type}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center bg-black/50 rounded-full p-2 border border-white/5">
                     {['ALL', 'BUY', 'RENT'].map((type) => (
@@ -653,6 +1123,23 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                     </select>
                     <ChevronDown size={16} className="text-white/40" />
                   </div>
+                </div>
+
+                {/* Home type filter chips */}
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                  {['ALL','House','Apartment','Villa','Townhouse','Mansion','Penthouse','Duplex','Studio','Cabin','Condo'].map((ht) => (
+                    <button
+                      key={ht}
+                      onClick={() => setFilterHomeType(ht)}
+                      className={`px-4 py-2 rounded-full text-[10px] font-black tracking-[0.15em] uppercase transition-all border ${
+                        filterHomeType === ht
+                          ? 'bg-white text-black border-white'
+                          : 'bg-transparent text-white/50 border-white/10 hover:border-white/30 hover:text-white'
+                      }`}
+                    >
+                      {ht === 'ALL' ? 'All Types' : ht}
+                    </button>
+                  ))}
                 </div>
               </div>
             </section>

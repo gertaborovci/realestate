@@ -284,11 +284,12 @@ const PublicAgents = ({ onNavigate }) => {
         </div>
 
         <div className="hidden md:flex items-center gap-8">
-          {['HOME', 'BUY', 'RENT', 'SELL', 'AGENTS'].map((item) => (
+          {['HOME', 'BUY', 'RENT', 'SELL', 'AGENTS', 'NEIGHBOURHOODS'].map((item) => (
             <button
               key={item}
               onClick={() => onNavigate(
-                item === 'AGENTS' ? 'agents'
+                item === 'AGENTS'         ? 'agents'
+                : item === 'NEIGHBOURHOODS' ? 'neighborhoods'
                 : (item === 'BUY' || item === 'RENT') ? 'properties'
                 : 'hero'
               )}
@@ -306,7 +307,13 @@ const PublicAgents = ({ onNavigate }) => {
         <div className="flex items-center gap-6">
           <div
             className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
-            onClick={() => onNavigate('user-profile')}
+            onClick={() => {
+              const u = getCurrentUser();
+              if (!u) { onNavigate('signin'); return; }
+              if (u.role === 'admin') onNavigate('dashboard');
+              else if (u.role === 'agent') onNavigate('agent-dashboard');
+              else onNavigate('user-profile');
+            }}
           >
             <User size={20} className="text-white" />
           </div>

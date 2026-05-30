@@ -6,6 +6,8 @@ import {
   UserCog,
   Calendar,
   Wrench,
+  MapPin,
+  Receipt,
 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {
@@ -40,6 +42,16 @@ const Sidebar = ({ onTabChange, activeTab }) => {
       id: 'users',
       icon: <UserCog size={18} />,
       label: 'USERS'
+    },
+    {
+      id: 'neighborhoods',
+      icon: <MapPin size={18} />,
+      label: 'NEIGHBOURHOODS'
+    },
+    {
+      id: 'expenses',
+      icon: <Receipt size={18} />,
+      label: 'EXPENSES'
     },
   ];
 

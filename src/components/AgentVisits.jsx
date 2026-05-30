@@ -67,7 +67,11 @@ const AgentVisits = () => {
     setLoading(true);
     try {
       const data = await apiFetch(`/api/visits/agent/${agentId}`);
-      setVisits(Array.isArray(data) ? data : []);
+      // Exclude rental requests — those live in the Rental Requests section
+      const nonRentals = (Array.isArray(data) ? data : []).filter(
+        (v) => !v.notes?.startsWith('Rental request')
+      );
+      setVisits(nonRentals);
     } catch (err) {
       console.error(err);
     } finally {

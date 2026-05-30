@@ -4,10 +4,11 @@ const c = require('../controllers/contractController');
 
 const router = express.Router();
 
-router.get('/',                  asyncHandler(c.getAll));
-router.get('/agent/:agent_id',   asyncHandler(c.getByAgent));
-router.get('/buyer/:user_id',    asyncHandler(c.getByBuyer));
-router.get('/:id',               asyncHandler(c.getOne));
+router.get('/',                        asyncHandler(c.getAll));
+router.get('/agent/:agent_id',         asyncHandler(c.getByAgent));
+router.get('/buyer/:user_id',          asyncHandler(c.getByBuyer));
+router.get('/property/:property_id',   asyncHandler(c.getByProperty));
+router.get('/:id',                     asyncHandler(c.getOne));
 router.post('/',                 asyncHandler(c.create));
 router.put('/:id',               asyncHandler(c.update));
 router.put('/:id/status',        asyncHandler(c.updateStatus));

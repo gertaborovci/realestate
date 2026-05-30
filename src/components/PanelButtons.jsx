@@ -10,7 +10,8 @@ function DraggableCornerButton({ corner, onCornerChange, children }) {
 
   // Map a corner name to fixed-position CSS
   const cornerStyle = (c) => {
-    const base = { position: 'fixed', zIndex: 100 };
+    // zIndex 1100 keeps the buttons above Leaflet map controls (which default to 1000)
+    const base = { position: 'fixed', zIndex: 1100 };
     if (c === 'top-left')     return { ...base, top: 32,    left: 32  };
     if (c === 'top-right')    return { ...base, top: 32,    right: 32 };
     if (c === 'bottom-right') return { ...base, bottom: 32, right: 32 };
@@ -66,7 +67,7 @@ function DraggableCornerButton({ corner, onCornerChange, children }) {
   };
 
   const style = livePos
-    ? { position: 'fixed', zIndex: 200, left: livePos.left, top: livePos.top }
+    ? { position: 'fixed', zIndex: 1200, left: livePos.left, top: livePos.top }
     : cornerStyle(corner);
 
   return (
