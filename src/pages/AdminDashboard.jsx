@@ -11,6 +11,7 @@ import AdminAnalytics from './AdminAnalytics';
 import ManageNeighborhoods from './ManageNeighborhoods';
 import ManageExpenses from './ManageExpenses';
 import MaintenanceVisits from '../components/MaintenanceVisits';
+import SupportTickets from '../components/SupportTickets';
 import { API_BASE, apiFetch } from '../lib/api';
 import { Home, Users, DollarSign, Clock, Calendar, Bell, Send } from 'lucide-react';
 
@@ -389,6 +390,7 @@ const AdminDashboard = ({ onBack }) => {
             {activeTab === 'neighborhoods'  && <ManageNeighborhoods />}
             {activeTab === 'expenses'       && <ManageExpenses />}
             {activeTab === 'notifications'  && <BroadcastPanel />}
+            {activeTab === 'support'        && <SupportTickets />}
 
             {activeTab === 'agent-profile' && (
               <AgentProfile

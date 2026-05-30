@@ -11,6 +11,7 @@ import UserContracts from '../components/UserContracts';
 import UserStories from '../components/UserStories';
 import UserRating from '../components/UserRating';
 import UserRequests from '../components/UserRequests';
+import UserSupport from '../components/UserSupport';
 
 export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUser, onUserChange, favorites = [], onRemoveFavorite, onViewProperty }) {
   const user = currentUser || getCurrentUser();
@@ -116,6 +117,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
             { key: 'contracts', label: 'My Contracts' },
             { key: 'stories',   label: 'Stories' },
             { key: 'rating',    label: 'Ratings' },
+            { key: 'support',   label: 'Support' },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -146,6 +148,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
         {activeSection === 'rating'    && (
           <UserRating ratings={ratings} setRatings={setRatings} />
         )}
+        {activeSection === 'support'   && <UserSupport />}
       </div>
 
       {/* About Us Footer */}
