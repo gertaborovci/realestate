@@ -62,6 +62,31 @@ async function create(req, res) {
   res.status(201).json({ id: result.insertId, message: 'Notification created.' });
 }
 
+// GET /api/notifications  — admin: all notifications with user info
+async function getAll(req, res) {
+  const [rows] = await db.query(
+    `SELECT n.*, u.username AS user_name
+     FROM notifications n
+     LEFT JOIN users u ON n.user_id = u.id
+     ORDER BY n.created_at DESC
+     LIMIT 300`
+  );
+  res.json(rows);
+}
+
+// PUT /api/notifications/:id  — admin: edit title / message / type
+async function update(req, res) {
+  const { title, message, type } = req.body;
+  if (!title && !message && !type) {
+    return res.status(400).json({ error: 'Provide at least one field to update.' });
+  }
+  await db.query(
+    'UPDATE notifications SET title = COALESCE(?, title), message = COALESCE(?, message), type = COALESCE(?, type) WHERE id = ?',
+    [title || null, message || null, type || null, req.params.id]
+  );
+  res.json({ message: 'Updated.' });
+}
+
 // POST /api/notifications/broadcast  — admin sends to ALL users
 async function broadcast(req, res) {
   const { title, message, link } = req.body;
@@ -82,8 +107,8 @@ async function broadcast(req, res) {
 }
 
 module.exports = {
-  getByUser, getUnreadCount,
+  getAll, getByUser, getUnreadCount,
   markRead, markAllRead,
-  remove, clearAll,
+  update, remove, clearAll,
   create, broadcast,
 };
