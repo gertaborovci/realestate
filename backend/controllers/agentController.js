@@ -17,7 +17,8 @@ async function getAll(req, res) {
       a.happy_clients,
       a.joined_year,
       u.username,
-      u.email
+      u.email,
+      u.photo_url
     FROM agents a
     LEFT JOIN users u ON a.user_id = u.id
     WHERE a.status = 'Active'
@@ -43,7 +44,8 @@ async function getById(req, res) {
       a.happy_clients,
       a.joined_year,
       u.username,
-      u.email
+      u.email,
+      u.photo_url
     FROM agents a
     LEFT JOIN users u ON a.user_id = u.id
     WHERE a.id = ?

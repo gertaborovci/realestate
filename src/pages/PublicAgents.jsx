@@ -4,7 +4,7 @@ import {
   ArrowLeft, Calendar, Users, Award, ChevronRight, Globe, Check,
 } from 'lucide-react';
 import { getCurrentUser } from '../lib/auth';
-import { apiFetch } from '../lib/api';
+import { apiFetch, API_BASE } from '../lib/api';
 import ConsultationModal from '../components/ConsultationModal';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -24,7 +24,10 @@ function normalizeAgent(a) {
     happyClients:   a.happy_clients    ?? 0,
     joined:         a.joined_year      || '—',
     rating:         5,
-    image:          a.profile_image    || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.username || 'Agent')}&background=1a1a1a&color=ffffff&size=400&bold=true`,
+    image:          a.photo_url
+                      ? (a.photo_url.startsWith('http') ? a.photo_url : `${API_BASE}${a.photo_url}`)
+                      : a.profile_image
+                      || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.username || 'Agent')}&background=1a1a1a&color=ffffff&size=400&bold=true`,
   };
 }
 
