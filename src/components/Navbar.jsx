@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Building2 } from 'lucide-react';
 import { setCurrentUser } from '../lib/auth';
 import NotificationBell from './NotificationBell';
 
 const Navbar = ({ onNavigate, isScrolled, currentView, onSignOut, currentUser }) => {
   const user = currentUser;
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const navLinks = [
     { name: 'HOME',           view: 'hero'          },
@@ -66,14 +67,18 @@ const Navbar = ({ onNavigate, isScrolled, currentView, onSignOut, currentUser })
       {/* Right: bell (logged-in only) + user icon + sign out or login */}
       <div className="flex items-center gap-4">
         {user && (
-          <NotificationBell userId={user.id} onNavigate={onNavigate} />
+          <NotificationBell userId={user.id} onNavigate={onNavigate} onUnreadChange={setUnreadCount} />
         )}
+        {/* User icon — shows red dot when there are unread notifications */}
         <div
-          className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
+          className="relative p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
           onClick={handleUserClick}
           title={user ? (user.username || 'My Profile') : 'Sign in'}
         >
           <User size={20} className="text-white" />
+          {user && unreadCount > 0 && (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-black" />
+          )}
         </div>
         {user ? (
           <button

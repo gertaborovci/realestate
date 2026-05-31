@@ -344,7 +344,9 @@ const certificationRoutes   = require('./routes/certificationRoutes');
 const favoriteRoutes        = require('./routes/favoriteRoutes');
 const ratingRoutes          = require('./routes/ratingRoutes');
 const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
-const expenseRoutes         = require('./routes/expenseRoutes');
+const expenseRoutes          = require('./routes/expenseRoutes');
+const propertyReviewRoutes   = require('./routes/propertyReviewRoutes');
+const qaRoutes               = require('./routes/qaRoutes');
 const maintenanceRoutes     = require('./routes/maintenanceRoutes');
 const notificationRoutes    = require('./routes/notificationRoutes');
 const ticketRoutes          = require('./routes/ticketRoutes');
@@ -363,7 +365,9 @@ app.use('/api/certifications', certificationRoutes);
 app.use('/api/favorites',      favoriteRoutes);
 app.use('/api/ratings',        ratingRoutes);
 app.use('/api/neighborhoods',  neighborhoodRoutes);
-app.use('/api/expenses',       expenseRoutes);
+app.use('/api/expenses',        expenseRoutes);
+app.use('/api/property-reviews', propertyReviewRoutes);
+app.use('/api/qa',              qaRoutes);
 app.use('/api/maintenance',    maintenanceRoutes);
 app.use('/api/notifications',  notificationRoutes);
 app.use('/api/tickets',        ticketRoutes);
@@ -403,15 +407,22 @@ app.get('/api/properties/:id', (req, res) => {
 });
 
 app.post('/api/properties', (req, res) => {
-    const { title, price, location, status, type, image, rooms, bathrooms, area, agent_id } = req.body;
+    const { title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id } = req.body;
     const sql = `INSERT INTO properties
-                   (title, price, location, status, type, image, rooms, bathrooms, area, agent_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [title, price, location, status, type, image || '', rooms, bathrooms, area, agent_id || null], (err, result) => {
+                   (title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [
+        title, price, location, latitude || null, longitude || null,
+        status, type, home_type || null, neighborhood_id || null,
+        image || '', rooms, bathrooms, area, agent_id || null,
+    ], (err, result) => {
         if (err) {
             console.error("❌ SQL Error (POST):", err.message);
             return res.status(500).json({ error: err.message });
         }
+        // Fire search-alert notifications (non-blocking)
+        const { notifyMatchingAlerts } = require('./controllers/searchAlertController');
+        notifyMatchingAlerts({ propertyId: result.insertId, title, location, price, rooms, type });
         res.status(201).json({ id: result.insertId, ...req.body });
     });
 });

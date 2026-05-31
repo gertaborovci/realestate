@@ -49,19 +49,21 @@ function ScoreBar({ label, value, icon }) {
 }
 
 // ─── Property mini-card (inside neighbourhood row) ───────────────────────────
+const HERO_IMG = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920';
+
 function PropertyMiniCard({ property, mainImages, onClick }) {
-  const img = mainImages[property.id];
+  const img = mainImages[property.id] || HERO_IMG;
   return (
     <div
       onClick={() => onClick(property)}
       className="flex-shrink-0 w-48 cursor-pointer group rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition bg-[#0a0a0a]"
     >
-      <div className="h-24 bg-white/5 overflow-hidden">
-        {img ? (
-          <img src={img} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center"><Home size={20} className="text-white/15" /></div>
-        )}
+      <div className="h-24 overflow-hidden">
+        <img
+          src={img}
+          alt={property.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+        />
       </div>
       <div className="p-3">
         <p className="text-white font-bold text-[11px] truncate">{property.title}</p>
@@ -139,13 +141,13 @@ export default function PublicNeighborhoods({ onNavigate, onViewPropertiesInCity
   });
 
   // Get properties that match a neighbourhood:
-  // 1. Exact: property.neighborhood_id === nb.id
-  // 2. Fallback fuzzy: location text matches name or city
+  // 1. Exact: property.neighborhood_id === nb.id  (set when adding the property)
+  // 2. Fallback: location text mentions the neighbourhood NAME specifically
+  //    (NOT the city - too broad; "Prishtina" would match every property in the city)
   const getNeighbourhoodProperties = (nb) =>
     properties.filter(p =>
       (p.neighborhood_id && Number(p.neighborhood_id) === Number(nb.id)) ||
-      cityMatch(p.location, nb.name) ||
-      cityMatch(p.location, nb.city)
+      (!p.neighborhood_id && cityMatch(p.location, nb.name))
     );
 
   const user = getCurrentUser();
@@ -282,14 +284,6 @@ export default function PublicNeighborhoods({ onNavigate, onViewPropertiesInCity
                             onClick={() => onViewPropertiesInCity(nb.name)}
                           />
                         ))}
-                        {/* Trailing "view all" card */}
-                        <div
-                          onClick={() => onViewPropertiesInCity(nb.name)}
-                          className="flex-shrink-0 w-36 cursor-pointer rounded-2xl border border-dashed border-white/15 hover:border-white/30 flex flex-col items-center justify-center gap-2 transition p-4 text-center"
-                        >
-                          <ChevronRight size={16} className="text-white/30" />
-                          <p className="text-[9px] font-black tracking-widest uppercase text-white/30">View All</p>
-                        </div>
                       </div>
                     </div>
                   ) : (

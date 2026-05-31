@@ -11,20 +11,23 @@ import ConsultationModal from '../components/ConsultationModal';
 
 function normalizeAgent(a) {
   return {
-    id:             a.id,
-    name:           a.username         || 'Agent',
-    city:           a.zone             || 'Kosovo',
-    specialization: a.specialization   || 'Real Estate',
-    category:       a.specialization   || 'Our Agents',
-    email:          a.email            || null,
-    phone:          a.phone            || null,
-    bio:            a.bio              || `${a.username || 'This agent'} specializes in ${a.specialization || 'real estate'} across ${a.zone || 'Kosovo'}.`,
-    license:        a.license_number   || '—',
-    deals:          a.deals_closed     ?? 0,
-    happyClients:   a.happy_clients    ?? 0,
-    joined:         a.joined_year      || '—',
-    rating:         5,
-    image:          a.profile_image    || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.username || 'Agent')}&background=1a1a1a&color=ffffff&size=400&bold=true`,
+    id:            a.id,
+    name:          a.username         || 'Agent',
+    city:          a.zone             || 'Kosovo',
+    specialization:a.specialization   || 'Real Estate',
+    category:      a.specialization   || 'Our Agents',
+    email:         a.email            || null,
+    phone:         a.phone            || null,
+    bio:           a.bio              || `${a.username || 'This agent'} specializes in ${a.specialization || 'real estate'} across ${a.zone || 'Kosovo'}.`,
+    license:       a.license_number   || '—',
+    deals:         a.deals_closed     ?? 0,
+    happyClients:  a.happy_clients    ?? 0,
+    joined:        a.joined_year      || '—',
+    rating:        Number(a.avg_rating) || 5,
+    image:         a.profile_image    || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.username || 'Agent')}&background=1a1a1a&color=ffffff&size=400&bold=true`,
+    // Certification trust
+    certCount:     Number(a.cert_count     ?? 0),
+    approvedCerts: Number(a.approved_certs ?? 0),
   };
 }
 
@@ -137,6 +140,25 @@ function AgentCard({ agent, onSelect }) {
             <StarDisplay rating={agent.rating} size={13} />
             <span className="text-white/40 text-xs font-bold tabular-nums">{agent.rating}.0</span>
           </div>
+
+          {/* Trust badge — only shown when certs exist */}
+          {agent.certCount > 0 && (
+            agent.approvedCerts > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                <span className="text-[9px] font-black tracking-widest uppercase text-emerald-400">
+                  {Math.round((agent.approvedCerts / agent.certCount) * 100)}% Trusted
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/60 inline-block" />
+                <span className="text-[9px] font-black tracking-widest uppercase text-yellow-400/60">
+                  Building Trust
+                </span>
+              </div>
+            )
+          )}
         </div>
       </div>
     </div>
@@ -145,13 +167,14 @@ function AgentCard({ agent, onSelect }) {
 
 // ─── main component ───────────────────────────────────────────────────────────
 
-const PublicAgents = ({ onNavigate }) => {
+const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
   const [agents, setAgents]               = useState([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState('');
-  const [searchTerm, setSearchTerm]       = useState('');
-  const [selectedCity, setSelectedCity]   = useState('All');
-  const [minRating, setMinRating]         = useState(0);
+  const [searchTerm,    setSearchTerm]    = useState('');
+  const [selectedCity,  setSelectedCity]  = useState(initialFilters?.city      || 'All');
+  const [minRating,     setMinRating]     = useState(initialFilters?.minRating  || 0);
+  const [trustFilter,   setTrustFilter]   = useState(initialFilters?.trust      || 'all');
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showModal, setShowModal]         = useState(false);
   const [isScrolled, setIsScrolled]       = useState(false);
@@ -164,6 +187,11 @@ const PublicAgents = ({ onNavigate }) => {
 
   const scrollRef  = useRef(null);
   const pageTopRef = useRef(null);
+
+  // Consume initial filters once so back-navigation doesn't reapply them
+  useEffect(() => {
+    if (initialFilters && onFiltersConsumed) onFiltersConsumed();
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -246,12 +274,24 @@ const PublicAgents = ({ onNavigate }) => {
 
   const cities      = ['All', ...Array.from(new Set(agents.map((a) => a.city).filter(Boolean))).sort()];
   const categories  = [...new Set(agents.map((a) => a.category).filter(Boolean))];
-  const isFiltering = searchTerm !== '' || selectedCity !== 'All' || minRating !== 0;
-  const filtered    = agents.filter((a) =>
-    a.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (selectedCity === 'All' || a.city === selectedCity) &&
-    a.rating >= minRating
-  );
+
+  // Derive trust level from cert_count / approved_certs returned by API
+  const getTrust = (a) => {
+    const approved = Number(a.approved_certs || 0);
+    const total    = Number(a.cert_count    || 0);
+    if (approved > 0) return 'verified';
+    if (total > 0)    return 'building';
+    return 'none';
+  };
+
+  const isFiltering = searchTerm !== '' || selectedCity !== 'All' || minRating !== 0 || trustFilter !== 'all';
+  const filtered    = agents.filter((a) => {
+    if (!a.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (selectedCity !== 'All' && a.city !== selectedCity) return false;
+    if (a.rating < minRating) return false;
+    if (trustFilter !== 'all' && getTrust(a) !== trustFilter) return false;
+    return true;
+  });
 
   const loggedIn = !!getCurrentUser();
 
@@ -541,6 +581,23 @@ const PublicAgents = ({ onNavigate }) => {
                       }`}
                     >
                       {r === 0 ? 'All' : <>{r}+ <Star size={12} className={minRating === r ? 'fill-black' : 'fill-white/40'} /></>}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Trust / Certification filter */}
+                <div className="flex items-center gap-2 bg-black/50 p-2 rounded-full border border-white/5 flex-wrap">
+                  <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-3 hidden md:block">Trust:</span>
+                  {[
+                    { value: 'all',      label: 'All' },
+                    { value: 'verified', label: '✓ Verified' },
+                    { value: 'building', label: '⏳ Building' },
+                  ].map(opt => (
+                    <button key={opt.value} onClick={() => setTrustFilter(opt.value)}
+                      className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                        trustFilter === opt.value ? 'bg-white text-black' : 'hover:bg-white/10 text-white/60'
+                      }`}>
+                      {opt.label}
                     </button>
                   ))}
                 </div>
