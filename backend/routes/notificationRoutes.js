@@ -13,9 +13,13 @@ router.delete('/user/:user_id/clear-all', asyncHandler(c.clearAll));
 // Broadcast (admin)
 router.post('/broadcast', asyncHandler(c.broadcast));
 
-// Single notification
-router.post('/',           asyncHandler(c.create));
-router.put('/:id/read',    asyncHandler(c.markRead));
-router.delete('/:id',      asyncHandler(c.remove));
+// All notifications — admin view (before /:id)
+router.get('/', asyncHandler(c.getAll));
+
+// Single notification CRUD
+router.post('/',        asyncHandler(c.create));
+router.put('/:id/read', asyncHandler(c.markRead));
+router.put('/:id',      asyncHandler(c.update));
+router.delete('/:id',   asyncHandler(c.remove));
 
 module.exports = router;
