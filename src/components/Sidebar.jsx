@@ -11,6 +11,8 @@ import {
   Bell,
   LifeBuoy,
   Landmark,
+  Star,
+  HelpCircle,
 } from 'lucide-react';
 
 const Sidebar = ({ onTabChange, activeTab }) => {

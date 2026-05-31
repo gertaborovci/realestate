@@ -2,8 +2,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
-import RentalCalendar from '../components/RentalCalendar';
-import PropertyMap    from '../components/PropertyMap';
+import RentalCalendar   from '../components/RentalCalendar';
+import PropertyMap      from '../components/PropertyMap';
+import PropertyReviews  from '../components/PropertyReviews';
+import PropertyQA       from '../components/PropertyQA';
 
 // ─── Fuzzy search helpers ─────────────────────────────────────────────────────
 
@@ -44,7 +46,7 @@ function cityMatch(location, nbCity) {
 
 const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
-const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened, initialCityFilter = '', onCityFilterConsumed }) => {
+const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened, initialCityFilter = '', onCityFilterConsumed, initialHomeType = '', initialFilterType = '' }) => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -86,10 +88,10 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [purchaseResult,     setPurchaseResult]      = useState(null);
   const [rentalError,        setRentalError]         = useState('');
 
-  const [searchQuery, setSearchQuery] = useState(initialCityFilter || '');
-  const [sortConfig, setSortConfig] = useState('newest');
-  const [filterType, setFilterType] = useState('ALL');
-  const [filterHomeType, setFilterHomeType] = useState('ALL');
+  const [searchQuery,    setSearchQuery]    = useState(initialCityFilter  || '');
+  const [sortConfig,     setSortConfig]     = useState('newest');
+  const [filterType,     setFilterType]     = useState(initialFilterType  || 'ALL');
+  const [filterHomeType, setFilterHomeType] = useState(initialHomeType    || 'ALL');
   const [agentInfo,          setAgentInfo]          = useState(null);
   const [neighborhoods,      setNeighborhoods]      = useState([]);
   const [showSuggestions,    setShowSuggestions]    = useState(false);
@@ -581,15 +583,16 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
           </div>
         </div>
         <div className="hidden md:flex items-center gap-8">
-          {['HOME', 'BUY', 'RENT', 'SELL', 'AGENTS', 'NEIGHBOURHOODS'].map((item) => {
+          {['HOME', 'BUY', 'RENT', 'AGENTS', 'NEIGHBOURHOODS'].map((item) => {
             const isActive = (item === 'BUY' && filterType === 'BUY') || (item === 'RENT' && filterType === 'RENT');
             return (
               <button key={item} 
                 onClick={() => {
-                  if (item === 'HOME') handleNavigation('hero');
-                  else if (item === 'AGENTS') handleNavigation('agents');
+                  if (item === 'HOME')           handleNavigation('hero');
+                  else if (item === 'AGENTS')   handleNavigation('agents');
                   else if (item === 'NEIGHBOURHOODS') handleNavigation('neighborhoods');
-                  else handleFilterToggle(item);
+                  else if (item === 'BUY')      handleFilterToggle('BUY');
+                  else if (item === 'RENT')     handleFilterToggle('RENT');
                 }}
                 className={`text-[10px] font-bold tracking-widest uppercase transition-all ${isActive ? 'text-white opacity-100 border-b border-white pb-1' : 'text-white opacity-60 hover:opacity-100'}`}>
                 {item}
@@ -1033,6 +1036,17 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                 </div>
               </div>
             )}
+
+            {/* ── Reviews button + full section ── */}
+            <div className="mt-10">
+              <PropertyReviews
+                propertyId={selectedProperty.id}
+                propertyTitle={selectedProperty.title}
+              />
+            </div>
+
+            {/* ── Q&A accordion ── */}
+            <PropertyQA propertyId={selectedProperty.id} />
 
           </div>
         ) : (

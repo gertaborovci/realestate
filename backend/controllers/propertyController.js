@@ -1,4 +1,5 @@
 const db = require('../db');
+const { notifyMatchingAlerts } = require('./searchAlertController');
 
 async function getAll(req, res) {
   const [results] = await db.query(`
@@ -36,6 +37,9 @@ async function create(req, res) {
      status, type, home_type || null, neighborhood_id || null,
      image || '', rooms, bathrooms, area, agent_id || null]
   );
+  // Fire notifications to users whose search alerts match this new property
+  notifyMatchingAlerts({ title, location, price, rooms, type });
+
   res.status(201).json({ id: result.insertId, ...req.body });
 }
 

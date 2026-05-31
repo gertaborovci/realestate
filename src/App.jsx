@@ -52,6 +52,9 @@ function App() {
   });
   const [initialPropertyId,  setInitialPropertyId]  = useState(null);
   const [initialCityFilter,  setInitialCityFilter]  = useState('');
+  const [initialHomeType,      setInitialHomeType]      = useState('');
+  const [initialFilterType,    setInitialFilterType]    = useState('');
+  const [initialAgentFilters,  setInitialAgentFilters]  = useState(null);
   const favLoadedForUser = useRef(null);
 
   useEffect(() => {
@@ -118,8 +121,22 @@ function App() {
     navigateTo('properties');
   };
 
+  const navigateToPropertiesFiltered = ({ homeType = '', filterType = '', searchQuery = '' } = {}) => {
+    setInitialHomeType(homeType);
+    setInitialFilterType(filterType);
+    setInitialCityFilter(searchQuery);
+    navigateTo('properties');
+  };
+
   const navigateTo = (newView, options = {}) => {
     if (options.agentId != null) setSelectedAgentId(options.agentId);
+    if (options.city != null || options.minRating != null || options.trust != null) {
+      setInitialAgentFilters({
+        city:      options.city      || '',
+        minRating: options.minRating || 0,
+        trust:     options.trust     || 'all',
+      });
+    }
     setView(newView);
     window.history.pushState({ view: newView }, '', '');
   };
@@ -162,6 +179,7 @@ function App() {
             currentUser={currentUser}
             onSignOut={handleSignOut}
             onSearch={handleHeroSearch}
+            onPropertySearch={navigateToPropertiesFiltered}
           />
         )}
 
@@ -174,7 +192,9 @@ function App() {
             initialPropertyId={initialPropertyId}
             onPropertyOpened={() => setInitialPropertyId(null)}
             initialCityFilter={initialCityFilter}
-            onCityFilterConsumed={() => setInitialCityFilter('')}
+            onCityFilterConsumed={() => { setInitialCityFilter(''); setInitialHomeType(''); setInitialFilterType(''); }}
+            initialHomeType={initialHomeType}
+            initialFilterType={initialFilterType}
           />
         )}
 
@@ -186,7 +206,12 @@ function App() {
         )}
 
         {view === 'agents' && (
-          <PublicAgents onNavigate={navigateTo} onBack={() => navigateTo('hero')} />
+          <PublicAgents
+            onNavigate={navigateTo}
+            onBack={() => navigateTo('hero')}
+            initialFilters={initialAgentFilters}
+            onFiltersConsumed={() => setInitialAgentFilters(null)}
+          />
         )}
 
         {view === 'agent-details' && (
