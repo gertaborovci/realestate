@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
 import { canAccessAgentDashboard, DASHBOARD_VIEWS } from '../lib/auth';
 import HeroSearch from '../components/HeroSearch';
+import NotificationBell from '../components/NotificationBell';
+import NextChapterModal from '../components/NextChapterModal';
 
-const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
-  const [isScrolled, setIsScrolled] = useState(false);
+const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onPropertySearch }) => {
+  const [isScrolled,    setIsScrolled]    = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showWizard,    setShowWizard]    = useState(false);
   const user = currentUser;
   const scrollRef = useRef(null);
 
@@ -30,12 +33,12 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
   }, []);
 
   const navLinks = [
-    { name: 'HOME', view: 'hero' },
-    { name: 'BUY', view: 'properties' },
-    { name: 'RENT', view: 'properties' },
-    { name: 'SELL', view: 'hero' },
-    { name: 'MORTGAGE', view: 'hero' },
-    { name: 'AGENTS', view: 'agents' }
+    { name: 'HOME',           view: 'hero'          },
+    { name: 'BUY',            view: 'properties'    },
+    { name: 'RENT',           view: 'properties'    },
+    { name: 'SELL',           view: 'hero'          },
+    { name: 'AGENTS',         view: 'agents'        },
+    { name: 'NEIGHBOURHOODS', view: 'neighborhoods' },
   ];
 
   // Updated to focus on Kosovo
@@ -51,7 +54,8 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
   // }
 
   return (
-    <div 
+    <>
+    <div
       ref={scrollRef}
       className="h-screen w-full bg-black overflow-y-auto scroll-smooth hide-scrollbar text-white"
     >
@@ -90,6 +94,9 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
 
         {/* Right: User Actions */}
         <div className="flex items-center gap-4">
+          {user && (
+            <NotificationBell userId={user.id} onNavigate={onNavigate} />
+          )}
           <div
             className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
             onClick={() => user ? onNavigate('user-dashboard') : onNavigate('signin')}
@@ -130,7 +137,7 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
               and architectural excellence across Kosovo.
             </p>
             <button
-              onClick={() => onNavigate('properties')}
+              onClick={() => setShowWizard(true)}
               className="inline-flex items-center gap-3 bg-white text-black px-10 py-4 rounded-full
                          font-black text-[11px] uppercase tracking-widest
                          hover:bg-zinc-100 transition-all hover:gap-5 duration-300 shadow-2xl"
@@ -243,8 +250,18 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch }) => {
           </div>
         </div>
       </section>
-      
+
     </div>
+
+    {/* Next Chapter wizard modal */}
+    {showWizard && (
+      <NextChapterModal
+        onClose={() => setShowWizard(false)}
+        onPropertySearch={onPropertySearch || (() => onNavigate('properties'))}
+        onNavigate={onNavigate}
+      />
+    )}
+    </>
   );
 };
 

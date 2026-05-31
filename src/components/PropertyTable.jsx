@@ -3,8 +3,11 @@ import {
   Edit, Trash2, Search, ChevronDown, ChevronUp,
   Home, Tag, User, Calendar, DoorOpen, Bath, Maximize,
   ShoppingBag, KeyRound, CheckCircle, Clock, X,
+  Star, HelpCircle, Info,
 } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
+import PropertyReviews from './PropertyReviews';
+import PropertyQA from './PropertyQA';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -196,16 +199,17 @@ function PropertyDetail({ property, onClose }) {
 
 const PropertyTable = ({ properties, onDelete, onEdit }) => {
   const [search,      setSearch]      = useState('');
-  const [typeFilter,  setTypeFilter]  = useState('ALL'); // ALL | SALE | RENT
-  const [expandedId,  setExpandedId]  = useState(null);
+  const [typeFilter,  setTypeFilter]  = useState('ALL');
+  // { id: propertyId, type: 'details' | 'reviews' | 'qa' } — null when nothing open
+  const [activePanel, setActivePanel] = useState(null);
 
   const filtered = useMemo(() => {
     let items = [...(properties || [])];
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(p =>
-        (p.title    || '').toLowerCase().includes(q) ||
-        (p.location || '').toLowerCase().includes(q) ||
+        (p.title      || '').toLowerCase().includes(q) ||
+        (p.location   || '').toLowerCase().includes(q) ||
         (p.agent_name || '').toLowerCase().includes(q)
       );
     }
@@ -214,7 +218,10 @@ const PropertyTable = ({ properties, onDelete, onEdit }) => {
     return items;
   }, [properties, search, typeFilter]);
 
-  const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
+  const togglePanel = (id, type) =>
+    setActivePanel(prev =>
+      prev?.id === id && prev?.type === type ? null : { id, type }
+    );
 
   return (
     <div className="space-y-6">
@@ -269,18 +276,34 @@ const PropertyTable = ({ properties, onDelete, onEdit }) => {
         )}
 
         {filtered.map((property) => {
-          const status = getStatus(property.status);
-          const rental = isRentType(property.type);
-          const isOpen = expandedId === property.id;
+          const status       = getStatus(property.status);
+          const rental       = isRentType(property.type);
+          const openType     = activePanel?.id === property.id ? activePanel.type : null;
+
+          const panelBtn = (type, icon, label) => (
+            <button
+              onClick={() => togglePanel(property.id, type)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition ${
+                openType === type
+                  ? 'bg-white text-black border-white'
+                  : 'text-white/40 border-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {icon}
+              {label}
+              {openType === type
+                ? <ChevronUp size={10} />
+                : <ChevronDown size={10} />}
+            </button>
+          );
 
           return (
-            <div key={property.id} className="rounded-2xl overflow-hidden border border-white/5 hover:border-white/10 transition">
+            <div key={property.id} className={`rounded-2xl overflow-hidden border transition ${
+              openType ? 'border-white/15' : 'border-white/5 hover:border-white/10'
+            }`}>
 
-              {/* Row */}
-              <div
-                className="flex items-center gap-4 p-4 bg-[#0a0a0a] cursor-pointer hover:bg-white/[0.02] transition select-none"
-                onClick={() => toggleExpand(property.id)}
-              >
+              {/* Row — no longer click-to-expand, buttons handle it */}
+              <div className="flex items-center gap-4 p-4 bg-[#0a0a0a] hover:bg-white/[0.02] transition select-none">
                 {/* Type badge */}
                 <span className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border ${
                   rental ? TYPE_CLS.rent : TYPE_CLS.sale
@@ -324,31 +347,59 @@ const PropertyTable = ({ properties, onDelete, onEdit }) => {
                   {fmtDate(property.created_at)}
                 </span>
 
-                {/* Expand / Actions */}
-                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => onEdit(property)}
-                    className="p-2 text-white/20 hover:text-white hover:bg-white/10 rounded-xl transition"
-                    title="Edit"
-                  >
+                {/* ── Panel buttons + Edit + Delete ── */}
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                  {panelBtn('details',  <Info     size={10} />, 'Details')}
+                  {panelBtn('reviews',  <Star     size={10} />, 'Reviews')}
+                  {panelBtn('qa',       <HelpCircle size={10} />, 'Q&A')}
+                  <button onClick={() => onEdit(property)}
+                    className="p-2 text-white/20 hover:text-white hover:bg-white/10 rounded-xl transition" title="Edit">
                     <Edit size={14} />
                   </button>
-                  <button
-                    onClick={() => onDelete(property.id)}
-                    className="p-2 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
-                    title="Delete"
-                  >
+                  <button onClick={() => onDelete(property.id)}
+                    className="p-2 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition" title="Delete">
                     <Trash2 size={14} />
                   </button>
-                  <div className="p-2 text-white/20">
-                    {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </div>
                 </div>
               </div>
 
-              {/* Expanded detail */}
-              {isOpen && (
-                <PropertyDetail property={property} onClose={() => setExpandedId(null)} />
+              {/* ── Dropdown panels ── */}
+              {openType === 'details' && (
+                <PropertyDetail property={property} onClose={() => setActivePanel(null)} />
+              )}
+
+              {openType === 'reviews' && (
+                <div className="bg-[#0a0a0a] border-t border-white/5 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 flex items-center gap-2">
+                      <Star size={12} /> Reviews — {property.title}
+                    </p>
+                    <button onClick={() => setActivePanel(null)} className="text-white/30 hover:text-white transition">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <PropertyReviews
+                    propertyId={property.id}
+                    propertyTitle={property.title}
+                    showModal={false}
+                    defaultOpen
+                    isAdmin
+                  />
+                </div>
+              )}
+
+              {openType === 'qa' && (
+                <div className="bg-[#0a0a0a] border-t border-white/5 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 flex items-center gap-2">
+                      <HelpCircle size={12} /> Q&A — {property.title}
+                    </p>
+                    <button onClick={() => setActivePanel(null)} className="text-white/30 hover:text-white transition">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <PropertyQA propertyId={property.id} isAdmin />
+                </div>
               )}
             </div>
           );

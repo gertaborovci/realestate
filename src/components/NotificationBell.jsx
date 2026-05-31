@@ -8,6 +8,7 @@ const typeStyles = {
   visit_update: 'bg-purple-500/15 border-purple-500/25',
   cert_update:  'bg-blue-500/15   border-blue-500/25',
   broadcast:    'bg-amber-500/15  border-amber-500/25',
+  alert:        'bg-green-500/15  border-green-500/25',
   system:       'bg-zinc-800      border-zinc-700',
 };
 
@@ -15,6 +16,7 @@ const typeDot = {
   visit_update: 'bg-purple-400',
   cert_update:  'bg-blue-400',
   broadcast:    'bg-amber-400',
+  alert:        'bg-green-400',
   system:       'bg-zinc-400',
 };
 
@@ -28,7 +30,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-const NotificationBell = ({ userId, onNavigate }) => {
+const NotificationBell = ({ userId, onNavigate, onUnreadChange }) => {
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread]               = useState(0);
   const [open, setOpen]                   = useState(false);
@@ -42,7 +44,9 @@ const NotificationBell = ({ userId, onNavigate }) => {
       const data = await apiFetch(`/api/notifications/user/${userId}`);
       if (Array.isArray(data)) {
         setNotifications(data);
-        setUnread(data.filter((n) => !n.is_read).length);
+        const count = data.filter((n) => !n.is_read).length;
+        setUnread(count);
+        if (onUnreadChange) onUnreadChange(count);
       }
     } catch { /* silent */ }
   }, [userId]);

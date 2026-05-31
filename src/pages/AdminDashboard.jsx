@@ -10,6 +10,8 @@ import RentalRequests from './RentalRequests';
 import AdminAnalytics from './AdminAnalytics';
 import ManageNeighborhoods from './ManageNeighborhoods';
 import ManageExpenses from './ManageExpenses';
+import AdminPropertyReviews from './AdminPropertyReviews';
+import AdminQA from './AdminQA';
 import MaintenanceVisits from '../components/MaintenanceVisits';
 import SupportTickets from '../components/SupportTickets';
 import { API_BASE, apiFetch } from '../lib/api';
@@ -389,6 +391,8 @@ const AdminDashboard = ({ onBack }) => {
             {activeTab === 'users'          && <ManageUsers />}
             {activeTab === 'neighborhoods'  && <ManageNeighborhoods />}
             {activeTab === 'expenses'       && <ManageExpenses />}
+            {activeTab === 'reviews'        && <AdminPropertyReviews />}
+            {activeTab === 'qa'             && <AdminQA />}
             {activeTab === 'notifications'  && <BroadcastPanel />}
             {activeTab === 'support'        && <SupportTickets />}
 

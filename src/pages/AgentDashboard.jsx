@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
 
@@ -7,17 +7,32 @@ import AgentProperties from '../components/AgentProperties';
 import AgentContractsView from '../components/AgentContractsView';
 import AgentTransactionsView from '../components/AgentTransactionsView';
 import AgentRentalRequests from '../components/AgentRentalRequests';
+import AgentQAManager from '../components/AgentQAManager';
 import UserSupport from '../components/UserSupport';
 import { getCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import { Camera, Trash2, User } from 'lucide-react';
 
 const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
-  const [view, setView] = useState('list');
+  const [view,      setView]      = useState('list');
   const [uploading, setUploading] = useState(false);
+  const [agentId,   setAgentId]   = useState(null);
+  const [agentProps,setAgentProps]= useState([]);
   const fileInputRef = useRef(null);
 
   const agentUser = currentUser || getCurrentUser();
+
+  // Resolve agents.id + properties for Q&A manager
+  useEffect(() => {
+    if (!agentUser?.id) return;
+    apiFetch(`/api/agents/by-user/${agentUser.id}`)
+      .then(a => {
+        setAgentId(a.id);
+        return apiFetch(`/api/properties/agent/${a.id}`);
+      })
+      .then(props => setAgentProps(Array.isArray(props) ? props : []))
+      .catch(() => {});
+  }, [agentUser?.id]);
 
   const photoSrc = agentUser?.photo_url
     ? (agentUser.photo_url.startsWith('http') ? agentUser.photo_url : `${API_BASE}${agentUser.photo_url}`)
@@ -61,6 +76,7 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
             <p onClick={() => setView('certifications')} className={`cursor-pointer transition-colors ${view === 'certifications' ? 'text-white font-black' : 'hover:text-white'}`}>Certifications</p>
             <p onClick={() => setView('inquiries')} className={`cursor-pointer transition-colors ${view === 'inquiries' ? 'text-white font-black' : 'hover:text-white'}`}>Contact Inquiries</p>
             <p onClick={() => setView('rentals')} className={`cursor-pointer transition-colors ${view === 'rentals' ? 'text-white font-black' : 'hover:text-white'}`}>Rental Requests</p>
+            <p onClick={() => setView('qa')} className={`cursor-pointer transition-colors ${view === 'qa' ? 'text-white font-black' : 'hover:text-white'}`}>Property Q&A</p>
             <p onClick={() => setView('support')} className={`cursor-pointer transition-colors ${view === 'support' ? 'text-white font-black' : 'hover:text-white'}`}>Support</p>
           </div>
         </div>
@@ -77,6 +93,11 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}
         {view === 'inquiries' && <div className="p-10"><ContactInquiries /></div>}
         {view === 'rentals'   && <AgentRentalRequests />}
+        {view === 'qa'        && (
+          <div className="p-10">
+            <AgentQAManager agentId={agentId} properties={agentProps} />
+          </div>
+        )}
         {view === 'support'   && <div className="p-10"><UserSupport /></div>}
 
       </div>

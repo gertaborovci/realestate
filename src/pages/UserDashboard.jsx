@@ -12,6 +12,7 @@ import UserStories from '../components/UserStories';
 import UserRating from '../components/UserRating';
 import UserRequests from '../components/UserRequests';
 import UserSupport from '../components/UserSupport';
+import UserSearchAlerts from '../components/UserSearchAlerts';
 
 export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUser, onUserChange, favorites = [], onRemoveFavorite, onViewProperty }) {
   const user = currentUser || getCurrentUser();
@@ -20,8 +21,9 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [removedNotification, setRemovedNotification] = useState(false);
 
-  const [testimonials, setTestimonials] = useState([]);
-  const [ratings, setRatings] = useState([]);
+  const [testimonials,      setTestimonials]      = useState([]);
+  const [ratings,           setRatings]           = useState([]);
+  const [alertUnreadCount,  setAlertUnreadCount]  = useState(0);
 
   // Redirect to sign-in if not logged in
   useEffect(() => {
@@ -47,6 +49,23 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
       .catch(console.error);
   }, []);
 
+  // Poll unread alert-type notifications for the Alerts tab badge
+  useEffect(() => {
+    if (!user?.id) return;
+    const check = () => {
+      apiFetch(`/api/notifications/user/${user.id}`)
+        .then(data => {
+          const count = (Array.isArray(data) ? data : [])
+            .filter(n => n.type === 'alert' && !n.is_read).length;
+          setAlertUnreadCount(count);
+        })
+        .catch(() => {});
+    };
+    check();
+    const interval = setInterval(check, 30000); // re-check every 30s
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
   const handleRemoveFavorite = (id) => {
     setFavorites(favorites.filter((item) => item.id !== id));
     setRemovedNotification(true);
@@ -55,16 +74,35 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
 
   const handleSaveStory = (newStory) => {
     const finalName = newStory.isAnonymous ? 'Anonymous' : (newStory.client || 'User');
-    apiFetch('/api/testimonials', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ klienti_emri: finalName, teksti: newStory.text }),
-    })
-      .then((created) => {
-        setTestimonials((prev) => [...prev, { id: created.id, text: newStory.text, client: finalName }]);
-        setIsStoryModalOpen(false);
-      })
-      .catch((err) => alert(err.message));
+
+    const doPost = (body, headers) =>
+      apiFetch('/api/testimonials', { method: 'POST', ...headers, body })
+        .then((created) => {
+          setTestimonials((prev) => [...prev, {
+            id: created.id,
+            text: newStory.text,
+            teksti: newStory.text,
+            client: finalName,
+            klienti_emri: finalName,
+            foto_url: created.foto_url || null,
+          }]);
+          setIsStoryModalOpen(false);
+        })
+        .catch((err) => alert(err.message));
+
+    if (newStory.photo) {
+      // Send as FormData to allow file upload
+      const fd = new FormData();
+      fd.append('klienti_emri', finalName);
+      fd.append('teksti', newStory.text);
+      fd.append('photo', newStory.photo);
+      doPost(fd, {});
+    } else {
+      doPost(
+        JSON.stringify({ klienti_emri: finalName, teksti: newStory.text }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   };
 
   if (!user) return null;
@@ -113,20 +151,26 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
           {[
             { key: 'profile',   label: 'Profile' },
             { key: 'favorites', label: `Favorites (${favorites.length})` },
-            { key: 'visits',    label: 'My Visits' },
+            { key: 'requests',  label: 'My Requests' },
             { key: 'contracts', label: 'My Contracts' },
             { key: 'stories',   label: 'Stories' },
             { key: 'rating',    label: 'Ratings' },
+            { key: 'alerts',    label: 'Alerts', badge: alertUnreadCount },
             { key: 'support',   label: 'Support' },
-          ].map(({ key, label }) => (
+          ].map(({ key, label, badge }) => (
             <button
               key={key}
               onClick={() => setActiveSection(key)}
-              className={`px-5 py-3 rounded-xl font-bold transition ${
+              className={`relative px-5 py-3 rounded-xl font-bold transition ${
                 activeSection === key ? 'bg-white text-black' : 'bg-zinc-900 text-white border border-zinc-800'
               }`}
             >
               {label}
+              {badge > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black">
+                  {badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -140,14 +184,15 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
             onViewProperty={onViewProperty}
           />
         )}
-        {activeSection === 'visits'    && <UserVisits />}
+        {activeSection === 'requests'  && <UserRequests />}
         {activeSection === 'contracts' && <UserContracts />}
         {activeSection === 'stories'   && (
-          <UserStories testimonials={testimonials} setIsStoryModalOpen={setIsStoryModalOpen} />
+          <UserStories testimonials={testimonials} setIsStoryModalOpen={setIsStoryModalOpen} setTestimonials={setTestimonials} />
         )}
         {activeSection === 'rating'    && (
           <UserRating ratings={ratings} setRatings={setRatings} />
         )}
+        {activeSection === 'alerts'    && <UserSearchAlerts onNavigate={onNavigate} />}
         {activeSection === 'support'   && <UserSupport />}
       </div>
 
@@ -159,37 +204,76 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
 
 /* ── Story modal ─────────────────────────────────────────────────────────────── */
 function StoryModal({ onClose, onSave }) {
-  const [text, setText] = useState('');
-  const [client, setClient] = useState('');
+  const [text,        setText]        = useState('');
+  const [client,      setClient]      = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [photo,       setPhoto]       = useState(null);
+  const [preview,     setPreview]     = useState(null);
   const onlyLetters = (v) => v.replace(/[^a-zA-ZçÇëË\s]/g, '');
+
+  const handlePhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhoto(file);
+    setPreview(URL.createObjectURL(file));
+  };
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-900 p-6 rounded-2xl w-full max-w-md border border-zinc-800">
-        <div className="flex justify-between mb-4">
+      <div className="bg-zinc-900 p-6 rounded-2xl w-full max-w-md border border-zinc-800 space-y-4">
+        <div className="flex justify-between items-center">
           <h3 className="font-bold text-lg">Add Your Story</h3>
-          <button onClick={onClose}><X /></button>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition"><X size={18} /></button>
         </div>
+
         <textarea
           placeholder="Write your story..."
-          className="w-full bg-black p-3 rounded-lg mb-3 border border-zinc-700 h-32"
+          value={text}
           onChange={(e) => setText(e.target.value)}
+          className="w-full bg-black p-3 rounded-xl border border-zinc-700 h-32 resize-none outline-none focus:border-zinc-500 text-sm"
         />
+
         <input
           placeholder="Your name..."
           disabled={isAnonymous}
-          className="w-full bg-black p-3 rounded-lg mb-3 border border-zinc-700 disabled:opacity-30"
+          className="w-full bg-black p-3 rounded-xl border border-zinc-700 disabled:opacity-30 outline-none focus:border-zinc-500 text-sm"
           value={client}
           onChange={(e) => setClient(onlyLetters(e.target.value))}
         />
-        <label className="flex items-center gap-2 mb-4 text-sm">
-          <input type="checkbox" onChange={(e) => setIsAnonymous(e.target.checked)} />
+
+        {/* Photo upload */}
+        <div>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Photo (optional)</p>
+          {preview ? (
+            <div className="relative inline-block">
+              <img src={preview} alt="preview" className="w-full h-32 object-cover rounded-xl border border-zinc-700" />
+              <button
+                type="button"
+                onClick={() => { setPhoto(null); setPreview(null); }}
+                className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 hover:bg-black transition"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ) : (
+            <label className="flex items-center justify-center gap-2 w-full h-16 border-2 border-dashed border-zinc-700 hover:border-zinc-500 rounded-xl cursor-pointer transition text-zinc-500 hover:text-white text-sm font-bold uppercase tracking-wide">
+              + Add Photo
+              <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            </label>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-white/60 cursor-pointer">
+          <input type="checkbox" onChange={(e) => setIsAnonymous(e.target.checked)} className="accent-white" />
           Post anonymously
         </label>
+
         <button
-          className="w-full bg-white text-black py-2 rounded-lg font-bold"
-          onClick={() => { if (!text.trim()) { alert('Write your story first!'); return; } onSave({ text, client, isAnonymous }); }}
+          className="w-full bg-white text-black py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-zinc-200 transition"
+          onClick={() => {
+            if (!text.trim()) { alert('Write your story first!'); return; }
+            onSave({ text, client, isAnonymous, photo });
+          }}
         >
           Publish
         </button>
