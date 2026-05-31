@@ -17,7 +17,19 @@ async function getAll(req, res) {
       a.happy_clients,
       a.joined_year,
       u.username,
-      u.email
+      u.email,
+      COALESCE((
+        SELECT COUNT(*) FROM certifications c WHERE c.agent_id = a.id
+      ), 0) AS cert_count,
+      COALESCE((
+        SELECT COUNT(*) FROM certifications c
+        WHERE c.agent_id = a.id AND c.status = 'Approved'
+      ), 0) AS approved_certs,
+      COALESCE((
+        SELECT ROUND(AVG(ar.rating), 1)
+        FROM agent_ratings ar WHERE ar.agent_id = a.id
+      ), 5) AS avg_rating,
+      u.photo_url
     FROM agents a
     LEFT JOIN users u ON a.user_id = u.id
     WHERE a.status = 'Active'
@@ -43,7 +55,8 @@ async function getById(req, res) {
       a.happy_clients,
       a.joined_year,
       u.username,
-      u.email
+      u.email,
+      u.photo_url
     FROM agents a
     LEFT JOIN users u ON a.user_id = u.id
     WHERE a.id = ?
