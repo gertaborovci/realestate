@@ -283,6 +283,25 @@ db.connect((err) => {
         else console.error('Error creating agent_ratings table:', err);
     });
 
+    // Ensure 'offices' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS offices (
+            id            INT AUTO_INCREMENT PRIMARY KEY,
+            name          VARCHAR(150)  NOT NULL,
+            address       VARCHAR(255)  NOT NULL,
+            city          VARCHAR(100)  NOT NULL,
+            phone         VARCHAR(30)   DEFAULT NULL,
+            email         VARCHAR(150)  DEFAULT NULL,
+            working_hours VARCHAR(200)  DEFAULT NULL,
+            map_url       VARCHAR(500)  DEFAULT NULL,
+            is_active     TINYINT(1)    NOT NULL DEFAULT 1,
+            created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ offices table verified!');
+        else console.error('Error creating offices table:', err.message);
+    });
+
     // Ensure 'tickets' table exists
     db.query(`
         CREATE TABLE IF NOT EXISTS tickets (
@@ -344,12 +363,11 @@ const certificationRoutes   = require('./routes/certificationRoutes');
 const favoriteRoutes        = require('./routes/favoriteRoutes');
 const ratingRoutes          = require('./routes/ratingRoutes');
 const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
-const expenseRoutes          = require('./routes/expenseRoutes');
-const propertyReviewRoutes   = require('./routes/propertyReviewRoutes');
-const qaRoutes               = require('./routes/qaRoutes');
+const expenseRoutes         = require('./routes/expenseRoutes');
 const maintenanceRoutes     = require('./routes/maintenanceRoutes');
 const notificationRoutes    = require('./routes/notificationRoutes');
 const ticketRoutes          = require('./routes/ticketRoutes');
+const officeRoutes          = require('./routes/officeRoutes');
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/agents',        agentRoutes);
@@ -365,12 +383,11 @@ app.use('/api/certifications', certificationRoutes);
 app.use('/api/favorites',      favoriteRoutes);
 app.use('/api/ratings',        ratingRoutes);
 app.use('/api/neighborhoods',  neighborhoodRoutes);
-app.use('/api/expenses',        expenseRoutes);
-app.use('/api/property-reviews', propertyReviewRoutes);
-app.use('/api/qa',              qaRoutes);
+app.use('/api/expenses',       expenseRoutes);
 app.use('/api/maintenance',    maintenanceRoutes);
 app.use('/api/notifications',  notificationRoutes);
 app.use('/api/tickets',        ticketRoutes);
+app.use('/api/offices',        officeRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT
@@ -407,22 +424,15 @@ app.get('/api/properties/:id', (req, res) => {
 });
 
 app.post('/api/properties', (req, res) => {
-    const { title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id } = req.body;
+    const { title, price, location, status, type, image, rooms, bathrooms, area, agent_id } = req.body;
     const sql = `INSERT INTO properties
-                   (title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [
-        title, price, location, latitude || null, longitude || null,
-        status, type, home_type || null, neighborhood_id || null,
-        image || '', rooms, bathrooms, area, agent_id || null,
-    ], (err, result) => {
+                   (title, price, location, status, type, image, rooms, bathrooms, area, agent_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [title, price, location, status, type, image || '', rooms, bathrooms, area, agent_id || null], (err, result) => {
         if (err) {
             console.error("❌ SQL Error (POST):", err.message);
             return res.status(500).json({ error: err.message });
         }
-        // Fire search-alert notifications (non-blocking)
-        const { notifyMatchingAlerts } = require('./controllers/searchAlertController');
-        notifyMatchingAlerts({ propertyId: result.insertId, title, location, price, rooms, type });
         res.status(201).json({ id: result.insertId, ...req.body });
     });
 });

@@ -4,6 +4,7 @@ import { canAccessAgentDashboard, DASHBOARD_VIEWS } from '../lib/auth';
 import HeroSearch from '../components/HeroSearch';
 import NotificationBell from '../components/NotificationBell';
 import NextChapterModal from '../components/NextChapterModal';
+import OfficeLocations from '../components/OfficeLocations';
 
 const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onPropertySearch }) => {
   const [isScrolled,    setIsScrolled]    = useState(false);
@@ -12,19 +13,18 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
   const user = currentUser;
   const scrollRef = useRef(null);
 
-  // Smart Scroll Detector (Fixed for snap scrolling)
   useEffect(() => {
     const handleScroll = () => {
       if (scrollRef.current) {
         setIsScrolled(scrollRef.current.scrollTop > 50);
       }
     };
-    
+
     const scrollContainer = scrollRef.current;
     if (scrollContainer) {
       scrollContainer.addEventListener('scroll', handleScroll);
     }
-    
+
     return () => {
       if (scrollContainer) {
         scrollContainer.removeEventListener('scroll', handleScroll);
@@ -41,17 +41,11 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
     { name: 'NEIGHBOURHOODS', view: 'neighborhoods' },
   ];
 
-  // Updated to focus on Kosovo
   const popularCities = [
     { name: 'Prishtina', homes: '1,240', img: '/photos/hero_Pristina.avif', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' },
     { name: 'Prizren', homes: '850', img: 'https://images.unsplash.com/photo-1610012759972-e1c27e025f18?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1000' },
     { name: 'Peja', homes: '430', img: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' }
   ];
-
-  // Uncomment this block later if AgentDashboard is fully built and imported
-  // if (showDashboard) {
-  //   return <AgentDashboard onBack={() => setShowDashboard(false)} />;
-  // }
 
   return (
     <>
@@ -59,17 +53,17 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
       ref={scrollRef}
       className="h-screen w-full bg-black overflow-y-auto scroll-smooth hide-scrollbar text-white"
     >
-      
+
       {/* Dynamic Navbar: Transparent at top, Black blur on scroll */}
       <nav className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-[100] transition-all duration-500 ${
-        isScrolled 
-          ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' 
+        isScrolled
+          ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl'
           : 'bg-transparent py-8'
       }`}>
-        
+
         {/* Left: KosovaNest Logo */}
-        <div 
-          className="flex items-center gap-3 cursor-pointer group" 
+        <div
+          className="flex items-center gap-3 cursor-pointer group"
           onClick={() => onNavigate('hero')}
         >
           <Building2 size={32} className="text-white group-hover:opacity-70 transition-opacity" />
@@ -82,8 +76,8 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
         {/* Center: Navigation Links */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((item) => (
-            <button 
-              key={item.name} 
+            <button
+              key={item.name}
               onClick={() => onNavigate(item.view)}
               className="text-white text-[10px] font-bold tracking-widest uppercase opacity-60 hover:opacity-100 transition-all"
             >
@@ -122,12 +116,11 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
         </div>
       </nav>
 
-
       {/* Hero Section: FULL SCREEN */}
       <section className="h-screen w-full relative">
         <div className="h-full w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')" }}>
           <div className="absolute inset-0 bg-black/40"></div>
-          
+
           <div className="absolute bottom-20 left-16 md:left-24">
             <h1 className="text-white text-[6vw] font-black tracking-tighter leading-[0.85] mb-5">
               Find Your Nest
@@ -184,7 +177,7 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
            </div>
         </div>
       </section>
-      
+
       {/* "Let us narrow the field" Section */}
       <section className="min-h-screen w-full bg-white text-black p-16 md:p-24 flex flex-col items-center justify-center">
         <div className="max-w-3xl text-center space-y-8 mb-24">
@@ -208,6 +201,8 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
           Connect with an agent <ChevronRight size={18} />
         </button>
       </section>
+
+      <OfficeLocations />
 
       {/* Footer Section */}
       <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between">

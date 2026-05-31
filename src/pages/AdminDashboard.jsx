@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
 import StatCard from '../components/StatCard';
 import PropertyTable from '../components/PropertyTable';
@@ -14,128 +14,86 @@ import AdminPropertyReviews from './AdminPropertyReviews';
 import AdminQA from './AdminQA';
 import MaintenanceVisits from '../components/MaintenanceVisits';
 import SupportTickets from '../components/SupportTickets';
+import ManageOffices from '../components/ManageOffices';
+import AgentCertifications from './AgentCertifications';
+import ContactInquiries from './ContactInquiries';
 import { API_BASE, apiFetch } from '../lib/api';
 import { Home, Users, DollarSign, Clock, Calendar, Bell, Send } from 'lucide-react';
 
-/* ─── Broadcast Panel ────────────────────────────────────────────── */
-const BroadcastPanel = () => {
-  const [form, setForm]       = useState({ title: '', message: '', link: '' });
-  const [sending, setSending] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [error, setError]     = useState('');
+import AgentVisits from '../components/AgentVisits';
+import AgentProperties from '../components/AgentProperties';
+import AgentContractsView from '../components/AgentContractsView';
+import AgentTransactionsView from '../components/AgentTransactionsView';
+import AgentRentalRequests from '../components/AgentRentalRequests';
+import { getCurrentUser } from '../lib/auth';
+import { apiFetch, API_BASE } from '../lib/api';
+import { Camera, Trash2, User } from 'lucide-react';
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!form.title.trim() || !form.message.trim()) {
-      setError('Title and message are required.');
-      return;
-    }
-    setSending(true);
-    setError('');
+const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
+  const [view, setView] = useState('list');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const agentUser = currentUser || getCurrentUser();
+
+  const photoSrc = agentUser?.photo_url
+    ? (agentUser.photo_url.startsWith('http') ? agentUser.photo_url : `${API_BASE}${agentUser.photo_url}`)
+    : null;
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('photo', file);
+    setUploading(true);
     try {
-      const result = await apiFetch('/api/notifications/broadcast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-role': 'admin' },
-        body: JSON.stringify({
-          title:   form.title.trim(),
-          message: form.message.trim(),
-          link:    form.link.trim() || null,
-        }),
-      });
-      setSuccess(`✅ Broadcast sent to ${result.count} user${result.count !== 1 ? 's' : ''}.`);
-      setForm({ title: '', message: '', link: '' });
-      setTimeout(() => setSuccess(''), 4000);
-    } catch (err) {
-      setError(err.message || 'Failed to send broadcast.');
-    }
-    setSending(false);
+      const data = await apiFetch(`/api/users/${agentUser.id}/photo`, { method: 'POST', body: formData });
+      const updated = { ...agentUser, photo_url: data.photo_url };
+      if (onUserChange) onUserChange(updated);
+    } catch (err) { alert(err.message); }
+    finally { setUploading(false); }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!window.confirm('Remove your profile photo?')) return;
+    try {
+      await apiFetch(`/api/users/${agentUser.id}/photo`, { method: 'DELETE' });
+      const updated = { ...agentUser, photo_url: null };
+      if (onUserChange) onUserChange(updated);
+    } catch (err) { alert(err.message); }
   };
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-          <Bell size={24} className="text-amber-400" />
-        </div>
+    <div className="flex h-screen bg-[#050505] text-white">
+      {/* Sidebar */}
+      <div className="w-64 border-r border-white/10 p-10 flex flex-col justify-between flex-shrink-0">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-white">NOTIFICATIONS</h1>
-          <p className="text-white/40 text-xs font-bold tracking-widest uppercase mt-1">
-            Broadcast messages to all users
-          </p>
+          <h1 className="text-xl font-extrabold uppercase tracking-tight mb-12">FIND HOME</h1>
+          <div className="space-y-8 text-[12px] font-bold uppercase tracking-widest text-white/50">
+            <p onClick={() => setView('profile')} className={`cursor-pointer transition-colors ${view === 'profile' ? 'text-white font-black' : 'hover:text-white'}`}>Profile</p>
+            <p onClick={() => setView('list')} className={`cursor-pointer transition-colors ${view === 'list' ? 'text-white font-black' : 'hover:text-white'}`}>Properties</p>
+            <p onClick={() => setView('contracts')} className={`cursor-pointer transition-colors ${view === 'contracts' ? 'text-white font-black' : 'hover:text-white'}`}>Contracts</p>
+            <p onClick={() => setView('payments')} className={`cursor-pointer transition-colors ${view === 'payments' ? 'text-white font-black' : 'hover:text-white'}`}>Payments</p>
+            <p onClick={() => setView('visits')} className={`cursor-pointer transition-colors ${view === 'visits' ? 'text-white font-black' : 'hover:text-white'}`}>Visits</p>
+            <p onClick={() => setView('certifications')} className={`cursor-pointer transition-colors ${view === 'certifications' ? 'text-white font-black' : 'hover:text-white'}`}>Certifications</p>
+            <p onClick={() => setView('inquiries')} className={`cursor-pointer transition-colors ${view === 'inquiries' ? 'text-white font-black' : 'hover:text-white'}`}>Contact Inquiries</p>
+            <p onClick={() => setView('rentals')} className={`cursor-pointer transition-colors ${view === 'rentals' ? 'text-white font-black' : 'hover:text-white'}`}>Rental Requests</p>
+          </div>
         </div>
+
       </div>
 
-      {/* Compose */}
-      <div className="bg-[#111] border border-white/8 rounded-2xl p-8 space-y-6">
-        <h2 className="text-xs font-black tracking-widest uppercase text-white/60 flex items-center gap-2">
-          <Send size={13} /> Compose Broadcast
-        </h2>
+      {/* Main panel */}
+      <div className="flex-1 overflow-y-auto relative">
 
-        {success && (
-          <div className="bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-3 rounded-xl font-semibold">
-            {success}
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl font-semibold">
-            {error}
-          </div>
-        )}
+        {view === 'list' && <AgentProperties />}
+        {view === 'contracts' && <AgentContractsView />}
+        {view === 'payments' && <AgentTransactionsView />}
+        {view === 'visits' && <AgentVisits />}
+        {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}
+        {view === 'inquiries' && <div className="p-10"><ContactInquiries /></div>}
+        {view === 'rentals' && <AgentRentalRequests />}
 
-        <form onSubmit={handleSend} className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-2">
-              Title *
-            </label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="e.g. New Properties Available!"
-              className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/30 transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-2">
-              Message *
-            </label>
-            <textarea
-              value={form.message}
-              onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-              placeholder="Write your broadcast message here…"
-              rows={4}
-              className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/30 transition resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-2">
-              Link <span className="text-white/20 normal-case font-normal tracking-normal">(optional — page to navigate to)</span>
-            </label>
-            <input
-              type="text"
-              value={form.link}
-              onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))}
-              placeholder="e.g. properties"
-              className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/30 transition"
-            />
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <p className="text-white/30 text-xs">
-              This message will be sent to <strong className="text-white/50">all registered users</strong>.
-            </p>
-            <button
-              type="submit"
-              disabled={sending}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black text-xs font-black px-8 py-3 rounded-full transition tracking-widest uppercase"
-            >
-              <Send size={14} />
-              {sending ? 'Sending…' : 'Send Broadcast'}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
@@ -395,6 +353,7 @@ const AdminDashboard = ({ onBack }) => {
             {activeTab === 'qa'             && <AdminQA />}
             {activeTab === 'notifications'  && <BroadcastPanel />}
             {activeTab === 'support'        && <SupportTickets />}
+            {activeTab === 'offices'        && <ManageOffices />}
 
             {activeTab === 'agent-profile' && (
               <AgentProfile
