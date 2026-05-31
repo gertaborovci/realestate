@@ -88,6 +88,23 @@ db.connect((err) => {
         if (!err) console.log('✅ certifications.rejection_reason column ready!');
     });
 
+    // Ensure 'notifications' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS notifications (
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            user_id    INT           NOT NULL,
+            type       VARCHAR(50)   NOT NULL DEFAULT 'system',
+            title      VARCHAR(150)  NOT NULL,
+            message    TEXT          NOT NULL,
+            is_read    TINYINT(1)    NOT NULL DEFAULT 0,
+            link       VARCHAR(255)  DEFAULT NULL,
+            created_at TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ notifications table verified!');
+        else console.error('Error creating notifications table:', err.message);
+    });
+
     // Ensure profile columns exist on users table
     const userProfileColumns = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL",
@@ -266,6 +283,43 @@ db.connect((err) => {
         else console.error('Error creating agent_ratings table:', err);
     });
 
+    // Ensure 'offices' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS offices (
+            id            INT AUTO_INCREMENT PRIMARY KEY,
+            name          VARCHAR(150)  NOT NULL,
+            address       VARCHAR(255)  NOT NULL,
+            city          VARCHAR(100)  NOT NULL,
+            phone         VARCHAR(30)   DEFAULT NULL,
+            email         VARCHAR(150)  DEFAULT NULL,
+            working_hours VARCHAR(200)  DEFAULT NULL,
+            map_url       VARCHAR(500)  DEFAULT NULL,
+            is_active     TINYINT(1)    NOT NULL DEFAULT 1,
+            created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ offices table verified!');
+        else console.error('Error creating offices table:', err.message);
+    });
+
+    // Ensure 'tickets' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS tickets (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            user_id     INT          NOT NULL,
+            subject     VARCHAR(200) NOT NULL,
+            message     TEXT         NOT NULL,
+            priority    VARCHAR(20)  NOT NULL DEFAULT 'Medium',
+            status      VARCHAR(20)  NOT NULL DEFAULT 'Open',
+            admin_reply TEXT         DEFAULT NULL,
+            created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) console.log('✅ tickets table verified!');
+        else console.error('Error creating tickets table:', err.message);
+    });
+
     // Ensure 'maintenance_requests' table exists
     db.query(`
         CREATE TABLE IF NOT EXISTS maintenance_requests (
@@ -311,6 +365,9 @@ const ratingRoutes          = require('./routes/ratingRoutes');
 const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
 const expenseRoutes         = require('./routes/expenseRoutes');
 const maintenanceRoutes     = require('./routes/maintenanceRoutes');
+const notificationRoutes    = require('./routes/notificationRoutes');
+const ticketRoutes          = require('./routes/ticketRoutes');
+const officeRoutes          = require('./routes/officeRoutes');
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/agents',        agentRoutes);
@@ -328,6 +385,9 @@ app.use('/api/ratings',        ratingRoutes);
 app.use('/api/neighborhoods',  neighborhoodRoutes);
 app.use('/api/expenses',       expenseRoutes);
 app.use('/api/maintenance',    maintenanceRoutes);
+app.use('/api/notifications',  notificationRoutes);
+app.use('/api/tickets',        ticketRoutes);
+app.use('/api/offices',        officeRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT
