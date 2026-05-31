@@ -4,6 +4,7 @@ import { canAccessAgentDashboard, DASHBOARD_VIEWS } from '../lib/auth';
 import HeroSearch from '../components/HeroSearch';
 import NotificationBell from '../components/NotificationBell';
 import NextChapterModal from '../components/NextChapterModal';
+import OfficeLocations from '../components/OfficeLocations';
 
 const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onPropertySearch }) => {
   const [isScrolled,    setIsScrolled]    = useState(false);
@@ -200,6 +201,8 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
           Connect with an agent <ChevronRight size={18} />
         </button>
       </section>
+
+      <OfficeLocations />
 
       {/* Footer Section */}
       <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between">
