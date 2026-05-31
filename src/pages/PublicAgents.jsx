@@ -4,30 +4,35 @@ import {
   ArrowLeft, Calendar, Users, Award, ChevronRight, Globe, Check,
 } from 'lucide-react';
 import { getCurrentUser } from '../lib/auth';
-import { apiFetch } from '../lib/api';
+import { apiFetch, API_BASE } from '../lib/api';
 import ConsultationModal from '../components/ConsultationModal';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeAgent(a) {
   return {
-    id:            a.id,
-    name:          a.username         || 'Agent',
-    city:          a.zone             || 'Kosovo',
-    specialization:a.specialization   || 'Real Estate',
-    category:      a.specialization   || 'Our Agents',
-    email:         a.email            || null,
-    phone:         a.phone            || null,
-    bio:           a.bio              || `${a.username || 'This agent'} specializes in ${a.specialization || 'real estate'} across ${a.zone || 'Kosovo'}.`,
-    license:       a.license_number   || '—',
-    deals:         a.deals_closed     ?? 0,
-    happyClients:  a.happy_clients    ?? 0,
-    joined:        a.joined_year      || '—',
-    rating:        Number(a.avg_rating) || 5,
-    image:         a.profile_image    || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.username || 'Agent')}&background=1a1a1a&color=ffffff&size=400&bold=true`,
-    // Certification trust
-    certCount:     Number(a.cert_count     ?? 0),
-    approvedCerts: Number(a.approved_certs ?? 0),
+    id:             a.id,
+    name:           a.username         || 'Agent',
+    city:           a.zone             || 'Kosovo',
+    specialization: a.specialization   || 'Real Estate',
+    category:       a.specialization   || 'Our Agents',
+    email:          a.email            || null,
+    phone:          a.phone            || null,
+    bio:            a.bio              || `${a.username || 'This agent'} specializes in ${a.specialization || 'real estate'} across ${a.zone || 'Kosovo'}.`,
+    license:        a.license_number   || '—',
+    deals:          a.deals_closed     ?? 0,
+    happyClients:   a.happy_clients    ?? 0,
+    joined:         a.joined_year      || '—',
+    // Kept dynamic rating from feature-clients
+    rating:         Number(a.avg_rating) || 5, 
+    // Kept robust image URL handling from main
+    image:          a.photo_url
+                      ? (a.photo_url.startsWith('http') ? a.photo_url : `${API_BASE}${a.photo_url}`)
+                      : a.profile_image
+                      || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.username || 'Agent')}&background=1a1a1a&color=ffffff&size=400&bold=true`,
+    // Kept Certification trust from feature-clients
+    certCount:      Number(a.cert_count     ?? 0),
+    approvedCerts:  Number(a.approved_certs ?? 0),
   };
 }
 
@@ -173,16 +178,16 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
   const [error, setError]                 = useState('');
   const [searchTerm,    setSearchTerm]    = useState('');
   const [selectedCity,  setSelectedCity]  = useState(initialFilters?.city      || 'All');
-  const [minRating,     setMinRating]     = useState(initialFilters?.minRating  || 0);
-  const [trustFilter,   setTrustFilter]   = useState(initialFilters?.trust      || 'all');
+  const [minRating,     setMinRating]     = useState(initialFilters?.minRating || 0);
+  const [trustFilter,   setTrustFilter]   = useState(initialFilters?.trust     || 'all');
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showModal, setShowModal]         = useState(false);
   const [isScrolled, setIsScrolled]       = useState(false);
 
-  const [userRating,       setUserRating]       = useState(0);
-  const [userComment,      setUserComment]      = useState('');
-  const [ratingLoading,    setRatingLoading]    = useState(false);
-  const [ratingSubmitted,  setRatingSubmitted]  = useState(false);
+  const [userRating,        setUserRating]        = useState(0);
+  const [userComment,       setUserComment]       = useState('');
+  const [ratingLoading,     setRatingLoading]     = useState(false);
+  const [ratingSubmitted,   setRatingSubmitted]   = useState(false);
   const [existingRatingId, setExistingRatingId] = useState(null);
 
   const scrollRef  = useRef(null);
