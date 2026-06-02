@@ -31,7 +31,10 @@ export default function NeighborhoodAutocomplete({ onSelect, placeholder = 'Sear
   useEffect(() => {
     const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      clearTimeout(debounceRef.current);
+    };
   }, []);
 
   const handleInput = (e) => {

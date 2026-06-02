@@ -23,7 +23,7 @@ async function getAll(req, res) {
       ), 0) AS cert_count,
       COALESCE((
         SELECT COUNT(*) FROM certifications c
-        WHERE c.agent_id = a.id AND c.status = 'Approved'
+        WHERE c.agent_id = a.id AND c.status = 'Verified'
       ), 0) AS approved_certs,
       COALESCE((
         SELECT ROUND(AVG(ar.rating), 1)

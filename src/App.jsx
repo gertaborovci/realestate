@@ -1,16 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+
+// Eagerly loaded — needed immediately on first visit
 import RealEstateHero from './pages/RealEstateHero';
-import PublicProperties from './pages/PublicProperties';
-import PublicAgents from './pages/PublicAgents';
-import PublicNeighborhoods from './pages/PublicNeighborhoods';
 import Signin from './pages/signin';
 import Signup from './pages/signup';
-import UserDashboard from './pages/UserDashboard';
-import AgentPages from './pages/AgentPages';
-import AgentDashboard from './pages/AgentDashboard';
-import AdminDashboard from './pages/AdminDashboard';
 import Navbar from './components/Navbar';
 import PanelButtons from './components/PanelButtons';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Lazily loaded — only fetched when the user navigates to them
+const PublicProperties   = lazy(() => import('./pages/PublicProperties'));
+const PublicAgents       = lazy(() => import('./pages/PublicAgents'));
+const PublicNeighborhoods= lazy(() => import('./pages/PublicNeighborhoods'));
+const UserDashboard      = lazy(() => import('./pages/UserDashboard'));
+const AgentPages         = lazy(() => import('./pages/AgentPages'));
+const AgentDashboard     = lazy(() => import('./pages/AgentDashboard'));
+const AdminDashboard     = lazy(() => import('./pages/AdminDashboard'));
+
+// Fallback shown while a lazy page is loading
+const PageLoader = () => (
+  <div className="h-screen w-full bg-black flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+  </div>
+);
 
 import {
   canAccessAdminDashboard,
@@ -64,7 +76,7 @@ function App() {
     apiFetch(`/api/favorites/${currentUser.id}`)
       .then((data) => { setFavorites(data); localStorage.setItem('kn_favorites', JSON.stringify(data)); })
       .catch(() => {});
-  }, [view, currentUser]);
+  }, [currentUser]); // removed `view` — no need to re-fetch favourites on every navigation
 
   const toggleFavorite = (property) => {
     setFavorites((prev) => {
@@ -156,6 +168,7 @@ function App() {
   const showNavbar = !VIEWS_WITHOUT_NAVBAR.includes(view);
 
   return (
+    <ErrorBoundary>
     <div className="h-screen bg-black overflow-hidden text-white relative">
 
       {showNavbar && (
@@ -172,6 +185,7 @@ function App() {
       <PanelButtons onNavigate={navigateTo} currentView={view} />
 
       <div className="h-full w-full overflow-y-auto">
+        <Suspense fallback={<PageLoader />}>
 
         {view === 'hero' && (
           <RealEstateHero
@@ -247,8 +261,10 @@ function App() {
         {view === 'signin' && <Signin onNavigate={navigateTo} onSignIn={handleSignIn} />}
         {view === 'signup' && <Signup onNavigate={navigateTo} onSignIn={handleSignIn} />}
 
+        </Suspense>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
 

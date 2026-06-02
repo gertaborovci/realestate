@@ -36,7 +36,15 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
   useEffect(() => {
     apiFetch('/api/testimonials')
       .then((data) =>
-        setTestimonials(data.map((t) => ({ id: t.id, text: t.teksti, client: t.klienti_emri })))
+        setTestimonials(data.map((t) => ({
+          id:           t.id,
+          text:         t.teksti,
+          teksti:       t.teksti,
+          client:       t.klienti_emri,
+          klienti_emri: t.klienti_emri,
+          foto_url:     t.foto_url  || null,
+          user_id:      t.user_id   || null,
+        })))
       )
       .catch(console.error);
   }, []);
@@ -67,7 +75,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
   }, [user?.id]);
 
   const handleRemoveFavorite = (id) => {
-    setFavorites(favorites.filter((item) => item.id !== id));
+    if (onRemoveFavorite) onRemoveFavorite(id); // delegate to App.jsx which owns favorites state
     setRemovedNotification(true);
     setTimeout(() => { setRemovedNotification(false); }, 3000);
   };
@@ -85,21 +93,22 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
             client: finalName,
             klienti_emri: finalName,
             foto_url: created.foto_url || null,
+            user_id: user?.id || null,
           }]);
           setIsStoryModalOpen(false);
         })
         .catch((err) => alert(err.message));
 
     if (newStory.photo) {
-      // Send as FormData to allow file upload
       const fd = new FormData();
       fd.append('klienti_emri', finalName);
       fd.append('teksti', newStory.text);
       fd.append('photo', newStory.photo);
+      if (user?.id) fd.append('user_id', String(user.id));
       doPost(fd, {});
     } else {
       doPost(
-        JSON.stringify({ klienti_emri: finalName, teksti: newStory.text }),
+        JSON.stringify({ klienti_emri: finalName, teksti: newStory.text, user_id: user?.id || null }),
         { headers: { 'Content-Type': 'application/json' } }
       );
     }

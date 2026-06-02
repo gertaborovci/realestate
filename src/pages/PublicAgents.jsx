@@ -3,7 +3,7 @@ import {
   Search, MapPin, Star, Phone, Mail, Building2, User,
   ArrowLeft, Calendar, Users, Award, ChevronRight, Globe, Check,
 } from 'lucide-react';
-import { getCurrentUser } from '../lib/auth';
+import { getCurrentUser, setCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import ConsultationModal from '../components/ConsultationModal';
 
@@ -329,7 +329,7 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
         </div>
 
         <div className="hidden md:flex items-center gap-8">
-          {['HOME', 'BUY', 'RENT', 'SELL', 'AGENTS', 'NEIGHBOURHOODS'].map((item) => (
+          {['HOME', 'BUY', 'RENT', 'AGENTS', 'NEIGHBOURHOODS'].map((item) => (
             <button
               key={item}
               onClick={() => onNavigate(
@@ -355,19 +355,22 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
             onClick={() => {
               const u = getCurrentUser();
               if (!u) { onNavigate('signin'); return; }
-              if (u.role === 'admin') onNavigate('dashboard');
-              else if (u.role === 'agent') onNavigate('agent-dashboard');
-              else onNavigate('user-profile');
+              onNavigate('user-dashboard');
             }}
           >
             <User size={20} className="text-white" />
           </div>
-          <button
-            onClick={() => onNavigate('signin')}
-            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase"
-          >
-            Login
-          </button>
+          {getCurrentUser() ? (
+            <button onClick={() => { setCurrentUser(null); onNavigate('hero'); }}
+              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">
+              Sign Out
+            </button>
+          ) : (
+            <button onClick={() => onNavigate('signin')}
+              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">
+              Login
+            </button>
+          )}
         </div>
       </nav>
 

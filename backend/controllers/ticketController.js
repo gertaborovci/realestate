@@ -66,7 +66,7 @@ async function create(req, res) {
       type:    'ticket',
       title:   '🎫 New Support Ticket',
       message: `New ${priority || 'Medium'} priority ticket: "${subject.trim()}"`,
-      link:    'support',
+      link:    'user-dashboard',
     });
   }
 
@@ -120,7 +120,7 @@ async function update(req, res) {
       type:    'ticket',
       title,
       message,
-      link:    'support',
+      link:    'user-dashboard',
     });
   }
 

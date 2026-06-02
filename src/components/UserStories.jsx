@@ -1,35 +1,87 @@
 import React, { useState } from 'react';
-import { MessageSquare, PlusCircle, Pencil, Trash2, Check, X, Loader } from 'lucide-react';
+import { MessageSquare, PlusCircle, Pencil, Trash2, Check, X, Loader, Camera } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
+import { getCurrentUser } from '../lib/auth';
 
 export default function UserStories({ testimonials, setIsStoryModalOpen, setTestimonials }) {
+  const currentUser = getCurrentUser();
   const [editingId,   setEditingId]   = useState(null);
   const [editText,    setEditText]    = useState('');
   const [editName,    setEditName]    = useState('');
+  const [editPhoto,   setEditPhoto]   = useState(null);    // new File to upload
+  const [editPreview, setEditPreview] = useState(null);   // preview URL
+  const [removePhoto, setRemovePhoto] = useState(false);  // flag to clear existing photo
   const [saving,      setSaving]      = useState(false);
   const [deletingId,  setDeletingId]  = useState(null);
 
   const startEdit = (t) => {
     setEditingId(t.id);
-    setEditText(t.text  || t.teksti        || '');
-    setEditName(t.client || t.klienti_emri || '');
+    setEditText(t.text   || t.teksti        || '');
+    setEditName(t.client || t.klienti_emri  || '');
+    setEditPhoto(null);
+    setEditPreview(null);
+    setRemovePhoto(false);
   };
 
-  const cancelEdit = () => { setEditingId(null); setEditText(''); setEditName(''); };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText('');
+    setEditName('');
+    setEditPhoto(null);
+    setEditPreview(null);
+    setRemovePhoto(false);
+  };
 
-  const saveEdit = async (id) => {
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditPhoto(file);
+    setEditPreview(URL.createObjectURL(file));
+    setRemovePhoto(false);
+  };
+
+  const handleRemovePhoto = () => {
+    setEditPhoto(null);
+    setEditPreview(null);
+    setRemovePhoto(true);
+  };
+
+  const saveEdit = async (id, currentFotoUrl) => {
     if (!editText.trim()) { alert('Story text cannot be empty.'); return; }
     setSaving(true);
     try {
-      await apiFetch(`/api/testimonials/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ klienti_emri: editName || 'Anonymous', teksti: editText }),
-      });
-      // Update local state
+      let newFotoUrl = currentFotoUrl;
+
+      if (editPhoto) {
+        // Upload new photo first
+        const fd = new FormData();
+        fd.append('klienti_emri', editName || 'Anonymous');
+        fd.append('teksti', editText);
+        fd.append('photo', editPhoto);
+        const created = await apiFetch(`/api/testimonials/${id}`, {
+          method: 'PUT',
+          body: fd,
+        });
+        newFotoUrl = created?.foto_url || currentFotoUrl;
+      } else {
+        // Regular JSON update (text/name ± clear photo)
+        await apiFetch(`/api/testimonials/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            klienti_emri: editName || 'Anonymous',
+            teksti:       editText,
+            foto_url:     removePhoto ? null : currentFotoUrl,
+          }),
+        });
+        if (removePhoto) newFotoUrl = null;
+      }
+
       if (setTestimonials) {
         setTestimonials(prev => prev.map(t =>
-          t.id === id ? { ...t, teksti: editText, text: editText, klienti_emri: editName, client: editName } : t
+          t.id === id
+            ? { ...t, teksti: editText, text: editText, klienti_emri: editName, client: editName, foto_url: newFotoUrl }
+            : t
         ));
       }
       cancelEdit();
@@ -77,8 +129,11 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
 
       <div className="space-y-3">
         {testimonials.map((t) => {
-          const text   = t.text   || t.teksti        || '';
-          const client = t.client || t.klienti_emri  || 'Anonymous';
+          const text      = t.text   || t.teksti        || '';
+          const client    = t.client || t.klienti_emri  || 'Anonymous';
+          const photoSrc  = t.foto_url
+            ? (t.foto_url.startsWith('http') ? t.foto_url : `${API_BASE}${t.foto_url}`)
+            : null;
 
           return (
             <div key={t.id} className="p-5 bg-zinc-900/60 rounded-2xl border border-white/5 group">
@@ -97,8 +152,43 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
                     rows={3}
                     className="w-full bg-black/50 border border-zinc-700 focus:border-zinc-500 text-white text-sm rounded-xl px-4 py-3 outline-none resize-none transition"
                   />
+
+                  {/* Photo section */}
+                  <div>
+                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">Photo</p>
+
+                    {/* Show preview of new photo OR existing photo (if not removed) */}
+                    {(editPreview || (photoSrc && !removePhoto)) ? (
+                      <div className="relative inline-block w-full">
+                        <img
+                          src={editPreview || photoSrc}
+                          alt="story"
+                          className="w-full h-36 object-cover rounded-xl border border-zinc-700"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemovePhoto}
+                          className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1.5 hover:bg-red-500/80 transition"
+                          title="Remove photo"
+                        >
+                          <X size={12} />
+                        </button>
+                        {/* Change photo overlay */}
+                        <label className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/70 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full cursor-pointer transition">
+                          <Camera size={11} /> Change
+                          <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center gap-2 w-full h-14 border-2 border-dashed border-zinc-700 hover:border-zinc-500 rounded-xl cursor-pointer transition text-zinc-500 hover:text-white text-sm font-bold uppercase tracking-wide">
+                        <Camera size={14} /> Add Photo
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                      </label>
+                    )}
+                  </div>
+
                   <div className="flex gap-2">
-                    <button onClick={() => saveEdit(t.id)} disabled={saving}
+                    <button onClick={() => saveEdit(t.id, t.foto_url)} disabled={saving}
                       className="flex items-center gap-1.5 bg-white hover:bg-zinc-200 text-black px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition disabled:opacity-50">
                       {saving ? <Loader size={12} className="animate-spin" /> : <Check size={12} />} Save
                     </button>
@@ -113,9 +203,9 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-3">
                     {/* Photo if present */}
-                    {(t.foto_url) && (
+                    {photoSrc && (
                       <img
-                        src={t.foto_url.startsWith('http') ? t.foto_url : `${API_BASE}${t.foto_url}`}
+                        src={photoSrc}
                         alt="story"
                         className="w-full h-40 object-cover rounded-xl border border-zinc-800"
                       />
@@ -123,16 +213,23 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
                     <p className="italic text-zinc-300 text-sm leading-relaxed">"{text}"</p>
                     <span className="text-xs font-bold text-emerald-400 block">— {client}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button onClick={() => startEdit(t)}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition">
-                      <Pencil size={13} />
-                    </button>
-                    <button onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}
-                      className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition disabled:opacity-40">
-                      {deletingId === t.id ? <Loader size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                    </button>
-                  </div>
+
+                  {/* Only the story's owner OR an admin can edit/delete */}
+                  {currentUser && (
+                    t.user_id === currentUser.id ||
+                    currentUser.role === 'admin'
+                  ) && (
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button onClick={() => startEdit(t)}
+                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}
+                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition disabled:opacity-40">
+                        {deletingId === t.id ? <Loader size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -32,7 +32,10 @@ export default function LocationAutocomplete({
   useEffect(() => {
     const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      clearTimeout(debounceRef.current); // cancel any pending fetch on unmount
+    };
   }, []);
 
   // Fetch suggestions with 400 ms debounce

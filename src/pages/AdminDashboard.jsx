@@ -6,7 +6,7 @@ import AddProperty from './AddProperty';
 import ManageAgents from './ManageAgents';
 import ManageUsers from './ManageUsers';
 import AgentProfile from './AgentProfile';
-import RentalRequests from './RentalRequests';
+// RentalRequests removed — agent rental requests are handled in AgentDashboard
 import AdminAnalytics from './AdminAnalytics';
 import ManageNeighborhoods from './ManageNeighborhoods';
 import ManageExpenses from './ManageExpenses';
@@ -378,6 +378,7 @@ const AdminDashboard = ({ onBack }) => {
 
   useEffect(() => {
     fetchProperties();
+    fetchVisits(); // also load on mount so dashboard stats show correct pending count
   }, []);
 
   useEffect(() => {

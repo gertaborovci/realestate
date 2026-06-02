@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Home } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 /**
  * Airbnb-style hero search bar.
@@ -14,8 +15,7 @@ export default function HeroSearch({ onSearch }) {
 
   // Load neighbourhood options from backend
   useEffect(() => {
-    fetch('http://localhost:5000/api/neighborhoods')
-      .then(r => r.json())
+    apiFetch('/api/neighborhoods')
       .then(data => setNeighborhoods(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);

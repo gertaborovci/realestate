@@ -9,6 +9,7 @@ import AgentTransactionsView from '../components/AgentTransactionsView';
 import AgentRentalRequests from '../components/AgentRentalRequests';
 import AgentQAManager from '../components/AgentQAManager';
 import UserSupport from '../components/UserSupport';
+import UserProfile from '../components/UserProfile';
 import { getCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import { Camera, Trash2, User } from 'lucide-react';
@@ -86,6 +87,11 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto relative">
 
+        {view === 'profile' && (
+          <div className="p-10">
+            <UserProfile currentUser={agentUser} onUserChange={onUserChange} />
+          </div>
+        )}
         {view === 'list' && <AgentProperties />}
         {view === 'contracts' && <AgentContractsView />}
         {view === 'payments' && <AgentTransactionsView />}
@@ -93,10 +99,13 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
         {view === 'certifications' && <div className="p-10"><AgentCertifications /></div>}
         {view === 'inquiries' && <div className="p-10"><ContactInquiries /></div>}
         {view === 'rentals'   && <AgentRentalRequests />}
-        {view === 'qa'        && (
+        {view === 'qa' && agentId && (
           <div className="p-10">
             <AgentQAManager agentId={agentId} properties={agentProps} />
           </div>
+        )}
+        {view === 'qa' && !agentId && (
+          <div className="p-10 text-white/30 text-sm">Loading Q&A manager…</div>
         )}
         {view === 'support'   && <div className="p-10"><UserSupport /></div>}
 

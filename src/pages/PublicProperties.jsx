@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
-import { getCurrentUser } from '../lib/auth';
+import { getCurrentUser, setCurrentUser } from '../lib/auth';
 import RentalCalendar   from '../components/RentalCalendar';
 import PropertyMap      from '../components/PropertyMap';
 import PropertyReviews  from '../components/PropertyReviews';
@@ -144,7 +144,8 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     const fetchProperties = async () => {
       try {
         const response = await fetch(`${API_BASE}/api/properties`);
-        const data = await response.json();
+        const raw  = await response.json();
+        const data = Array.isArray(raw) ? raw : [];  // guard: API may return {error:...} on 500
         setProperties(data);
 
         const imageMap = {};
@@ -603,11 +604,19 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
         <div className="flex items-center gap-6">
           <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition" onClick={() => {
             if (!currentUser) { handleNavigation('signin'); return; }
-            if (currentUser.role === 'admin') handleNavigation('dashboard');
-            else if (currentUser.role === 'agent') handleNavigation('agent-dashboard');
-            else handleNavigation('user-profile');
+            handleNavigation('user-dashboard');
           }}><User size={20} className="text-white" /></div>
-          <button onClick={() => handleNavigation('signin')} className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">Login</button>
+          {currentUser ? (
+            <button onClick={() => { setCurrentUser(null); handleNavigation('hero'); }}
+              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">
+              Sign Out
+            </button>
+          ) : (
+            <button onClick={() => handleNavigation('signin')}
+              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">
+              Login
+            </button>
+          )}
         </div>
       </nav>
 

@@ -85,7 +85,7 @@ async function update(req, res) {
           type:    'cert_update',
           title:   'Document Verified ✅',
           message: `Your ${type} document has been verified by the admin.`,
-          link:    'agent-certifications',
+          link:    'agent-dashboard',
         });
       } else if (req.body.status === 'Rejected') {
         await createNotification({
@@ -95,7 +95,7 @@ async function update(req, res) {
           message: rejection_reason
             ? `Your ${type} document was rejected: ${rejection_reason}`
             : `Your ${type} document has been rejected. Please re-upload.`,
-          link:    'agent-certifications',
+          link:    'agent-dashboard',
         });
       }
     }

@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/',       asyncHandler(testimonialController.getAll));
 router.post('/',      upload.single('photo'), asyncHandler(testimonialController.create));
-router.put('/:id',    asyncHandler(testimonialController.update));
+router.put('/:id',    upload.single('photo'), asyncHandler(testimonialController.update));
 router.delete('/:id', asyncHandler(testimonialController.remove));
 
 module.exports = router;

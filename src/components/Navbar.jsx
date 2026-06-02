@@ -11,16 +11,13 @@ const Navbar = ({ onNavigate, isScrolled, currentView, onSignOut, currentUser })
     { name: 'HOME',           view: 'hero'          },
     { name: 'BUY',            view: 'properties'    },
     { name: 'RENT',           view: 'properties'    },
-    { name: 'SELL',           view: 'hero'          },
     { name: 'AGENTS',         view: 'agents'        },
     { name: 'NEIGHBOURHOODS', view: 'neighborhoods' },
   ];
 
   const handleUserClick = () => {
     if (!user) { onNavigate('signin'); return; }
-    if (user.role === 'admin') onNavigate('dashboard');
-    else if (user.role === 'agent') onNavigate('agent-dashboard');
-    else onNavigate('user-dashboard');
+    onNavigate('user-dashboard'); // always goes to user profile — role panels have their own floating buttons
   };
 
   const handleSignOut = () => {

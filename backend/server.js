@@ -283,6 +283,44 @@ db.connect((err) => {
         else console.error('Error creating agent_ratings table:', err);
     });
 
+    // Ensure 'property_reviews' table exists
+    db.query(`
+        CREATE TABLE IF NOT EXISTS property_reviews (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            user_id     INT NOT NULL,
+            property_id INT NOT NULL,
+            rating      DECIMAL(2,1) NOT NULL,
+            comment     TEXT DEFAULT NULL,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_user_property (user_id, property_id)
+        )
+    `, (err) => {
+        if (!err) console.log('✅ property_reviews table is ready!');
+        else console.error('Error creating property_reviews table:', err);
+    });
+
+    // Ensure searchalerts has required_features column (added in later migration)
+    db.query("ALTER TABLE searchalerts ADD COLUMN IF NOT EXISTS required_features VARCHAR(500) DEFAULT NULL", () => {});
+
+    // Ensure testimonials has user_id column (added for ownership tracking)
+    db.query("ALTER TABLE testimonials ADD COLUMN IF NOT EXISTS user_id INT DEFAULT NULL", () => {});
+
+    // Ensure QA tables exist
+    db.query(`CREATE TABLE IF NOT EXISTS agent_qa (
+        id INT AUTO_INCREMENT PRIMARY KEY, agent_id INT NOT NULL, question VARCHAR(500) NOT NULL,
+        answer TEXT NOT NULL, sort_order INT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`, () => {});
+    db.query(`CREATE TABLE IF NOT EXISTS property_qa (
+        id INT AUTO_INCREMENT PRIMARY KEY, agent_id INT, property_id INT NOT NULL,
+        question VARCHAR(500) NOT NULL, answer TEXT NOT NULL, sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`, () => {});
+    db.query(`CREATE TABLE IF NOT EXISTS qa_exclusions (
+        id INT AUTO_INCREMENT PRIMARY KEY, agent_id INT NOT NULL, property_id INT NOT NULL,
+        UNIQUE KEY unique_exclusion (agent_id, property_id)
+    )`, () => {});
+
     // Ensure 'offices' table exists
     db.query(`
         CREATE TABLE IF NOT EXISTS offices (
@@ -365,6 +403,8 @@ const ratingRoutes          = require('./routes/ratingRoutes');
 const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
 const expenseRoutes         = require('./routes/expenseRoutes');
 const maintenanceRoutes     = require('./routes/maintenanceRoutes');
+const propertyReviewRoutes  = require('./routes/propertyReviewRoutes');
+const qaRoutes              = require('./routes/qaRoutes');
 const notificationRoutes    = require('./routes/notificationRoutes');
 const ticketRoutes          = require('./routes/ticketRoutes');
 const officeRoutes          = require('./routes/officeRoutes');
@@ -387,7 +427,9 @@ app.use('/api/expenses',       expenseRoutes);
 app.use('/api/maintenance',    maintenanceRoutes);
 app.use('/api/notifications',  notificationRoutes);
 app.use('/api/tickets',        ticketRoutes);
-app.use('/api/offices',        officeRoutes);
+app.use('/api/offices',          officeRoutes);
+app.use('/api/property-reviews', propertyReviewRoutes);
+app.use('/api/qa',               qaRoutes);
 
 // ==========================================
 // 1. API ROUTES PËR PRONAT
@@ -424,26 +466,38 @@ app.get('/api/properties/:id', (req, res) => {
 });
 
 app.post('/api/properties', (req, res) => {
-    const { title, price, location, status, type, image, rooms, bathrooms, area, agent_id } = req.body;
+    const { title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id } = req.body;
     const sql = `INSERT INTO properties
-                   (title, price, location, status, type, image, rooms, bathrooms, area, agent_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [title, price, location, status, type, image || '', rooms, bathrooms, area, agent_id || null], (err, result) => {
+                   (title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [
+        title, price, location, latitude || null, longitude || null,
+        status, type, home_type || null, neighborhood_id || null,
+        image || '', rooms, bathrooms, area, agent_id || null
+    ], (err, result) => {
         if (err) {
             console.error("❌ SQL Error (POST):", err.message);
             return res.status(500).json({ error: err.message });
         }
+        // Fire search-alert notifications (non-blocking)
+        const { notifyMatchingAlerts } = require('./controllers/searchAlertController');
+        notifyMatchingAlerts({ propertyId: result.insertId, title, location, price, rooms, type });
         res.status(201).json({ id: result.insertId, ...req.body });
     });
 });
 
 app.put('/api/properties/:id', (req, res) => {
-    const { title, price, location, status, type, image, rooms, bathrooms, area } = req.body;
+    const { title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area } = req.body;
     const sql = `UPDATE properties
-                 SET title = ?, price = ?, location = ?, status = ?, type = ?,
+                 SET title = ?, price = ?, location = ?, latitude = ?, longitude = ?,
+                     status = ?, type = ?, home_type = ?, neighborhood_id = ?,
                      image = ?, rooms = ?, bathrooms = ?, area = ?
                  WHERE id = ?`;
-    db.query(sql, [title, price, location, status, type, image || '', rooms, bathrooms, area, req.params.id], (err) => {
+    db.query(sql, [
+        title, price, location, latitude || null, longitude || null,
+        status, type, home_type || null, neighborhood_id || null,
+        image || '', rooms, bathrooms, area, req.params.id
+    ], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json({ message: "Updated successfully!" });
     });

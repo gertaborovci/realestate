@@ -1,46 +1,195 @@
-# Real Estate Management System
+# KosovaNest — Real Estate Platform
 
-Projekt për lëndën Lab Course 1 (Viti Akademik 2025/2026).
-
----
-
-# Përshkrimi i Projektit
-
-Real Estate Management System është një aplikacion web që mundëson menaxhimin e pronave, klientëve dhe agjentëve të pasurive të paluajtshme.
-
-Sistemi ofron:
-- Regjistrim dhe kyçje të përdoruesve
-- Menaxhim të pronave
-- Panel administrimi (Admin Dashboard)
-- Ruajtje të të dhënave në databazë
-- Autentifikim dhe siguri me JWT Token
-
-Ky projekt është zhvilluar duke përdorur React për frontend, Node.js dhe Express.js për backend dhe MySQL si databazë.
+A full-stack real estate web application built for Kosovo's property market.  
+Academic project — Lab Course 1, 2025/2026.
 
 ---
 
-# Teknologjitë e Përdorura
+## Overview
 
-## Frontend
-- React
-- Vite
-- Tailwind CSS
-
-## Backend
-- Node.js
-- Express.js
-
-## Databaza
-- MySQL
-
-## Siguria
-- JWT (JSON Web Tokens)
+KosovaNest is a premium real estate platform that connects buyers, renters, agents and administrators. It covers the full property lifecycle from listing to contract, with a rich feature set including interactive maps, neighbourhood profiles, rental calendars, property reviews, agent Q&A, search alerts with notifications, and a comprehensive admin analytics dashboard.
 
 ---
 
-# Instalimi i Projektit
+## Tech Stack
 
-## 1. Klonimi i Projektit
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 (Vite), Tailwind CSS |
+| Maps | React-Leaflet + OpenStreetMap / Nominatim |
+| Backend | Node.js + Express.js |
+| Database | MySQL (MariaDB) via `mysql2` |
+| File uploads | Multer |
+| Auth | Role-based (admin / agent / user) via headers + localStorage |
+| Charts | Custom SVG (no external chart library) |
 
+---
+
+## Features by Role
+
+### Public (not logged in)
+- Browse properties with fuzzy search, home-type filters, price slider, BUY/RENT toggle
+- Property detail page with gallery, features, agent card, location map, neighbourhood scores, Q&A accordion, reviews
+- Browse agents with city / min-rating / certification-trust filters
+- Browse neighbourhood profiles with score bars and property scroll panels
+- "Start Your Next Chapter" wizard on the hero page
+
+### User (logged in)
+- All public features plus: Schedule visits, initiate purchases, rent properties (with check-in/check-out calendar)
+- User Dashboard: Profile, Favourites, My Requests (visits + rentals), Contracts, Stories (with photos), Ratings, Alerts, Support
+- Leave and edit property reviews (one per property, with Verified badge if visit/contract confirmed)
+- Search Alerts — get notified when a matching property is listed
+
+### Agent
+- Agent Dashboard: Profile, Properties, Contracts, Payments, Visits, Certifications, Contact Inquiries, Rental Requests, Property Q&A
+- Add / edit properties with Nominatim address autocomplete (Kosovo-only), lat/lng, home type, neighbourhood assignment
+- Manage rental requests: calendar showing blocked dates, approve/reject, performance stats per property
+- Customise Property Q&A: global template applies to all listings, per-property overrides, exclusion list
+- Sign rental/purchase contracts; property status auto-updates to Sold/Rented on finalisation
+
+### Admin
+- Full Admin Dashboard with analytics: KPI cards, monthly Revenue vs Expenses SVG bar chart, property status donut chart, contract pipeline
+- Properties: expandable Detail / Reviews / Q&A panel per row; search, type filter, agent name
+- Agents, Users, Visits, Maintenance, Certifications, Neighbourhoods (with Leaflet map), Expenses (with chart), Notifications (broadcast), Support Tickets
+- Moderate property reviews, edit/delete agent Q&A
+
+---
+
+## Full CRUD List (22)
+
+Properties, Property Images, Property Features, Users, Agents, Certifications, Clients, Contracts, Transactions, Expenses, Maintenance Requests, Neighbourhoods, Offices, Contact Inquiries, Notifications, Visits, Agent Ratings, Search Alerts, Testimonials, Support Tickets, Property Reviews, Property Q&A
+
+---
+
+## Project Structure
+
+```
+realestate/
+├── backend/
+│   ├── controllers/        # Business logic (22 controllers)
+│   ├── routes/             # Express routers
+│   ├── middleware/         # Auth, error handling, uploads
+│   ├── config/upload.js    # Multer config
+│   ├── utils/notify.js     # createNotification helper
+│   └── server.js           # Entry point, DB connection, auto-migrations
+│
+├── public/
+│   └── photos/             # Static city / property hero images
+│
+└── src/
+    ├── components/         # Reusable UI components
+    │   ├── PropertyReviews.jsx
+    │   ├── PropertyQA.jsx
+    │   ├── AgentQAManager.jsx
+    │   ├── RentalCalendar.jsx
+    │   ├── PropertyMap.jsx
+    │   ├── LocationAutocomplete.jsx
+    │   ├── NeighborhoodAutocomplete.jsx
+    │   ├── NotificationBell.jsx
+    │   ├── NextChapterModal.jsx
+    │   └── ...
+    ├── pages/              # Route-level pages (lazy-loaded)
+    │   ├── RealEstateHero.jsx
+    │   ├── PublicProperties.jsx
+    │   ├── PublicAgents.jsx
+    │   ├── PublicNeighborhoods.jsx
+    │   ├── UserDashboard.jsx
+    │   ├── AgentDashboard.jsx
+    │   ├── AdminDashboard.jsx
+    │   └── ...
+    ├── lib/
+    │   ├── api.js          # apiFetch helper
+    │   └── auth.js         # getCurrentUser, setCurrentUser, roles
+    └── App.jsx             # Router + global state
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- MySQL / MariaDB
+- npm
+
+### 1. Clone the repo
 ```bash
-git clone <repository-link>
+git clone <repository-url>
+cd realestate
+```
+
+### 2. Install dependencies
+```bash
+# Frontend
+npm install
+
+# Backend
+cd backend
+npm install
+```
+
+### 3. Set up the database
+1. Open phpMyAdmin (or any MySQL client)
+2. Create a database called `findhome_db`
+3. Import the latest SQL dump from `backend/findhome_db.sql`
+
+### 4. Configure backend
+The backend connects to MySQL on `127.0.0.1:3306` with user `root` and no password (default XAMPP setup).  
+To change this, edit the connection block in `backend/server.js`:
+```js
+const db = mysql.createConnection({
+    host: '127.0.0.1',
+    user: 'root',
+    password: '',
+    database: 'findhome_db'
+});
+```
+
+### 5. Start the backend
+```bash
+cd backend
+npm run dev     # starts on http://localhost:5000
+```
+
+### 6. Start the frontend
+```bash
+# from project root
+npm run dev     # starts on http://localhost:5173
+```
+
+---
+
+## Default Accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `alba@ubt-uni.net` | *(see DB)* |
+| Agent | `a21564756@gmail.com` | *(see DB)* |
+| User | `Olti@user.com` | *(see DB)* |
+
+---
+
+## Key Environment Notes
+
+- The frontend expects the backend at `http://localhost:5000` by default. Override by setting `VITE_API_URL` in a `.env` file at the project root.
+- Uploaded files (photos, documents) are saved to `backend/uploads/`. This folder is auto-created on server start.
+- The server auto-creates all required tables on startup if they don't exist.
+- React-Leaflet requires `leaflet/dist/leaflet.css` — this is imported in `src/main.jsx`.
+
+---
+
+## Notable Technical Details
+
+- **Fuzzy search** — Levenshtein distance matching for property search and neighbourhood city matching (tolerates typos like "Prishtine" → "Prishtina")
+- **Lazy loading** — All heavy pages are loaded on-demand via `React.lazy()` + `Suspense`
+- **Smart Alerts** — Search alerts use JS-side fuzzy matching (not SQL LIKE) so city name variants still trigger notifications
+- **Property status sync** — When an agent signs a contract, the property automatically changes to Sold/Rented
+- **Auto agent profile** — Registering as an agent automatically creates the `agents` table row
+- **Q&A fallback** — If a property has no specific Q&A, it automatically inherits the agent's global template
+- **Verified Reviews** — Review cards show a ✓ Verified badge if the reviewer has an approved visit or active contract for that property
+
+---
+
+## Authors
+
+Developed by the KosovaNest team — UBT, Academic Year 2025/2026.

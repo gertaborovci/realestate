@@ -36,15 +36,14 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
     { name: 'HOME',           view: 'hero'          },
     { name: 'BUY',            view: 'properties'    },
     { name: 'RENT',           view: 'properties'    },
-    { name: 'SELL',           view: 'hero'          },
     { name: 'AGENTS',         view: 'agents'        },
     { name: 'NEIGHBOURHOODS', view: 'neighborhoods' },
   ];
 
   const popularCities = [
-    { name: 'Prishtina', homes: '1,240', img: '/photos/hero_Pristina.avif', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' },
-    { name: 'Prizren', homes: '850', img: 'https://images.unsplash.com/photo-1610012759972-e1c27e025f18?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1000' },
-    { name: 'Peja', homes: '430', img: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000', fallback: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1000' }
+    { name: 'Prishtina', homes: '1,240', img: '/photos/Prishtina_Hero.jpeg', fallback: '/photos/hero_Pristina.avif' },
+    { name: 'Prizren',   homes: '850',   img: '/photos/hero_Prizren.avif',   fallback: '/photos/Prizreni_Hero.avif' },
+    { name: 'Peja',      homes: '430',   img: '/photos/Peja_Hero.JPG',       fallback: 'https://images.unsplash.com/photo-1601004144365-5b487e6514f7?q=80&w=1000' }
   ];
 
   return (

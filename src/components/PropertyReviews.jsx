@@ -232,9 +232,13 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
     if (!myRating) { setError('Please pick a star rating.'); return; }
     if (!user?.id) { setError('Please sign in to leave a review.'); return; }
     setSubmitting(true); setError('');
+
+    // Use PUT if editing OR if user already has a review (prevents duplicate key error)
+    const existingId = editingId || myExistingReview?.id;
+
     try {
-      if (editingId) {
-        await apiFetch(`/api/property-reviews/${editingId}`, {
+      if (existingId) {
+        await apiFetch(`/api/property-reviews/${existingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rating: myRating, comment: myComment }),
@@ -248,8 +252,14 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
         });
       }
       load();
-    } catch (err) { setError(err.message || 'Failed to submit.'); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      // Friendly message for the rare case of a race condition
+      const msg = err.message || '';
+      setError(msg.includes('Duplicate') ? 'You already reviewed this property — your existing review has been updated.' : msg || 'Failed to submit.');
+      if (msg.includes('Duplicate')) { load(); } // reload to show the existing review
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -313,11 +323,11 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
       {/* Rating breakdown */}
       {reviews.length > 0 && <RatingBreakdown reviews={reviews} />}
 
-      {/* Write / edit review — hidden for admin */}
-      {!isAdmin && user ? (
+      {/* Write / edit review — only shown when no review yet OR actively editing */}
+      {!isAdmin && user && (!myExistingReview || editingId) ? (
         <form onSubmit={handleSubmit} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
-            {editingId ? 'Edit your review' : myExistingReview ? 'Your review' : 'Leave a review'}
+            {editingId || myExistingReview ? 'Your review — click Submit to update' : 'Leave a review'}
           </p>
           <StarInput value={myRating} onChange={setMyRating} />
           <textarea value={myComment} onChange={e => setMyComment(e.target.value)} rows={3}
