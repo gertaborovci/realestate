@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HelpCircle, Trash2, Loader, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 export default function AdminQA() {
   const [agents,   setAgents]   = useState([]);
@@ -37,7 +38,7 @@ export default function AdminQA() {
   };
 
   const handleDeleteGlobal = async (agentId, itemId) => {
-    if (!window.confirm('Delete this Q&A item?')) return;
+    if (!await showConfirm('Delete this Q&A item?')) return;
     setDeleting(itemId);
     try {
       await apiFetch(`/api/qa/global/${itemId}`, { method: 'DELETE' });
@@ -45,7 +46,7 @@ export default function AdminQA() {
         ...prev,
         [agentId]: prev[agentId].filter(q => q.id !== itemId),
       }));
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
     finally { setDeleting(null); }
   };
 

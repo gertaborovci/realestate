@@ -75,6 +75,31 @@ async function create(req, res) {
   });
 }
 
+// ── PUT full update ───────────────────────────────────────────────────────────
+async function update(req, res) {
+  const { amount, payment_date, method, payment_type, notes } = req.body;
+  if (!amount && !payment_date && !method && !payment_type && !notes) {
+    return res.status(400).json({ error: 'Provide at least one field to update.' });
+  }
+
+  const [rows] = await db.query('SELECT * FROM transactions WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Payment not found.' });
+
+  const current = rows[0];
+  await db.query(
+    `UPDATE transactions
+       SET amount       = COALESCE(?, amount),
+           payment_date = COALESCE(?, payment_date),
+           method       = COALESCE(?, method),
+           payment_type = COALESCE(?, payment_type),
+           notes        = COALESCE(?, notes)
+     WHERE id = ?`,
+    [amount ?? null, payment_date ?? null, method ?? null,
+     payment_type ?? null, notes ?? null, req.params.id]
+  );
+  res.json({ message: 'Payment updated.' });
+}
+
 // ── PUT update status (also auto-promotes contract) ───────────────────────────
 async function updateStatus(req, res) {
   const { status } = req.body;
@@ -106,4 +131,4 @@ async function remove(req, res) {
   res.json({ message: 'Payment deleted.' });
 }
 
-module.exports = { getAll, getByContract, getByAgent, create, updateStatus, remove };
+module.exports = { getAll, getByContract, getByAgent, create, update, updateStatus, remove };

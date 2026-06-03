@@ -4,6 +4,7 @@ import {
   ChevronDown, ChevronUp, Heart, Star, MapPin, Trash, User,
 } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 /* ── Shared input style ─────────────────────────────────────────────────────── */
 const inputCls =
@@ -87,7 +88,7 @@ const ManageUsers = () => {
 
   /* ── save edits ── */
   const handleSave = async () => {
-    if (!form.name.trim()) { alert('Name cannot be empty.'); return; }
+    if (!form.name.trim()) { await showAlert('Name cannot be empty.'); return; }
     setSaving(true);
     try {
       await apiFetch(`/api/users/${editingUser.id}/profile`, {
@@ -111,7 +112,7 @@ const ManageUsers = () => {
       await loadUsers();
       setEditingUser(null);
     } catch (e) {
-      alert(e.message || 'Save failed.');
+      await showAlert(e.message || 'Save failed.', 'error');
     } finally {
       setSaving(false);
     }
@@ -119,13 +120,13 @@ const ManageUsers = () => {
 
   /* ── delete user ── */
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this user permanently?')) return;
+    if (!await showConfirm('Delete this user permanently?')) return;
     try {
       await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
       await loadUsers();
       if (editingUser?.id === id) setEditingUser(null);
     } catch (e) {
-      alert(e.message || 'Delete failed.');
+      await showAlert(e.message || 'Delete failed.', 'error');
     }
   };
 
@@ -136,7 +137,7 @@ const ManageUsers = () => {
     try {
       setFavs(await apiFetch(`/api/favorites/${editingUser.id}`));
       setShowFavs(true);
-    } catch (e) { alert(e.message); }
+    } catch (e) { await showAlert(e.message, 'error'); }
     finally { setFavsLoading(false); }
   };
 
@@ -147,28 +148,28 @@ const ManageUsers = () => {
     try {
       setRatings(await apiFetch(`/api/ratings/user/${editingUser.id}`));
       setShowRatings(true);
-    } catch (e) { alert(e.message); }
+    } catch (e) { await showAlert(e.message, 'error'); }
     finally { setRatsLoading(false); }
   };
 
   /* ── admin delete agent photo ── */
   const handleDeletePhoto = async () => {
-    if (!window.confirm("Remove this agent's profile photo?")) return;
+    if (!await showConfirm("Remove this agent's profile photo?")) return;
     try {
       await apiFetch(`/api/users/${editingUser.id}/photo`, { method: 'DELETE' });
       const updated = { ...editingUser, photo_url: null };
       setEditingUser(updated);
       setUsers((prev) => prev.map((u) => u.id === editingUser.id ? { ...u, photo_url: null } : u));
-    } catch (e) { alert(e.message); }
+    } catch (e) { await showAlert(e.message, 'error'); }
   };
 
   /* ── admin delete rating ── */
   const deleteRating = async (ratingId) => {
-    if (!window.confirm('Delete this rating?')) return;
+    if (!await showConfirm('Delete this rating?')) return;
     try {
       await apiFetch(`/api/ratings/admin/${ratingId}`, { method: 'DELETE' });
       setRatings((prev) => prev.filter((r) => r.id !== ratingId));
-    } catch (e) { alert(e.message); }
+    } catch (e) { await showAlert(e.message, 'error'); }
   };
 
   const roleBadge = (role) => {

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const STATUS_STYLES = {
   PENDING:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
@@ -84,14 +85,13 @@ const AgentVisits = () => {
   const loadDropdowns = useCallback(async () => {
     if (!agentId) return;
     try {
-      const [props, usrs] = await Promise.all([
-        apiFetch('/api/properties'),
+      const [propsRaw, usrs] = await Promise.all([
+        apiFetch('/api/properties?limit=100'),
         apiFetch('/api/users'),
       ]);
+      const allProps = Array.isArray(propsRaw) ? propsRaw : (propsRaw?.data ?? []);
       // Filter properties belonging to this agent
-      const myProps = Array.isArray(props)
-        ? props.filter((p) => p.agent_id === agentId)
-        : [];
+      const myProps = allProps.filter((p) => p.agent_id === agentId);
       setProperties(myProps);
       setUsers(Array.isArray(usrs) ? usrs.filter((u) => u.role === 'user') : []);
     } catch (err) {
@@ -215,7 +215,7 @@ const AgentVisits = () => {
         prev.map((v) => (v.id === visitId ? { ...v, status: newStatus } : v))
       );
     } catch (err) {
-      alert(err.message || 'Failed to update status.');
+      await showAlert(err.message || 'Failed to update status.', 'error');
     } finally {
       setUpdatingId(null);
     }
@@ -223,7 +223,7 @@ const AgentVisits = () => {
 
   // ── DELETE ────────────────────────────────────────────────────────────────
   const handleDelete = async (visitId) => {
-    if (!window.confirm('Delete this visit? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this visit? This cannot be undone.')) return;
     setDeletingId(visitId);
     try {
       const currentUser = getCurrentUser();
@@ -236,7 +236,7 @@ const AgentVisits = () => {
       });
       setVisits((prev) => prev.filter((v) => v.id !== visitId));
     } catch (err) {
-      alert(err.message || 'Failed to delete visit.');
+      await showAlert(err.message || 'Failed to delete visit.', 'error');
     } finally {
       setDeletingId(null);
     }

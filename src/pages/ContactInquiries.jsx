@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 // ── Status styling ─────────────────────────────────────────────────────────
 const VISIT_STATUS_STYLES = {
@@ -162,7 +163,7 @@ const ContactInquiries = () => {
       );
       setEditingId(null);
     } catch (err) {
-      alert(err.message || 'Failed to save.');
+      await showAlert(err.message || 'Failed to save.', 'error');
     } finally {
       setSaving(false);
     }
@@ -187,7 +188,7 @@ const ContactInquiries = () => {
       setOpenReply(null);
       setReplyText((p) => ({ ...p, [id]: '' }));
     } catch (err) {
-      alert(err.message || 'Failed to send reply.');
+      await showAlert(err.message || 'Failed to send reply.', 'error');
     } finally {
       setSendingReply(null);
     }
@@ -195,13 +196,13 @@ const ContactInquiries = () => {
 
   // ── DELETE inquiry ──────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this inquiry? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this inquiry? This cannot be undone.')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/inquiries/${id}`, { method: 'DELETE' });
       setInquiries((prev) => prev.filter((inq) => inq.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete.');
+      await showAlert(err.message || 'Failed to delete.', 'error');
     } finally {
       setDeletingId(null);
     }
@@ -225,7 +226,7 @@ const ContactInquiries = () => {
         prev.map((c) => (c.id === visitId ? { ...c, status: newStatus } : c))
       );
     } catch (err) {
-      alert(err.message || 'Failed to update status.');
+      await showAlert(err.message || 'Failed to update status.', 'error');
     } finally {
       setUpdatingVisit(null);
     }

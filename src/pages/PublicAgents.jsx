@@ -6,6 +6,7 @@ import {
 import { getCurrentUser, setCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import ConsultationModal from '../components/ConsultationModal';
+import { showAlert, showConfirm } from '../lib/modal';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -203,7 +204,8 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
       try {
         setLoading(true);
         const raw = await apiFetch('/api/agents');
-        setAgents(Array.isArray(raw) ? raw.map(normalizeAgent) : []);
+        const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+        setAgents(list.map(normalizeAgent));
       } catch (err) {
         setError('Could not load agents. Please make sure the server is running.');
         console.error(err);
@@ -254,7 +256,7 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
   const handleSubmitRating = async () => {
     const user = getCurrentUser();
     if (!user) { onNavigate('signin'); return; }
-    if (userRating === 0) { alert('Please select a star rating.'); return; }
+    if (userRating === 0) { await showAlert('Please select a star rating.'); return; }
 
     setRatingLoading(true);
     try {
@@ -271,7 +273,7 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
       });
       setRatingSubmitted(true);
     } catch (err) {
-      alert(err.message);
+      await showAlert(err.message, 'error');
     } finally {
       setRatingLoading(false);
     }

@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 backend/uploads/
+
+# Environment files — never commit secrets
+.env
+backend/.env
+.env.local
+.env.production

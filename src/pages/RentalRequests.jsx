@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../lib/api';
 import RentalCalendar from '../components/RentalCalendar';
+import { showAlert, showConfirm } from '../lib/modal';
 
 /** Parse notes like:
  *  "Rental request — Check-in: 2026-06-01, Check-out: 2026-06-07 | Note: text here"
@@ -54,7 +55,7 @@ export default function RentalRequests() {
       });
       load();
     } catch (err) {
-      alert(err.message || 'Failed to update request.');
+      await showAlert(err.message || 'Failed to update request.', 'error');
     }
   };
 

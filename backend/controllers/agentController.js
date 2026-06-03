@@ -1,6 +1,15 @@
 const db = require('../db');
 
 async function getAll(req, res) {
+  // Pagination: ?page=1&limit=20  (limit capped at 100)
+  const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const offset = (page - 1) * limit;
+
+  const [[{ total }]] = await db.query(
+    "SELECT COUNT(*) AS total FROM agents WHERE status = 'Active'"
+  );
+
   const [agents] = await db.query(`
     SELECT
       a.id,
@@ -34,8 +43,16 @@ async function getAll(req, res) {
     LEFT JOIN users u ON a.user_id = u.id
     WHERE a.status = 'Active'
     ORDER BY a.id ASC
-  `);
-  res.json(agents);
+    LIMIT ? OFFSET ?
+  `, [limit, offset]);
+
+  res.json({
+    data:  agents,
+    total: Number(total),
+    page,
+    pages: Math.ceil(Number(total) / limit),
+    limit,
+  });
 }
 
 async function getById(req, res) {
@@ -72,6 +89,11 @@ async function create(req, res) {
     commission_percentage, zone, status,
     bio, phone, profile_image, deals_closed, happy_clients, joined_year,
   } = req.body;
+
+  // Input validation
+  if (!user_id) return res.status(400).json({ error: 'user_id is required.' });
+  if (!license_number || !license_number.trim())
+    return res.status(400).json({ error: 'license_number is required.' });
 
   const [result] = await db.query(
     `INSERT INTO agents

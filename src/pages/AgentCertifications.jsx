@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Pencil, Trash2, Loader, FileCheck, ShieldCheck, AlertCircle } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const DOC_TYPES = ['Passport / ID', 'Real Estate License', 'Sales Training Certificate'];
 
@@ -136,13 +137,13 @@ const AgentCertifications = () => {
 
   // ── DELETE ──────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this certification? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this certification? This cannot be undone.')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/certifications/${id}`, { method: 'DELETE' });
       setCertifications((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete.');
+      await showAlert(err.message || 'Failed to delete.', 'error');
     } finally {
       setDeletingId(null);
     }

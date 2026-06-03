@@ -19,4 +19,23 @@ async function create(req, res) {
   res.status(201).json({ message: 'Review added successfully.', id: result.insertId });
 }
 
-module.exports = { getByAgent, getAll, create };
+async function update(req, res) {
+  const { vleresimi, komenti } = req.body;
+  if (vleresimi == null && komenti == null) {
+    return res.status(400).json({ error: 'Provide at least one field to update.' });
+  }
+  const [result] = await db.query(
+    'UPDATE reviews SET vleresimi = COALESCE(?, vleresimi), komenti = COALESCE(?, komenti) WHERE id = ?',
+    [vleresimi ?? null, komenti ?? null, req.params.id]
+  );
+  if (!result.affectedRows) return res.status(404).json({ error: 'Review not found.' });
+  res.json({ message: 'Review updated.' });
+}
+
+async function remove(req, res) {
+  const [result] = await db.query('DELETE FROM reviews WHERE id = ?', [req.params.id]);
+  if (!result.affectedRows) return res.status(404).json({ error: 'Review not found.' });
+  res.json({ message: 'Review deleted.' });
+}
+
+module.exports = { getByAgent, getAll, create, update, remove };

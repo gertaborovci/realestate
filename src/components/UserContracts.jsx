@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const STATUS_STYLE = {
   'Pending Signature': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
@@ -47,8 +48,8 @@ export default function UserContracts() {
 
   // ── Load available properties for the create modal ─────────────────────────
   useEffect(() => {
-    apiFetch('/api/properties')
-      .then((d) => setProperties(Array.isArray(d) ? d : []))
+    apiFetch('/api/properties?limit=100')
+      .then((d) => setProperties(Array.isArray(d) ? d : (d?.data ?? [])))
       .catch(() => {});
   }, []);
 
@@ -87,10 +88,10 @@ export default function UserContracts() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ party: 'buyer' }),
       });
-      if (res.finalized) alert('Both parties have signed — your contract is now Finalized! 🎉');
+      if (res.finalized) await showAlert('Both parties have signed — your contract is now Finalized!', 'success');
       load();
     } catch (err) {
-      alert(err.message || 'Failed to sign contract.');
+      await showAlert(err.message || 'Failed to sign contract.', 'error');
     } finally {
       setSigningId(null);
     }
@@ -98,7 +99,7 @@ export default function UserContracts() {
 
   // ── Cancel contract ────────────────────────────────────────────────────────
   const handleCancel = async (id) => {
-    if (!window.confirm('Cancel this purchase contract? This cannot be undone.')) return;
+    if (!await showConfirm('Cancel this purchase contract? This cannot be undone.')) return;
     setCancellingId(id);
     try {
       await apiFetch(`/api/contracts/${id}/status`, {
@@ -108,7 +109,7 @@ export default function UserContracts() {
       });
       load();
     } catch (err) {
-      alert(err.message || 'Failed to cancel contract.');
+      await showAlert(err.message || 'Failed to cancel contract.', 'error');
     } finally {
       setCancellingId(null);
     }
@@ -116,13 +117,13 @@ export default function UserContracts() {
 
   // ── Delete cancelled contract ──────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm('Permanently delete this cancelled contract?')) return;
+    if (!await showConfirm('Permanently delete this cancelled contract?')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/contracts/${id}`, { method: 'DELETE' });
       setContracts((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete contract.');
+      await showAlert(err.message || 'Failed to delete contract.', 'error');
     } finally {
       setDeletingId(null);
     }

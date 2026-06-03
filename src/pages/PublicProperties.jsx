@@ -6,6 +6,7 @@ import RentalCalendar   from '../components/RentalCalendar';
 import PropertyMap      from '../components/PropertyMap';
 import PropertyReviews  from '../components/PropertyReviews';
 import PropertyQA       from '../components/PropertyQA';
+import { showAlert, showConfirm } from '../lib/modal';
 
 // ─── Fuzzy search helpers ─────────────────────────────────────────────────────
 
@@ -143,9 +144,10 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/properties`);
+        const response = await fetch(`${API_BASE}/api/properties?limit=100`);
         const raw  = await response.json();
-        const data = Array.isArray(raw) ? raw : [];  // guard: API may return {error:...} on 500
+        // API now returns { data, total, page, pages } — fall back to plain array for safety
+        const data = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
         setProperties(data);
 
         const imageMap = {};
@@ -459,13 +461,13 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
       return cin <= e && cout >= s;
     });
     if (overlap) {
-      alert('Your selected dates overlap with an existing booking. Please choose different dates — the blocked ones are shown in red on the calendar.');
+      await showAlert('Your selected dates overlap with an existing booking. Please choose different dates — the blocked ones are shown in red on the calendar.', 'error');
       return;
     }
 
     const noteLine = userNote.trim() ? `\n\nNote: "${userNote.trim()}"` : '';
-    const confirmed = window.confirm(
-      `Are you sure you want to request a rental for "${property.title}"?\n\nCheck-in:  ${checkInDate}\nCheck-out: ${checkOutDate}${noteLine}\n\nThe agent will review and confirm your request.`
+    const confirmed = await showConfirm(
+      `Confirm rental request for "${property.title}"?\n\nCheck-in: ${checkInDate}  ·  Check-out: ${checkOutDate}${noteLine}\n\nThe agent will review and confirm your request.`
     );
     if (!confirmed) return;
     setVisitResult(null);

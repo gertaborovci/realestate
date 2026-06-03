@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { setCurrentUser, setAuthToken, setRefreshToken, normalizeRole, DASHBOARD_VIEWS } from '../lib/auth';
 
-const SignUp = ({ onNavigate }) => {
+const SignUp = ({ onNavigate, onSignIn }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,7 +29,7 @@ const SignUp = ({ onNavigate }) => {
       return;
     }
     try {
-      await apiFetch('/api/auth/register', {
+      const data = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -38,8 +39,20 @@ const SignUp = ({ onNavigate }) => {
           role: formData.role,
         }),
       });
-      alert('Account created! Please sign in.');
-      onNavigate('signin');
+      // Auto-login after registration — store both tokens
+      if (data.token)        setAuthToken(data.token);
+      if (data.refreshToken) setRefreshToken(data.refreshToken);
+      if (data.user) {
+        const user = { ...data.user, role: normalizeRole(data.user.role) };
+        setCurrentUser(user);
+        if (onSignIn) onSignIn(user);
+        // Navigate to appropriate dashboard
+        if (user.role === 'admin') onNavigate(DASHBOARD_VIEWS.admin);
+        else if (user.role === 'agent') onNavigate(DASHBOARD_VIEWS.agent);
+        else onNavigate('user-dashboard');
+      } else {
+        onNavigate('signin');
+      }
     } catch (err) {
       setError(err.message);
     }

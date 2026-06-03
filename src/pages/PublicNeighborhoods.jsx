@@ -93,10 +93,11 @@ export default function PublicNeighborhoods({ onNavigate, onViewPropertiesInCity
   useEffect(() => {
     Promise.all([
       apiFetch('/api/neighborhoods'),
-      apiFetch('/api/properties'),
+      apiFetch('/api/properties?limit=100'),
     ]).then(async ([nbs, props]) => {
-      setNeighborhoods(Array.isArray(nbs)   ? nbs   : []);
-      const validProps = Array.isArray(props) ? props : [];
+      setNeighborhoods(Array.isArray(nbs) ? nbs : []);
+      // API now returns { data, total, page, pages } — extract the array
+      const validProps = Array.isArray(props) ? props : (Array.isArray(props?.data) ? props.data : []);
       setProperties(validProps);
 
       // Fetch main images for all properties

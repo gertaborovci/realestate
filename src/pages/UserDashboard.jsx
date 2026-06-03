@@ -13,6 +13,7 @@ import UserRating from '../components/UserRating';
 import UserRequests from '../components/UserRequests';
 import UserSupport from '../components/UserSupport';
 import UserSearchAlerts from '../components/UserSearchAlerts';
+import { showAlert, showConfirm } from '../lib/modal';
 
 export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUser, onUserChange, favorites = [], onRemoveFavorite, onViewProperty }) {
   const user = currentUser || getCurrentUser();
@@ -97,7 +98,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
           }]);
           setIsStoryModalOpen(false);
         })
-        .catch((err) => alert(err.message));
+        .catch(async (err) => await showAlert(err.message, 'error'));
 
     if (newStory.photo) {
       const fd = new FormData();
@@ -143,11 +144,11 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
       )}
 
       {/* Main content */}
-      <div className="max-w-7xl mx-auto px-8 pt-36 pb-24">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-24 md:pt-36 pb-12 md:pb-24">
 
         {/* Header */}
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-white mb-3">
+          <h1 className="text-2xl md:text-4xl font-black text-white mb-3">
             {user.emri || user.username || 'My Profile'}
           </h1>
           <p className="text-zinc-500 uppercase tracking-widest text-xs font-bold">
@@ -170,7 +171,7 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
             <button
               key={key}
               onClick={() => setActiveSection(key)}
-              className={`relative px-5 py-3 rounded-xl font-bold transition ${
+              className={`relative px-3 md:px-5 py-2 md:py-3 rounded-xl font-bold text-xs md:text-sm transition ${
                 activeSection === key ? 'bg-white text-black' : 'bg-zinc-900 text-white border border-zinc-800'
               }`}
             >
@@ -279,8 +280,8 @@ function StoryModal({ onClose, onSave }) {
 
         <button
           className="w-full bg-white text-black py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-zinc-200 transition"
-          onClick={() => {
-            if (!text.trim()) { alert('Write your story first!'); return; }
+          onClick={async () => {
+            if (!text.trim()) { await showAlert('Write your story first!'); return; }
             onSave({ text, client, isAnonymous, photo });
           }}
         >

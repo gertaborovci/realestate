@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar, User, Mail, MessageSquare,
   CheckCircle, XCircle, Loader, RefreshCw, Home, Clock,
@@ -7,6 +7,7 @@ import {
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 import RentalCalendar from './RentalCalendar';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const STATUS_STYLES = {
   PENDING:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
@@ -49,7 +50,7 @@ export default function AgentRentalRequests() {
   const [selectedPropId, setSelectedPropId] = useState('all');
   const [sortOrder,      setSortOrder]      = useState('newest');
 
-  // ── Resolve agent id ──────────────────────────────────────────────────────
+  // â"€â"€ Resolve agent id â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   useEffect(() => {
     const user = getCurrentUser();
     if (!user?.id) { setInitError('You must be logged in.'); setLoading(false); return; }
@@ -58,7 +59,7 @@ export default function AgentRentalRequests() {
       .catch(() => { setInitError('Your account is not linked to an agent profile.'); setLoading(false); });
   }, []);
 
-  // ── Load rental requests ──────────────────────────────────────────────────
+  // â"€â"€ Load rental requests â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const load = useCallback(async () => {
     if (!agentId) return;
     setLoading(true);
@@ -76,7 +77,7 @@ export default function AgentRentalRequests() {
 
   useEffect(() => { if (agentId) load(); }, [agentId, load]);
 
-  // ── Approve / Reject ──────────────────────────────────────────────────────
+  // â"€â"€ Approve / Reject â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleStatus = async (id, newStatus) => {
     setUpdatingId(id);
     try {
@@ -92,7 +93,7 @@ export default function AgentRentalRequests() {
       });
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
     } catch (err) {
-      alert(err.message || 'Failed to update status.');
+      await showAlert(err.message || 'Failed to update status.', 'error');
     } finally {
       setUpdatingId(null);
     }
@@ -104,7 +105,7 @@ export default function AgentRentalRequests() {
     </div>
   );
 
-  // ── Derived data ──────────────────────────────────────────────────────────
+  // â"€â"€ Derived data â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
   // Unique rental properties (from requests)
   const rentalProperties = [
@@ -114,7 +115,7 @@ export default function AgentRentalRequests() {
     ).values(),
   ];
 
-  // Blocked ranges for calendar — filtered by selected property
+  // Blocked ranges for calendar  -  filtered by selected property
   const approvedRangesAll = requests
     .filter(r => r.status === 'APPROVED')
     .map(r => {
@@ -154,11 +155,11 @@ export default function AgentRentalRequests() {
   const totalApproved = requests.filter(r => r.status === 'APPROVED').length;
   const totalRejected = requests.filter(r => r.status === 'CANCELLED').length;
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // â"€â"€ Render â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   return (
     <div className="p-10 space-y-8">
 
-      {/* ── Header ── */}
+      {/* â"€â"€ Header â"€â"€ */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-4xl font-extrabold uppercase tracking-tight">RENTAL REQUESTS</h2>
@@ -174,7 +175,7 @@ export default function AgentRentalRequests() {
         </button>
       </div>
 
-      {/* ── Stats summary ── */}
+      {/* â"€â"€ Stats summary â"€â"€ */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="px-3 py-1.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 text-[10px] font-black tracking-widest uppercase">
           {totalPending} Pending
@@ -187,13 +188,13 @@ export default function AgentRentalRequests() {
         </span>
       </div>
 
-      {/* ── Two-column: Calendar (left) + Controls (right) ── */}
+      {/* â"€â"€ Two-column: Calendar (left) + Controls (right) â"€â"€ */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
 
         {/* Left: Calendar */}
         <div>
           <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/30 mb-3">
-            {selectedPropId === 'all' ? 'All Booked Periods' : `Booked — ${rentalProperties.find(p => String(p.id) === String(selectedPropId))?.title || ''}`}
+            {selectedPropId === 'all' ? 'All Booked Periods' : `Booked  -  ${rentalProperties.find(p => String(p.id) === String(selectedPropId))?.title || ''}`}
           </p>
           <RentalCalendar blockedRanges={calendarRanges} />
         </div>
@@ -286,7 +287,7 @@ export default function AgentRentalRequests() {
         </div>
       </div>
 
-      {/* ── Cards ── */}
+      {/* â"€â"€ Cards â"€â"€ */}
       <div>
         <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/30 mb-4">
           {displayed.length} {displayed.length === 1 ? 'Request' : 'Requests'}{selectedPropId !== 'all' ? ' for this property' : ''}
@@ -318,7 +319,7 @@ export default function AgentRentalRequests() {
                     </span>
                   </div>
 
-                  {/* Property name — prominent pill */}
+                  {/* Property name  -  prominent pill */}
                   {req.property_title && (
                     <div className="shrink-0 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-bold tracking-widest uppercase text-white/60 flex items-center gap-1.5">
                       <Home size={10} className="text-white/30" />
@@ -333,7 +334,7 @@ export default function AgentRentalRequests() {
                       <div>
                         <Label>Client</Label>
                         <p className="text-sm font-semibold text-white">
-                          {req.user_name || (req.user_id ? `User #${req.user_id}` : '—')}
+                          {req.user_name || (req.user_id ? `User #${req.user_id}` : ' - ')}
                         </p>
                       </div>
                     </div>
@@ -342,7 +343,7 @@ export default function AgentRentalRequests() {
                       <Mail size={13} className="text-white/30 mt-0.5 shrink-0" />
                       <div>
                         <Label>Email</Label>
-                        <p className="text-sm text-white/60">{req.user_email || '—'}</p>
+                        <p className="text-sm text-white/60">{req.user_email || ' - '}</p>
                       </div>
                     </div>
 
@@ -350,9 +351,9 @@ export default function AgentRentalRequests() {
                       <Calendar size={13} className="text-white/30 mt-0.5 shrink-0" />
                       <div>
                         <Label>Check-in / Check-out</Label>
-                        <p className="text-sm font-semibold text-white">{parsed?.checkIn || '—'}</p>
+                        <p className="text-sm font-semibold text-white">{parsed?.checkIn || ' - '}</p>
                         <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
-                          <Clock size={11} /> {parsed?.checkOut || '—'}
+                          <Clock size={11} /> {parsed?.checkOut || ' - '}
                         </p>
                       </div>
                     </div>
@@ -405,3 +406,4 @@ export default function AgentRentalRequests() {
     </div>
   );
 }
+

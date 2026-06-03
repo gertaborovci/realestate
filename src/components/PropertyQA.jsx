@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, HelpCircle, Pencil, Trash2, Check, X, Loader } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const inputCls = 'w-full bg-black/40 border border-white/10 text-white text-sm rounded-xl px-3 py-2 outline-none resize-none focus:border-white/30 transition placeholder:text-white/20';
 
@@ -71,7 +72,7 @@ export default function PropertyQA({ propertyId, isAdmin = false }) {
   };
 
   const handleAdminDelete = async (id, source) => {
-    if (!window.confirm('Delete this Q&A item?')) return;
+    if (!await showConfirm('Delete this Q&A item?')) return;
     setDeletingId(id);
     const endpoint = source === 'property'
       ? `/api/qa/specific/${id}`
@@ -79,7 +80,7 @@ export default function PropertyQA({ propertyId, isAdmin = false }) {
     try {
       await apiFetch(endpoint, { method: 'DELETE' });
       setItems(prev => prev.filter(i => i.id !== id));
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
     finally { setDeletingId(null); }
   };
 
@@ -164,3 +165,4 @@ export default function PropertyQA({ propertyId, isAdmin = false }) {
     </div>
   );
 }
+

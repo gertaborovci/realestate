@@ -20,7 +20,7 @@ KosovaNest is a premium real estate platform that connects buyers, renters, agen
 | Backend | Node.js + Express.js |
 | Database | MySQL (MariaDB) via `mysql2` |
 | File uploads | Multer |
-| Auth | Role-based (admin / agent / user) via headers + localStorage |
+| Auth | JWT access token (15 min) + httpOnly cookie refresh token (30 days), role-based (admin / agent / user) |
 | Charts | Custom SVG (no external chart library) |
 
 ---
@@ -134,16 +134,22 @@ npm install
 3. Import the latest SQL dump from `backend/findhome_db.sql`
 
 ### 4. Configure backend
-The backend connects to MySQL on `127.0.0.1:3306` with user `root` and no password (default XAMPP setup).  
-To change this, edit the connection block in `backend/server.js`:
-```js
-const db = mysql.createConnection({
-    host: '127.0.0.1',
-    user: 'root',
-    password: '',
-    database: 'findhome_db'
-});
+Create a `.env` file inside the `backend/` folder:
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=findhome_db
+
+JWT_SECRET=your_jwt_secret_here
+JWT_EXPIRES=15m
+JWT_REFRESH_SECRET=your_refresh_secret_here
+JWT_REFRESH_EXPIRES=30d
+
+PORT=5000
+NODE_ENV=development
 ```
+If no `.env` is present, the server falls back to `root` / no password on `localhost` (default XAMPP/WAMP setup).
 
 ### 5. Start the backend
 ```bash

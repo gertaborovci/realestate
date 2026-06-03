@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const STATUS_STYLE = {
   'Pending Signature': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
@@ -78,7 +79,7 @@ const AgentContractsView = () => {
       cancelEditNotes(id);
       load();
     } catch (err) {
-      alert(err.message || 'Failed to save notes.');
+      await showAlert(err.message || 'Failed to save notes.', 'error');
     } finally {
       setSavingNotes(null);
     }
@@ -86,7 +87,7 @@ const AgentContractsView = () => {
 
   // ── 2. Cancel contract ──────────────────────────────────────────────────────
   const handleCancel = async (id) => {
-    if (!window.confirm('Cancel this contract? This action will set its status to Cancelled.')) return;
+    if (!await showConfirm('Cancel this contract? This action will set its status to Cancelled.')) return;
     setCancelling(id);
     try {
       await apiFetch(`/api/contracts/${id}/status`, {
@@ -96,7 +97,7 @@ const AgentContractsView = () => {
       });
       load();
     } catch (err) {
-      alert(err.message || 'Failed to cancel contract.');
+      await showAlert(err.message || 'Failed to cancel contract.', 'error');
     } finally {
       setCancelling(null);
     }
@@ -113,7 +114,7 @@ const AgentContractsView = () => {
       });
       load();
     } catch (err) {
-      alert(err.message || 'Failed to update status.');
+      await showAlert(err.message || 'Failed to update status.', 'error');
     } finally {
       setUpdatingStatus(null);
     }
@@ -128,10 +129,10 @@ const AgentContractsView = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ party: 'agent' }),
       });
-      if (res.finalized) alert('Both parties have signed — contract is now Finalized!');
+      if (res.finalized) await showAlert('Both parties have signed — contract is now Finalized!', 'success');
       load();
     } catch (err) {
-      alert(err.message || 'Failed to record signature.');
+      await showAlert(err.message || 'Failed to record signature.', 'error');
     } finally {
       setSigning(null);
     }

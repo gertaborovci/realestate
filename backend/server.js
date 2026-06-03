@@ -1,21 +1,58 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
-const mysql = require('mysql2'); 
+const express      = require('express');
+const cors         = require('cors');
+const helmet       = require('helmet');
+const rateLimit    = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+const path         = require('path');
+const fs           = require('fs');
+const multer       = require('multer');
+const mysql        = require('mysql2');
+const swaggerUi    = require('swagger-ui-express');
+const swaggerSpec  = require('./swagger');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// ── API Documentation — Swagger UI ─────────────────────────────────────────
+// Available at http://localhost:5000/api-docs
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'KosovaNest API Docs',
+  swaggerOptions: { persistAuthorization: true },
+}));
+
+// ── Security headers ────────────────────────────────────────────────────────
+app.use(helmet());
+
+// ── CORS — restrict to known origins ───────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (mobile apps, Postman, curl)
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
+app.use(cookieParser());  // parse httpOnly cookies (refresh token)
 
 // ==========================================
 // SETUP I FOTOVE (MULTER)
 // ==========================================
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded files — override Helmet's same-origin CORP so the frontend
+// (localhost:5173) can load images that are hosted on the API (localhost:5000)
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -387,35 +424,48 @@ db.connect((err) => {
 // ==========================================
 const { errorHandler } = require('./middleware/errorHandler');
 
-const authRoutes        = require('./routes/authRoutes');
-const agentRoutes       = require('./routes/agentRoutes');
-const featureRoutes     = require('./routes/featureRoutes.js');
-const userRoutes        = require('./routes/userRoutes');
-const visitRoutes       = require('./routes/visitRoutes');
-const testimonialRoutes = require('./routes/testimonialRoutes');
-const searchAlertRoutes = require('./routes/searchAlertRoutes');
-const contractRoutes        = require('./routes/contractRoutes');
-const transactionRoutes     = require('./routes/transactionRoutes');
-const inquiryRoutes         = require('./routes/inquiryRoutes');
-const certificationRoutes   = require('./routes/certificationRoutes');
-const favoriteRoutes        = require('./routes/favoriteRoutes');
-const ratingRoutes          = require('./routes/ratingRoutes');
-const neighborhoodRoutes    = require('./routes/neighborhoodRoutes');
-const expenseRoutes         = require('./routes/expenseRoutes');
-const maintenanceRoutes     = require('./routes/maintenanceRoutes');
-const propertyReviewRoutes  = require('./routes/propertyReviewRoutes');
-const qaRoutes              = require('./routes/qaRoutes');
-const notificationRoutes    = require('./routes/notificationRoutes');
-const ticketRoutes          = require('./routes/ticketRoutes');
-const officeRoutes          = require('./routes/officeRoutes');
+// ── Rate limiting ───────────────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,                   // max 20 login/register attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+});
 
-app.use('/api/auth',          authRoutes);
-app.use('/api/agents',        agentRoutes);
-app.use('/api/properties',    featureRoutes);
-app.use('/api/users',         userRoutes);
-app.use('/api/visits',        visitRoutes);
-app.use('/api/testimonials',  testimonialRoutes);
-app.use('/api/search-alerts', searchAlertRoutes);
+// ── Route modules ───────────────────────────────────────────────────────────
+const authRoutes           = require('./routes/authRoutes');
+const agentRoutes          = require('./routes/agentRoutes');
+const propertyRoutes       = require('./routes/propertyRoutes');
+const userRoutes           = require('./routes/userRoutes');
+const visitRoutes          = require('./routes/visitRoutes');
+const testimonialRoutes    = require('./routes/testimonialRoutes');
+const searchAlertRoutes    = require('./routes/searchAlertRoutes');
+const contractRoutes       = require('./routes/contractRoutes');
+const transactionRoutes    = require('./routes/transactionRoutes');
+const inquiryRoutes        = require('./routes/inquiryRoutes');
+const certificationRoutes  = require('./routes/certificationRoutes');
+const favoriteRoutes       = require('./routes/favoriteRoutes');
+const ratingRoutes         = require('./routes/ratingRoutes');
+const neighborhoodRoutes   = require('./routes/neighborhoodRoutes');
+const expenseRoutes        = require('./routes/expenseRoutes');
+const maintenanceRoutes    = require('./routes/maintenanceRoutes');
+const propertyReviewRoutes = require('./routes/propertyReviewRoutes');
+const qaRoutes             = require('./routes/qaRoutes');
+const notificationRoutes   = require('./routes/notificationRoutes');
+const ticketRoutes         = require('./routes/ticketRoutes');
+const officeRoutes         = require('./routes/officeRoutes');
+const reviewRoutes         = require('./routes/reviewRoutes');
+const clientRoutes         = require('./routes/clientRoutes');
+
+// ── Mount routes ────────────────────────────────────────────────────────────
+app.use('/api/auth',           authLimiter, authRoutes);
+app.use('/api/agents',         agentRoutes);
+app.use('/api/properties',     propertyRoutes);
+app.use('/api/users',          userRoutes);
+app.use('/api/visits',         visitRoutes);
+app.use('/api/testimonials',   testimonialRoutes);
+app.use('/api/search-alerts',  searchAlertRoutes);
 app.use('/api/contracts',      contractRoutes);
 app.use('/api/transactions',   transactionRoutes);
 app.use('/api/inquiries',      inquiryRoutes);
@@ -427,233 +477,18 @@ app.use('/api/expenses',       expenseRoutes);
 app.use('/api/maintenance',    maintenanceRoutes);
 app.use('/api/notifications',  notificationRoutes);
 app.use('/api/tickets',        ticketRoutes);
-app.use('/api/offices',          officeRoutes);
+app.use('/api/offices',        officeRoutes);
 app.use('/api/property-reviews', propertyReviewRoutes);
-app.use('/api/qa',               qaRoutes);
+app.use('/api/qa',             qaRoutes);
+app.use('/api/reviews',        reviewRoutes);
+app.use('/api/clients',        clientRoutes);
 
-// ==========================================
-// 1. API ROUTES PËR PRONAT
-// ==========================================
-app.get('/api/properties', (req, res) => {
-    db.query("SELECT * FROM properties ORDER BY id DESC", (err, results) => {
-        if (err) {
-            console.error("❌ SQL Error (GET):", err.message);
-            return res.status(500).json({ error: err.message });
-        }
-        res.status(200).json(results);
-    });
-});
+// ── All property, image, client, review, and maintenance routes are
+//    now handled by the dedicated routers mounted above.
+//    The legacy raw-route blocks have been removed to eliminate duplicates.
 
-// ── Agent-scoped: must come BEFORE /:id ──
-app.get('/api/properties/agent/:agent_id', (req, res) => {
-    db.query(
-        "SELECT * FROM properties WHERE agent_id = ? ORDER BY id DESC",
-        [req.params.agent_id],
-        (err, results) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(200).json(results);
-        }
-    );
-});
-
-app.get('/api/properties/:id', (req, res) => {
-    const propertyId = req.params.id;
-    db.query("SELECT * FROM properties WHERE id = ?", [propertyId], (err, result) => {
-        if (err) return res.status(500).json({ error: "Failed to fetch property details." });
-        if (result.length === 0) return res.status(404).json({ message: "Property not found." });
-        res.status(200).json(result[0]);
-    });
-});
-
-app.post('/api/properties', (req, res) => {
-    const { title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id } = req.body;
-    const sql = `INSERT INTO properties
-                   (title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area, agent_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [
-        title, price, location, latitude || null, longitude || null,
-        status, type, home_type || null, neighborhood_id || null,
-        image || '', rooms, bathrooms, area, agent_id || null
-    ], (err, result) => {
-        if (err) {
-            console.error("❌ SQL Error (POST):", err.message);
-            return res.status(500).json({ error: err.message });
-        }
-        // Fire search-alert notifications (non-blocking)
-        const { notifyMatchingAlerts } = require('./controllers/searchAlertController');
-        notifyMatchingAlerts({ propertyId: result.insertId, title, location, price, rooms, type });
-        res.status(201).json({ id: result.insertId, ...req.body });
-    });
-});
-
-app.put('/api/properties/:id', (req, res) => {
-    const { title, price, location, latitude, longitude, status, type, home_type, neighborhood_id, image, rooms, bathrooms, area } = req.body;
-    const sql = `UPDATE properties
-                 SET title = ?, price = ?, location = ?, latitude = ?, longitude = ?,
-                     status = ?, type = ?, home_type = ?, neighborhood_id = ?,
-                     image = ?, rooms = ?, bathrooms = ?, area = ?
-                 WHERE id = ?`;
-    db.query(sql, [
-        title, price, location, latitude || null, longitude || null,
-        status, type, home_type || null, neighborhood_id || null,
-        image || '', rooms, bathrooms, area, req.params.id
-    ], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "Updated successfully!" });
-    });
-});
-
-app.delete('/api/properties/:id', (req, res) => {
-    db.query("DELETE FROM properties WHERE id = ?", [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "Deleted successfully!" });
-    });
-});
-
-// ==========================================
-// 2. API ROUTES PËR IMAZHET (MULTER)
-// ==========================================
-app.get('/api/properties/:id/images', (req, res) => {
-    const propertyId = req.params.id;
-    db.query("SELECT * FROM propertyimages WHERE property_id = ? ORDER BY renditja ASC", [propertyId], (err, results) => {
-        if (err) {
-            console.error("Database error fetching images:", err);
-            return res.status(500).json({ error: "Failed to fetch images." });
-        }
-        res.status(200).json(results);
-    });
-});
-
-app.post('/api/properties/:id/images', upload.single('image'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: "No image file provided." });
-
-    const propertyId = req.params.id;
-    const imageUrl = `/uploads/${req.file.filename}`; 
-    const eshteKryesore = req.body.eshte_kryesore === 'true' || req.body.eshte_kryesore === true ? 1 : 0;
-    
-    db.query(`INSERT INTO propertyimages (property_id, image_url, eshte_kryesore, renditja) VALUES (?, ?, ?, ?)`, 
-    [propertyId, imageUrl, eshteKryesore, 0], (err, result) => {
-        if (err) return res.status(500).json({ error: "Failed to add image to database." });
-        res.status(201).json({ message: "Image uploaded successfully!", id: result.insertId, image_url: imageUrl });
-    });
-});
-
-app.delete('/api/properties/images/:image_id', (req, res) => {
-    db.query("DELETE FROM propertyimages WHERE id = ?", [req.params.image_id], (err) => {
-        if (err) return res.status(500).json({ error: "Failed to delete image." });
-        res.status(200).json({ message: "Image deleted!" });
-    });
-});
-
-app.put('/api/properties/images/:image_id/set-main', (req, res) => {
-    const imageId = req.params.image_id;
-    const { property_id } = req.body;
-
-    db.query("UPDATE propertyimages SET eshte_kryesore = false WHERE property_id = ?", [property_id], (err) => {
-        if (err) return res.status(500).json({ error: "Error resetting images." });
-
-        db.query("UPDATE propertyimages SET eshte_kryesore = true WHERE id = ?", [imageId], (err) => {
-            if (err) return res.status(500).json({ error: "Failed to set main image." });
-            res.status(200).json({ message: "Main image updated successfully!" });
-        });
-    });
-});
-
-// ==========================================
-// 3. API ROUTES: CLIENTS, FAVORITES, REVIEWS
-// ==========================================
-app.get('/api/clients', (req, res) => {
-    db.query("SELECT * FROM clients", (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.json(results);
-    });
-});
-
-app.post('/api/clients', (req, res) => {
-    const { user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit } = req.body;
-    db.query("INSERT INTO clients (user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
-    [user_id, emri, mbiemri, telefoni, email, buxheti_max, preferencat, lloji_klientit], (err) => {
-        if (err) return res.status(500).json(err);
-        res.json({ message: "Client created successfully!" });
-    });
-});
-
-app.post('/api/favorites', (req, res) => {
-    const { client_id, property_id } = req.body;
-    db.query("INSERT INTO favorites (client_id, property_id) VALUES (?, ?)", [client_id, property_id], (err) => {
-        if (err) return res.status(500).json(err);
-        res.json({ message: "Favorite added!" });
-    });
-});
-
-app.get('/api/reviews/:agent_id', (req, res) => {
-    db.query("SELECT * FROM reviews WHERE agent_id = ?", [req.params.agent_id], (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.json(results);
-    });
-});
-
-app.post('/api/reviews', (req, res) => {
-    const { agent_id, client_id, vleresimi, komenti } = req.body;
-    db.query("INSERT INTO reviews (agent_id, client_id, vleresimi, komenti) VALUES (?, ?, ?, ?)", [agent_id, client_id, vleresimi, komenti], (err) => {
-        if (err) return res.status(500).json(err);
-        res.json({ message: "Review added successfully!" });
-    });
-});
-
-// =========================================================================
-// 🚀 MODULI: FINANCAT & LOGJISTIKA (Përditësuar për Elzën)
-// =========================================================================
-app.get('/api/maintenance', (req, res) => {
-    const query = `
-        SELECT m.*, p.title as property_title 
-        FROM maintenancetickets m 
-        LEFT JOIN properties p ON m.property_id = p.id
-        ORDER BY m.created_at DESC
-    `;
-    db.query(query, (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.status(200).json(results);
-    });
-});
-
-app.post('/api/maintenance', (req, res) => {
-    const { property_id, tenant_id, title, description } = req.body;
-    db.query("INSERT INTO maintenancetickets (property_id, tenant_id, title, description, status) VALUES (?, ?, ?, ?, 'Pending')", 
-    [property_id, tenant_id, title, description], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.status(201).json({ id: result.insertId, ...req.body });
-    });
-});
-
-app.put('/api/maintenance/:id', (req, res) => {
-    const { status, cost, title } = req.body;
-    db.query("UPDATE maintenancetickets SET status = ? WHERE id = ?", [status, req.params.id], (err, result) => {
-        if (err) return res.status(500).json(err);
-        
-        if (status === 'Resolved' && cost > 0) {
-            const description = `Riparim automatik: ${title || 'Tiketë Mirëmbajtjeje'}`;
-            db.query("INSERT INTO agencyexpenses (category, amount, description, expense_date) VALUES (?, ?, ?, NOW())", 
-            ['Maintenance', cost, description], (err) => {
-                if (err) return res.status(500).json(err);
-                return res.status(200).json({ message: "Statusi u ndryshua dhe u regjistrua në financa!" });
-            });
-        } else {
-            res.status(200).json({ message: "Statusi u ndryshua!" });
-        }
-    });
-});
-
-app.delete('/api/maintenance/:id', (req, res) => {
-    db.query("DELETE FROM maintenancetickets WHERE id = ?", [req.params.id], (err) => {
-        if (err) return res.status(500).json(err);
-        res.status(200).json({ message: "Bileta u fshi!" });
-    });
-});
-
-// Expenses are now handled by /routes/expenseRoutes.js
-
-app.get('/api/financial-summary', (req, res) => {
+const { requireRole } = require('./middleware/authMiddleware');
+app.get('/api/financial-summary', requireRole('admin'), (req, res) => {
     const queryTotalPayments = "SELECT COALESCE(SUM(amount), 0) as total_income FROM payments WHERE status = 'PAID'";
     const queryTotalExpenses = "SELECT COALESCE(SUM(amount), 0) as total_expenses FROM agencyexpenses";
 

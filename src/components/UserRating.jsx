@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Star, Pencil, Trash2, Check, X } from 'lucide-react';
 import { getCurrentUser } from '../lib/auth';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
-/* ── Half-star display ─────────────────────────────────────────────────────── */
+/* â"€â"€ Half-star display â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
 function StarDisplay({ rating, size = 16 }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -25,7 +26,7 @@ function StarDisplay({ rating, size = 16 }) {
   );
 }
 
-/* ── Interactive input ─────────────────────────────────────────────────────── */
+/* â"€â"€ Interactive input â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
 function StarInput({ value, onChange, size = 28 }) {
   const [hovered, setHovered] = useState(null);
   const display = hovered !== null ? hovered : value;
@@ -61,7 +62,7 @@ function StarInput({ value, onChange, size = 28 }) {
   );
 }
 
-/* ── Main component ────────────────────────────────────────────────────────── */
+/* â"€â"€ Main component â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
 export default function UserRating({ ratings, setRatings }) {
   const [editingId,   setEditingId]   = useState(null);
   const [editRating,  setEditRating]  = useState(0);
@@ -79,7 +80,7 @@ export default function UserRating({ ratings, setRatings }) {
   const cancelEdit = () => setEditingId(null);
 
   const saveEdit = async (id) => {
-    if (!editRating) { alert('Please select a star rating.'); return; }
+    if (!editRating) { await showAlert('Please select a star rating.'); return; }
     setSaving(true);
     try {
       await apiFetch(`/api/ratings/${id}`, {
@@ -92,14 +93,14 @@ export default function UserRating({ ratings, setRatings }) {
       );
       setEditingId(null);
     } catch (err) {
-      alert(err.message);
+      await showAlert(err.message, 'error');
     } finally {
       setSaving(false);
     }
   };
 
   const deleteRating = async (id) => {
-    if (!window.confirm('Delete this rating?')) return;
+    if (!await showConfirm('Delete this rating?')) return;
     try {
       await apiFetch(`/api/ratings/${id}`, {
         method: 'DELETE',
@@ -108,7 +109,7 @@ export default function UserRating({ ratings, setRatings }) {
       });
       setRatings((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
-      alert(err.message);
+      await showAlert(err.message, 'error');
     }
   };
 
@@ -119,7 +120,7 @@ export default function UserRating({ ratings, setRatings }) {
         <Star size={40} className="mx-auto mb-4 text-white/20" />
         <p className="text-lg font-bold text-white/40">No ratings yet.</p>
         <p className="text-sm mt-2 text-white/30">
-          Browse our agents and rate them — your reviews will appear here.
+          Browse our agents and rate them  -  your reviews will appear here.
         </p>
       </div>
     );
@@ -134,7 +135,7 @@ export default function UserRating({ ratings, setRatings }) {
       {ratings.map((r) => (
         <div key={r.id} className="bg-zinc-900/60 border border-white/5 rounded-2xl p-6">
           {editingId === r.id ? (
-            /* ── Edit mode ── */
+            /* â"€â"€ Edit mode â"€â"€ */
             <div className="space-y-4">
               <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40">
                 Editing rating for <span className="text-white">{r.agent_name}</span>
@@ -164,7 +165,7 @@ export default function UserRating({ ratings, setRatings }) {
               </div>
             </div>
           ) : (
-            /* ── View mode ── */
+            /* â"€â"€ View mode â"€â"€ */
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2 flex-1">
                 <p className="font-black text-white tracking-tight">{r.agent_name}</p>
@@ -202,3 +203,4 @@ export default function UserRating({ ratings, setRatings }) {
     </div>
   );
 }
+
