@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Menu, X } from 'lucide-react';
 import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
 
@@ -13,12 +14,14 @@ import UserProfile from '../components/UserProfile';
 import { getCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import { Camera, Trash2, User } from 'lucide-react';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
-  const [view,      setView]      = useState('list');
-  const [uploading, setUploading] = useState(false);
-  const [agentId,   setAgentId]   = useState(null);
-  const [agentProps,setAgentProps]= useState([]);
+  const [view,        setView]        = useState('list');
+  const [uploading,   setUploading]   = useState(false);
+  const [agentId,     setAgentId]     = useState(null);
+  const [agentProps,  setAgentProps]  = useState([]);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
   const fileInputRef = useRef(null);
 
   const agentUser = currentUser || getCurrentUser();
@@ -49,43 +52,86 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
       const data = await apiFetch(`/api/users/${agentUser.id}/photo`, { method: 'POST', body: formData });
       const updated = { ...agentUser, photo_url: data.photo_url };
       if (onUserChange) onUserChange(updated);
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
     finally { setUploading(false); }
   };
 
   const handleDeletePhoto = async () => {
-    if (!window.confirm('Remove your profile photo?')) return;
+    if (!await showConfirm('Remove your profile photo?')) return;
     try {
       await apiFetch(`/api/users/${agentUser.id}/photo`, { method: 'DELETE' });
       const updated = { ...agentUser, photo_url: null };
       if (onUserChange) onUserChange(updated);
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
   };
+
+  const navItems = [
+    { key: 'profile',         label: 'Profile' },
+    { key: 'list',            label: 'Properties' },
+    { key: 'contracts',       label: 'Contracts' },
+    { key: 'payments',        label: 'Payments' },
+    { key: 'visits',          label: 'Visits' },
+    { key: 'certifications',  label: 'Certifications' },
+    { key: 'inquiries',       label: 'Contact Inquiries' },
+    { key: 'rentals',         label: 'Rental Requests' },
+    { key: 'qa',              label: 'Property Q&A' },
+    { key: 'support',         label: 'Support' },
+  ];
+
+  const handleNav = (key) => { setView(key); setMobileOpen(false); };
 
   return (
     <div className="flex h-screen bg-[#050505] text-white">
-      {/* Sidebar */}
-      <div className="w-64 border-r border-white/10 p-10 flex flex-col justify-between flex-shrink-0">
-        <div>
-          <h1 className="text-xl font-extrabold uppercase tracking-tight mb-12">FIND HOME</h1>
-          <div className="space-y-8 text-[12px] font-bold uppercase tracking-widest text-white/50">
-            <p onClick={() => setView('profile')} className={`cursor-pointer transition-colors ${view === 'profile' ? 'text-white font-black' : 'hover:text-white'}`}>Profile</p>
-            <p onClick={() => setView('list')} className={`cursor-pointer transition-colors ${view === 'list' ? 'text-white font-black' : 'hover:text-white'}`}>Properties</p>
-            <p onClick={() => setView('contracts')} className={`cursor-pointer transition-colors ${view === 'contracts' ? 'text-white font-black' : 'hover:text-white'}`}>Contracts</p>
-            <p onClick={() => setView('payments')} className={`cursor-pointer transition-colors ${view === 'payments' ? 'text-white font-black' : 'hover:text-white'}`}>Payments</p>
-            <p onClick={() => setView('visits')} className={`cursor-pointer transition-colors ${view === 'visits' ? 'text-white font-black' : 'hover:text-white'}`}>Visits</p>
-            <p onClick={() => setView('certifications')} className={`cursor-pointer transition-colors ${view === 'certifications' ? 'text-white font-black' : 'hover:text-white'}`}>Certifications</p>
-            <p onClick={() => setView('inquiries')} className={`cursor-pointer transition-colors ${view === 'inquiries' ? 'text-white font-black' : 'hover:text-white'}`}>Contact Inquiries</p>
-            <p onClick={() => setView('rentals')} className={`cursor-pointer transition-colors ${view === 'rentals' ? 'text-white font-black' : 'hover:text-white'}`}>Rental Requests</p>
-            <p onClick={() => setView('qa')} className={`cursor-pointer transition-colors ${view === 'qa' ? 'text-white font-black' : 'hover:text-white'}`}>Property Q&A</p>
-            <p onClick={() => setView('support')} className={`cursor-pointer transition-colors ${view === 'support' ? 'text-white font-black' : 'hover:text-white'}`}>Support</p>
-          </div>
-        </div>
 
+      {/* ── Hamburger (mobile only) ──────────────────────────────────── */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-[#111] border border-white/10 text-white shadow-lg"
+        aria-label="Open menu"
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* ── Mobile overlay ───────────────────────────────────────────── */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ──────────────────────────────────────────────────── */}
+      <div className={`
+        flex flex-col w-64 border-r border-white/10 flex-shrink-0
+        h-screen fixed md:static top-0 left-0 z-50 bg-[#050505]
+        transition-transform duration-300 ease-in-out
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <div className="p-8 flex items-center justify-between">
+          <h1 className="text-xl font-extrabold uppercase tracking-tight">FIND HOME</h1>
+          <button onClick={() => setMobileOpen(false)} className="md:hidden text-white/40 hover:text-white">
+            <X size={18} />
+          </button>
+        </div>
+        <nav className="flex-1 px-4 pb-8 overflow-y-auto">
+          <div className="space-y-1 text-[12px] font-bold uppercase tracking-widest text-white/50">
+            {navItems.map(({ key, label }) => (
+              <p
+                key={key}
+                onClick={() => handleNav(key)}
+                className={`cursor-pointer px-4 py-3 rounded-xl transition-all ${
+                  view === key ? 'text-white font-black bg-white/10' : 'hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {label}
+              </p>
+            ))}
+          </div>
+        </nav>
       </div>
 
-      {/* Main panel */}
-      <div className="flex-1 overflow-y-auto relative">
+      {/* ── Main panel ───────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto relative pt-14 md:pt-0">
 
         {view === 'profile' && (
           <div className="p-10">

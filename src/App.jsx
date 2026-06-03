@@ -29,6 +29,8 @@ import {
   canAccessAgentDashboard,
   getCurrentUser,
   setCurrentUser,
+  setAuthToken,
+  setRefreshToken,
   DASHBOARD_VIEWS,
 } from './lib/auth';
 
@@ -113,6 +115,8 @@ function App() {
     favLoadedForUser.current = null;
     setFavorites([]);
     localStorage.removeItem('kn_favorites');
+    setAuthToken(null);      // clear access token
+    setRefreshToken(null);   // clear refresh token
     updateUser(null);
   };
 

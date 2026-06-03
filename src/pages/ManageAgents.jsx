@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Edit2, Trash2, Eye } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const ManageAgents = ({ onViewProfile }) => {
   const [agents, setAgents] = useState([]);
@@ -20,12 +21,13 @@ const ManageAgents = ({ onViewProfile }) => {
 
   const loadData = async () => {
     try {
-      const [usersData, agentsData] = await Promise.all([
+      const [usersData, agentsRaw] = await Promise.all([
         apiFetch('/api/users'),
-        apiFetch('/api/agents'),
+        apiFetch('/api/agents?limit=100'),
       ]);
       setUsers(usersData);
-      setAgents(agentsData);
+      // API now returns { data, total, page, pages }
+      setAgents(Array.isArray(agentsRaw) ? agentsRaw : (agentsRaw?.data ?? []));
     } catch (error) {
       console.error('Failed to load agents/users:', error);
     }
@@ -60,7 +62,7 @@ const ManageAgents = ({ onViewProfile }) => {
       await loadData();
       setFormData({ user_id: '', license_number: '', specialization: '', commission_percentage: '', zone: '', status: 'Active' });
     } catch (error) {
-      alert(error.message || 'Failed to save agent.');
+      await showAlert(error.message || 'Failed to save agent.');
     }
   };
 
@@ -78,12 +80,12 @@ const ManageAgents = ({ onViewProfile }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('⚠️ Are you sure you want to delete this agent?')) return;
+    if (!await showConfirm('⚠️ Are you sure you want to delete this agent?')) return;
     try {
       await fetch(`${API_BASE}/api/agents/${id}`, { method: 'DELETE' });
       await loadData();
     } catch (error) {
-      alert(error.message || 'Failed to delete agent.');
+      await showAlert(error.message || 'Failed to delete agent.');
     }
   };
 

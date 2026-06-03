@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
@@ -52,8 +53,8 @@ export default function UserVisits() {
 
   // ── Fetch properties for create form dropdown ──────────────────────────────
   useEffect(() => {
-    apiFetch('/api/properties')
-      .then((d) => setProperties(Array.isArray(d) ? d : []))
+    apiFetch('/api/properties?limit=100')
+      .then((d) => setProperties(Array.isArray(d) ? d : (d?.data ?? [])))
       .catch(() => {});
   }, []);
 
@@ -128,7 +129,7 @@ export default function UserVisits() {
 
   // ── Cancel visit (status → CANCELLED) ─────────────────────────────────────
   const handleCancel = async (id) => {
-    if (!window.confirm('Cancel this visit?')) return;
+    if (!await showConfirm('Cancel this visit?')) return;
     setCancellingId(id);
     try {
       await apiFetch(`/api/visits/${id}`, {
@@ -142,7 +143,7 @@ export default function UserVisits() {
       });
       loadVisits();
     } catch (err) {
-      alert(err.message || 'Failed to cancel visit.');
+      await showAlert(err.message || 'Failed to cancel visit.', 'error');
     } finally {
       setCancellingId(null);
     }
@@ -150,7 +151,7 @@ export default function UserVisits() {
 
   // ── Delete visit ───────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm('Permanently delete this visit?')) return;
+    if (!await showConfirm('Permanently delete this visit?')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/visits/${id}`, {
@@ -159,7 +160,7 @@ export default function UserVisits() {
       });
       setVisits((prev) => prev.filter((v) => v.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete visit.');
+      await showAlert(err.message || 'Failed to delete visit.', 'error');
     } finally {
       setDeletingId(null);
     }

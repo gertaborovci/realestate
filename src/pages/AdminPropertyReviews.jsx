@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Star, Trash2, Loader, Search, ShieldCheck, RefreshCw } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 function Stars({ rating, size = 12 }) {
   return (
@@ -49,12 +50,12 @@ export default function AdminPropertyReviews() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this review? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this review? This cannot be undone.')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/property-reviews/${id}`, { method: 'DELETE' });
       setReviews(prev => prev.filter(r => r.id !== id));
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
     finally { setDeletingId(null); }
   };
 

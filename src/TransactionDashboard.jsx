@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Wrench, BarChart3, DollarSign, TrendingUp } from 'lucide-react';
 import { API_BASE } from './lib/api';
+import { showAlert, showConfirm } from './lib/modal';
 
 const api = axios.create({ baseURL: API_BASE });
 
@@ -40,20 +41,20 @@ export default function TransactionDashboard() {
     e.preventDefault();
     try {
       await api.post('/api/expenses', expense);
-      alert("Shpenzimi u regjistrua me sukses!");
+      await showAlert("Shpenzimi u regjistrua me sukses!");
       setExpense({ category: 'Marketing', amount: '', description: '', expense_date: '' });
       fetchExpenses();
-    } catch (err) { alert("Gabim gjatë regjistrimit."); }
+    } catch (err) { await showAlert("Gabim gjatë regjistrimit."); }
   };
 
   const handleTicketSubmit = async (e) => {
     e.preventDefault();
     try {
       await api.post('/api/maintenance', ticket);
-      alert("Tiketa e mirëmbajtjes u dërgua!");
+      await showAlert("Tiketa e mirëmbajtjes u dërgua!");
       setTicket({ property_id: '', tenant_id: '1', title: '', description: '' });
       fetchTickets();
-    } catch (err) { alert("Gabim gjatë dërgimit."); }
+    } catch (err) { await showAlert("Gabim gjatë dërgimit."); }
   };
 
   const handleStatusChange = async (id, newStatus) => {

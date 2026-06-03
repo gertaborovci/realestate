@@ -19,6 +19,7 @@ import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
 import { API_BASE, apiFetch } from '../lib/api';
 import { Home, Users, DollarSign, Clock, Calendar, Bell, Send } from 'lucide-react';
+import { showAlert, showConfirm } from '../lib/modal';
 
 /* ── Broadcast Panel ─────────────────────────────────────────────────────── */
 function BroadcastPanel() {
@@ -113,7 +114,7 @@ function BroadcastPanel() {
 
   // ── Delete ──
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this notification?')) return;
+    if (!await showConfirm('Delete this notification?')) return;
     try {
       await apiFetch(`/api/notifications/${id}`, { method: 'DELETE' });
       setList(prev => prev.filter(n => n.id !== id));
@@ -157,7 +158,7 @@ function BroadcastPanel() {
       )}
 
       <div className="flex items-center justify-between">
-        <h1 className="text-5xl font-bold">NOTIFICATIONS</h1>
+        <h1 className="text-2xl md:text-5xl font-bold">NOTIFICATIONS</h1>
         {unreadCount > 0 && (
           <span className="bg-red-500 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
             {unreadCount} unread
@@ -352,9 +353,10 @@ const AdminDashboard = ({ onBack }) => {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/properties`);
-      const data = await response.json();
-      setProperties(Array.isArray(data) ? data : []);
+      const response = await fetch(`${API_BASE}/api/properties?limit=100`);
+      const raw = await response.json();
+      // API now returns { data, total, page, pages }
+      setProperties(Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []));
     } catch (error) {
       console.error('Error:', error);
       setProperties([]);
@@ -388,7 +390,7 @@ const AdminDashboard = ({ onBack }) => {
   }, [activeTab, fetchVisits]);
 
   const deleteProperty = async (id) => {
-    if (window.confirm('⚠️ Are you sure?')) {
+    if (await showConfirm('⚠️ Are you sure?')) {
       const response = await fetch(`${API_BASE}/api/properties/${id}`, { method: 'DELETE' });
       if (response.ok) {
         setProperties((prev) => prev.filter((p) => p.id !== id));
@@ -414,7 +416,7 @@ const AdminDashboard = ({ onBack }) => {
       });
       fetchVisits();
     } catch (err) {
-      alert(err.message || 'Failed to update visit.');
+      await showAlert(err.message || 'Failed to update visit.', 'error');
     }
   };
 
@@ -423,7 +425,8 @@ const AdminDashboard = ({ onBack }) => {
   return (
     <div className="flex h-full bg-[#050505]">
       <Sidebar onTabChange={setActiveTab} activeTab={activeTab} />
-      <main className="flex-1 p-12 overflow-y-auto">
+      {/* pt-16 on mobile gives room below the hamburger button */}
+      <main className="flex-1 p-4 pt-16 md:p-12 md:pt-12 overflow-y-auto">
         {loading && activeTab !== 'visits' ? (
           <div className="text-xl">Duke ngarkuar...</div>
         ) : (
@@ -434,8 +437,8 @@ const AdminDashboard = ({ onBack }) => {
 
             {activeTab === 'properties' && (
               <>
-                <div className="flex justify-between mb-12">
-                  <h1 className="text-5xl font-bold">PROPERTIES</h1>
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-3 mb-8 md:mb-12">
+                  <h1 className="text-2xl md:text-5xl font-bold">PROPERTIES</h1>
                   <button
                     type="button"
                     onClick={() => {
@@ -468,8 +471,8 @@ const AdminDashboard = ({ onBack }) => {
 
             {activeTab === 'visits' && (
               <>
-                <div className="flex justify-between items-center mb-12">
-                  <h1 className="text-5xl font-bold">CONSULTATIONS & VISITS</h1>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-8 md:mb-12">
+                  <h1 className="text-2xl md:text-5xl font-bold">CONSULTATIONS & VISITS</h1>
                   <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">
                     {visits.filter((v) => v.status === 'PENDING').length} pending
                   </span>

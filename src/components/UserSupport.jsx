@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { LifeBuoy, Send, ChevronDown, ChevronUp, Trash2, Clock, CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 
@@ -85,11 +86,11 @@ export default function UserSupport() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this ticket?')) return;
+    if (!await showConfirm('Delete this ticket?')) return;
     try {
       await apiFetch(`/api/tickets/${id}`, { method: 'DELETE' });
       setTickets((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
   };
 
   return (
@@ -103,7 +104,7 @@ export default function UserSupport() {
         <div>
           <h2 className="text-2xl font-black text-white tracking-tight">Support</h2>
           <p className="text-white/40 text-xs font-bold tracking-widest uppercase mt-0.5">
-            Submit a ticket — we'll reply as soon as possible
+            Submit a ticket  -  we'll reply as soon as possible
           </p>
         </div>
       </div>
@@ -210,7 +211,7 @@ export default function UserSupport() {
               key={t.id}
               className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden transition hover:border-zinc-700"
             >
-              {/* Ticket header — always visible */}
+              {/* Ticket header  -  always visible */}
               <div
                 className="flex items-center gap-4 px-6 py-4 cursor-pointer select-none"
                 onClick={() => setExpanded(expanded === t.id ? null : t.id)}
@@ -277,3 +278,4 @@ export default function UserSupport() {
     </div>
   );
 }
+

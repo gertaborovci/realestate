@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const AgentPages = ({ onBack, agentId }) => {
   const [formData, setFormData] = useState({
@@ -24,10 +25,12 @@ const AgentPages = ({ onBack, agentId }) => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [agents, props] = await Promise.all([
-          apiFetch('/api/agents'),
-          apiFetch('/api/properties'),
+        const [agentsRaw, propsRaw] = await Promise.all([
+          apiFetch('/api/agents?limit=100'),
+          apiFetch('/api/properties?limit=100'),
         ]);
+        const agents = Array.isArray(agentsRaw) ? agentsRaw : (agentsRaw?.data ?? []);
+        const props  = Array.isArray(propsRaw)  ? propsRaw  : (propsRaw?.data  ?? []);
         const a = agentId
           ? agents.find((ag) => ag.id === Number(agentId)) || agents[0]
           : agents[0];
@@ -68,7 +71,7 @@ const AgentPages = ({ onBack, agentId }) => {
           message: formData.message,
         }),
       });
-      alert('Message sent successfully!');
+      await showAlert('Message sent successfully!');
       setFormData({
         name: '',
         email: '',
@@ -78,7 +81,7 @@ const AgentPages = ({ onBack, agentId }) => {
         property_id: '',
       });
     } catch (err) {
-      alert(err.message);
+      await showAlert(err.message, 'error');
     }
   };
 
@@ -86,11 +89,11 @@ const AgentPages = ({ onBack, agentId }) => {
     e.preventDefault();
     const user = getCurrentUser();
     if (!user?.id) {
-      alert('Please sign in to schedule a visit.');
+      await showAlert('Please sign in to schedule a visit.');
       return;
     }
     if (!formData.property_id || !formData.visit_date || !formData.visit_time) {
-      alert('Please select a property, date, and time.');
+      await showAlert('Please select a property, date, and time.');
       return;
     }
     try {
@@ -105,7 +108,7 @@ const AgentPages = ({ onBack, agentId }) => {
           status: 'PENDING',
         }),
       });
-      alert('Visit scheduled successfully! The admin will review your request.');
+      await showAlert('Visit scheduled successfully! The admin will review your request.');
       setFormData((prev) => ({
         ...prev,
         visit_date: '',
@@ -113,7 +116,7 @@ const AgentPages = ({ onBack, agentId }) => {
         property_id: '',
       }));
     } catch (err) {
-      alert(err.message || 'Failed to schedule visit.');
+      await showAlert(err.message || 'Failed to schedule visit.', 'error');
     }
   };
 

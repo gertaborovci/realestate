@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Pencil, Trash2, X, Check, Loader, Receipt } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const API = '/api/expenses';
 
@@ -155,14 +156,14 @@ export default function ManageExpenses() {
 
   // ── DELETE ─────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this expense? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this expense? This cannot be undone.')) return;
     setDeletingId(id);
     try {
       await apiFetch(`${API}/${id}`, { method: 'DELETE' });
       setExpenses(prev => prev.filter(e => e.id !== id));
       flash('Expense deleted.');
     } catch (err) {
-      alert(err.message || 'Failed to delete.');
+      await showAlert(err.message || 'Failed to delete.', 'error');
     } finally {
       setDeletingId(null);
     }

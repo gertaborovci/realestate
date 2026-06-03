@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Trash2, CalendarCheck, Home, Clock } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
-/** Parse rental notes: "Rental request — Check-in: YYYY-MM-DD, Check-out: YYYY-MM-DD | Note: ..." */
+/** Parse rental notes: "Rental request  -  Check-in: YYYY-MM-DD, Check-out: YYYY-MM-DD | Note: ..." */
 function parseRental(notes) {
   if (!notes?.startsWith('Rental request')) return null;
   const cin  = notes.match(/Check-in:\s*(\d{4}-\d{2}-\d{2})/);
@@ -42,7 +43,7 @@ export default function UserRequests() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Remove this request?')) return;
+    if (!await showConfirm('Remove this request?')) return;
     setDeleting(id);
     try {
       await apiFetch(`/api/visits/${id}`, {
@@ -54,7 +55,7 @@ export default function UserRequests() {
       });
       setRequests((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete request.');
+      await showAlert(err.message || 'Failed to delete request.', 'error');
     } finally {
       setDeleting(null);
     }
@@ -118,12 +119,12 @@ export default function UserRequests() {
               <div className="flex items-center gap-1.5 text-white/40 text-xs font-medium">
                 <Clock size={11} />
                 {isRental ? (
-                  <span>Check-in: <span className="text-white/60">{rental.checkIn}</span> — Check-out: <span className="text-white/60">{rental.checkOut}</span></span>
+                  <span>Check-in: <span className="text-white/60">{rental.checkIn}</span>  -  Check-out: <span className="text-white/60">{rental.checkOut}</span></span>
                 ) : (
                   <span>
                     {req.visit_date
                       ? new Date(req.visit_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : '—'}
+                      : ' - '}
                     {req.visit_time ? ` at ${req.visit_time}` : ''}
                   </span>
                 )}
@@ -151,3 +152,4 @@ export default function UserRequests() {
     </div>
   );
 }
+

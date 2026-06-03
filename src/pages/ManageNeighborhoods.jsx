@@ -4,6 +4,7 @@ import L from 'leaflet';
 import { Plus, Pencil, Trash2, X, Check, Loader, MapPin, Search } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import NeighborhoodAutocomplete from '../components/NeighborhoodAutocomplete';
+import { showAlert, showConfirm } from '../lib/modal';
 
 // ── Fix Leaflet default marker icons in Vite ──────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -154,7 +155,7 @@ export default function ManageNeighborhoods() {
 
   // ── DELETE ─────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this neighbourhood? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this neighbourhood? This cannot be undone.')) return;
     setDeletingId(id);
     try {
       await apiFetch(`${API}/${id}`, { method: 'DELETE' });
@@ -162,7 +163,7 @@ export default function ManageNeighborhoods() {
       if (editingId === id) resetForm();
       flash('Neighbourhood deleted.');
     } catch (err) {
-      alert(err.message || 'Delete failed.');
+      await showAlert(err.message || 'Delete failed.', 'error');
     } finally {
       setDeletingId(null);
     }

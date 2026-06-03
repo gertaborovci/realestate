@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { MessageSquare, PlusCircle, Pencil, Trash2, Check, X, Loader, Camera } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 export default function UserStories({ testimonials, setIsStoryModalOpen, setTestimonials }) {
   const currentUser = getCurrentUser();
@@ -47,7 +48,7 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
   };
 
   const saveEdit = async (id, currentFotoUrl) => {
-    if (!editText.trim()) { alert('Story text cannot be empty.'); return; }
+    if (!editText.trim()) { await showAlert('Story text cannot be empty.'); return; }
     setSaving(true);
     try {
       let newFotoUrl = currentFotoUrl;
@@ -64,7 +65,7 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
         });
         newFotoUrl = created?.foto_url || currentFotoUrl;
       } else {
-        // Regular JSON update (text/name ± clear photo)
+        // Regular JSON update (text/name Â± clear photo)
         await apiFetch(`/api/testimonials/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -86,20 +87,20 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
       }
       cancelEdit();
     } catch (err) {
-      alert(err.message || 'Failed to update story.');
+      await showAlert(err.message || 'Failed to update story.', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this story? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this story? This cannot be undone.')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/testimonials/${id}`, { method: 'DELETE' });
       if (setTestimonials) setTestimonials(prev => prev.filter(t => t.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete story.');
+      await showAlert(err.message || 'Failed to delete story.', 'error');
     } finally {
       setDeletingId(null);
     }
@@ -138,7 +139,7 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
           return (
             <div key={t.id} className="p-5 bg-zinc-900/60 rounded-2xl border border-white/5 group">
               {editingId === t.id ? (
-                /* ── Edit mode ── */
+                /* â"€â"€ Edit mode â"€â"€ */
                 <div className="space-y-3">
                   <input
                     value={editName}
@@ -199,7 +200,7 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
                   </div>
                 </div>
               ) : (
-                /* ── View mode ── */
+                /* â"€â"€ View mode â"€â"€ */
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-3">
                     {/* Photo if present */}
@@ -211,7 +212,7 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
                       />
                     )}
                     <p className="italic text-zinc-300 text-sm leading-relaxed">"{text}"</p>
-                    <span className="text-xs font-bold text-emerald-400 block">— {client}</span>
+                    <span className="text-xs font-bold text-emerald-400 block"> -  {client}</span>
                   </div>
 
                   {/* Only the story's owner OR an admin can edit/delete */}
@@ -239,3 +240,4 @@ export default function UserStories({ testimonials, setIsStoryModalOpen, setTest
     </div>
   );
 }
+

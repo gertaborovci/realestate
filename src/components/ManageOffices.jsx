@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { Building2, Plus, Pencil, Trash2, MapPin, Phone, Mail, Clock, ExternalLink, X, Check, ToggleLeft, ToggleRight } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const EMPTY_FORM = {
   name: '', address: '', city: '', phone: '',
@@ -92,7 +93,7 @@ export default function ManageOffices() {
       await apiFetch(`/api/offices/${id}`, { method: 'DELETE' });
       setOffices((prev) => prev.filter((o) => o.id !== id));
       setDeleteId(null);
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
   };
 
   const toggleActive = async (office) => {
@@ -105,7 +106,7 @@ export default function ManageOffices() {
       setOffices((prev) =>
         prev.map((o) => o.id === office.id ? { ...o, is_active: o.is_active ? 0 : 1 } : o)
       );
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
   };
 
   const field = (label, key, placeholder, type = 'text') => (
@@ -174,7 +175,7 @@ export default function ManageOffices() {
       ) : offices.length === 0 ? (
         <div className="text-center py-20 text-white/20">
           <Building2 size={40} className="mx-auto mb-4 opacity-20" />
-          <p className="font-bold">No offices yet — add your first one</p>
+          <p className="font-bold">No offices yet  -  add your first one</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -299,12 +300,12 @@ export default function ManageOffices() {
                 </div>
               )}
 
-              {field('Office Name *',    'name',          'e.g. Main Office – Prishtina')}
+              {field('Office Name *',    'name',          'e.g. Main Office  -  Prishtina')}
               {field('City *',           'city',          'e.g. Prishtina')}
               {field('Address *',        'address',       'e.g. Rr. UCK, Nr. 45')}
               {field('Phone',            'phone',         'e.g. +383 44 123 456', 'tel')}
               {field('Email',            'email',         'e.g. info@kosovanest.com', 'email')}
-              {field('Working Hours',    'working_hours', 'e.g. Mon–Fri: 09:00–18:00')}
+              {field('Working Hours',    'working_hours', 'e.g. Mon - Fri: 09:00 - 18:00')}
 
               {/* Map URL */}
               <div>
@@ -362,3 +363,4 @@ export default function ManageOffices() {
     </div>
   );
 }
+

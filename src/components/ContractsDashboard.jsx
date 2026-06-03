@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileText, CreditCard, Plus, Trash2, Loader, CheckCircle,
   RefreshCw, AlertTriangle, Euro, Building2, User, Calendar,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â"€â"€ Helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const CONTRACT_STATUS_STYLES = {
   'Deposit Pending': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
   'Active':          'bg-green-500/10  text-green-400  border-green-500/30',
@@ -21,7 +22,7 @@ const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'Credit Card', 'Crypto', 'Othe
 
 const fmt = (n) => `€${Number(n || 0).toLocaleString('en')}`;
 
-// ── Contracts tab ─────────────────────────────────────────────────────────────
+// â"€â"€ Contracts tab â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const ContractsTab = ({ contracts, loading, onRefresh }) => {
   const [updating, setUpdating] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -36,20 +37,20 @@ const ContractsTab = ({ contracts, loading, onRefresh }) => {
       });
       onRefresh();
     } catch (err) {
-      alert(err.message || 'Failed to update status.');
+      await showAlert(err.message || 'Failed to update status.', 'error');
     } finally {
       setUpdating(null);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this contract and all its transactions?')) return;
+    if (!await showConfirm('Delete this contract and all its transactions?')) return;
     setDeleting(id);
     try {
       await apiFetch(`/api/contracts/${id}`, { method: 'DELETE' });
       onRefresh();
     } catch (err) {
-      alert(err.message || 'Failed to delete contract.');
+      await showAlert(err.message || 'Failed to delete contract.', 'error');
     } finally {
       setDeleting(null);
     }
@@ -114,7 +115,7 @@ const ContractsTab = ({ contracts, loading, onRefresh }) => {
             <div className="flex items-center gap-2 min-w-0">
               <User size={12} className="text-white/30 shrink-0" />
               <div className="min-w-0">
-                <p className="text-sm text-white truncate">{c.client_name || '—'}</p>
+                <p className="text-sm text-white truncate">{c.client_name || ' - '}</p>
                 <p className="text-[10px] text-white/40 truncate">{c.client_email || ''}</p>
               </div>
             </div>
@@ -134,7 +135,7 @@ const ContractsTab = ({ contracts, loading, onRefresh }) => {
                 {fmt(paid)}
               </p>
               {depositMet
-                ? <p className="text-[10px] text-green-500/70">Deposit met ✓</p>
+                ? <p className="text-[10px] text-green-500/70">Deposit met âœ"</p>
                 : <p className="text-[10px] text-white/30">{fmt(depositRequired - paid)} remaining</p>}
             </div>
 
@@ -170,7 +171,7 @@ const ContractsTab = ({ contracts, loading, onRefresh }) => {
   );
 };
 
-// ── Transactions tab ──────────────────────────────────────────────────────────
+// â"€â"€ Transactions tab â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const TransactionsTab = ({ contracts, transactions, loading, onRefresh }) => {
   const today = new Date().toISOString().split('T')[0];
 
@@ -226,20 +227,20 @@ const TransactionsTab = ({ contracts, transactions, loading, onRefresh }) => {
       });
       onRefresh();
     } catch (err) {
-      alert(err.message);
+      await showAlert(err.message, 'error');
     } finally {
       setUpdatingTx(null);
     }
   };
 
   const handleTxDelete = async (id) => {
-    if (!window.confirm('Delete this payment record?')) return;
+    if (!await showConfirm('Delete this payment record?')) return;
     setDeletingTx(id);
     try {
       await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' });
       onRefresh();
     } catch (err) {
-      alert(err.message);
+      await showAlert(err.message, 'error');
     } finally {
       setDeletingTx(null);
     }
@@ -248,7 +249,7 @@ const TransactionsTab = ({ contracts, transactions, loading, onRefresh }) => {
   return (
     <div className="space-y-10">
 
-      {/* ── Add Payment form ── */}
+      {/* â"€â"€ Add Payment form â"€â"€ */}
       <div className="bg-[#111] border border-white/10 rounded-3xl p-8">
         <h3 className="text-lg font-black uppercase tracking-widest mb-6 flex items-center gap-3">
           <Plus size={18} className="text-white/40" /> Add Payment
@@ -277,10 +278,10 @@ const TransactionsTab = ({ contracts, transactions, loading, onRefresh }) => {
               required
               className="w-full bg-[#0a0a0a] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30"
             >
-              <option value="">— Select a contract —</option>
+              <option value="">-- Select a contract --</option>
               {contracts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  #{c.id} · {c.property_title} — {c.client_name} ({c.status})
+                  #{c.id} · {c.property_title}  -  {c.client_name} ({c.status})
                 </option>
               ))}
             </select>
@@ -360,7 +361,7 @@ const TransactionsTab = ({ contracts, transactions, loading, onRefresh }) => {
         </form>
       </div>
 
-      {/* ── Transactions table ── */}
+      {/* â"€â"€ Transactions table â"€â"€ */}
       {loading ? (
         <div className="flex items-center justify-center h-32 gap-3 text-white/40">
           <Loader size={18} className="animate-spin" />
@@ -398,7 +399,7 @@ const TransactionsTab = ({ contracts, transactions, loading, onRefresh }) => {
               <span className="text-sm font-bold text-white">{fmt(tx.amount)}</span>
 
               <span className="text-sm text-white/60">
-                {tx.payment_date ? new Date(tx.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                {tx.payment_date ? new Date(tx.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ' - '}
               </span>
 
               <span className="text-xs text-white/50">{tx.method}</span>
@@ -434,7 +435,7 @@ const TransactionsTab = ({ contracts, transactions, loading, onRefresh }) => {
   );
 };
 
-// ── Root component ────────────────────────────────────────────────────────────
+// â"€â"€ Root component â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const ContractsDashboard = () => {
   const [tab,          setTab]          = useState('contracts');
   const [contracts,    setContracts]    = useState([]);
@@ -546,3 +547,4 @@ const ContractsDashboard = () => {
 };
 
 export default ContractsDashboard;
+

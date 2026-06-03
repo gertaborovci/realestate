@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   Building2, MapPin, Euro, Pencil, Plus, Loader, Home,
   DoorOpen, Maximize, Trash2, AlertTriangle,
@@ -6,12 +6,13 @@ import {
 import { apiFetch, API_BASE } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 import AddProperty from '../pages/AddProperty';
+import { showAlert, showConfirm } from '../lib/modal';
 
-// ── Status display helpers ──────────────────────────────────────────────────
+// â"€â"€ Status display helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const STATUS_META = {
-  'E Lirë':          { label: 'Available', cls: 'bg-green-500/10 text-green-400 border-green-500/30' },
+  'E LirÃ«':          { label: 'Available', cls: 'bg-green-500/10 text-green-400 border-green-500/30' },
   'E Shitur':        { label: 'Sold',      cls: 'bg-red-500/10   text-red-400   border-red-500/30'   },
-  'E Dhënë me Qira': { label: 'Rented',    cls: 'bg-blue-500/10  text-blue-400  border-blue-500/30'  },
+  'E DhÃ«nÃ« me Qira': { label: 'Rented',    cls: 'bg-blue-500/10  text-blue-400  border-blue-500/30'  },
 };
 
 const TYPE_LABELS = {
@@ -19,7 +20,7 @@ const TYPE_LABELS = {
   Qira:   'For Rent',
 };
 
-// ── Delete confirmation modal ───────────────────────────────────────────────
+// â"€â"€ Delete confirmation modal â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const DeleteModal = ({ property, onCancel, onConfirm, deleting }) => (
   <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
     <div className="bg-[#111] border border-white/10 rounded-3xl p-8 w-full max-w-sm text-center space-y-4">
@@ -48,7 +49,7 @@ const DeleteModal = ({ property, onCancel, onConfirm, deleting }) => (
   </div>
 );
 
-// ── Main component ──────────────────────────────────────────────────────────
+// â"€â"€ Main component â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const AgentProperties = () => {
   const [properties,       setProperties]       = useState([]);
   const [loading,          setLoading]          = useState(true);
@@ -59,7 +60,7 @@ const AgentProperties = () => {
   const [deleteTarget,     setDeleteTarget]     = useState(null);
   const [deleting,         setDeleting]         = useState(false);
 
-  // ── Data fetching ─────────────────────────────────────────────────────────
+  // â"€â"€ Data fetching â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const loadProperties = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -86,12 +87,12 @@ const AgentProperties = () => {
 
   useEffect(() => { loadProperties(); }, [loadProperties]);
 
-  // ── Navigation helpers ────────────────────────────────────────────────────
+  // â"€â"€ Navigation helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const goEdit = (property) => { setSelectedProperty(property); setView('edit'); };
   const goAdd  = ()         => { setSelectedProperty(null);     setView('add');  };
   const goList = ()         => { setView('list'); loadProperties(); };
 
-  // ── Delete ────────────────────────────────────────────────────────────────
+  // â"€â"€ Delete â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -100,13 +101,13 @@ const AgentProperties = () => {
       setDeleteTarget(null);
       loadProperties();
     } catch (err) {
-      alert('Failed to delete property.');
+      await showAlert('Failed to delete property.', 'error');
     } finally {
       setDeleting(false);
     }
   };
 
-  // ── Add / Edit view ───────────────────────────────────────────────────────
+  // â"€â"€ Add / Edit view â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   if (view === 'add' || view === 'edit') {
     return (
       <div className="p-10">
@@ -120,7 +121,7 @@ const AgentProperties = () => {
     );
   }
 
-  // ── Loading / Error states ────────────────────────────────────────────────
+  // â"€â"€ Loading / Error states â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 gap-3 text-white/40">
@@ -138,7 +139,7 @@ const AgentProperties = () => {
     );
   }
 
-  // ── List view ─────────────────────────────────────────────────────────────
+  // â"€â"€ List view â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   return (
     <div className="p-10 space-y-8">
 
@@ -221,13 +222,13 @@ const AgentProperties = () => {
                 {/* Location */}
                 <div className="flex items-center gap-1.5 text-sm text-white/50 min-w-0">
                   <MapPin size={11} className="shrink-0 text-white/30" />
-                  <span className="truncate">{property.location || '—'}</span>
+                  <span className="truncate">{property.location || ' - '}</span>
                 </div>
 
                 {/* Price */}
                 <div className="flex items-center gap-1 text-sm font-bold text-white">
                   <Euro size={11} className="text-white/30" />
-                  {property.price ? Number(property.price).toLocaleString('en') : '—'}
+                  {property.price ? Number(property.price).toLocaleString('en') : ' - '}
                 </div>
 
                 {/* Specs (rooms / area) */}
@@ -239,14 +240,14 @@ const AgentProperties = () => {
                   )}
                   {property.area && (
                     <span className="flex items-center gap-1">
-                      <Maximize size={10} /> {property.area} m²
+                      <Maximize size={10} /> {property.area} mÂ²
                     </span>
                   )}
                 </div>
 
                 {/* Type */}
                 <span className="text-xs text-white/50">
-                  {TYPE_LABELS[property.type] || property.type || '—'}
+                  {TYPE_LABELS[property.type] || property.type || ' - '}
                 </span>
 
                 {/* Status badge */}

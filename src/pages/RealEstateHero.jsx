@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Landmark, Key, Heart, Users, Building2 } from 'lucide-react';
+import { User, Menu, MapPin, Globe, Mail, Phone, ChevronRight, Handshake, ShieldCheck, Key, Heart, Users, Building2 } from 'lucide-react';
 import { canAccessAgentDashboard, DASHBOARD_VIEWS } from '../lib/auth';
 import HeroSearch from '../components/HeroSearch';
 import NotificationBell from '../components/NotificationBell';
@@ -145,15 +145,15 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
       <section className="min-h-screen w-full bg-white text-black p-16 md:p-24 flex items-center">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           {[
-            { title: 'Buy', desc: 'Find your dream home with the most experienced local agents.', btn: 'Browse Homes', icon: <Heart className="text-red-500" /> },
-            { title: 'Mortgage', desc: 'Partnering with local banks to deliver the best possible rates.', btn: 'Get Pre-approved', icon: <Landmark className="text-blue-600" /> },
-            { title: 'Sell', desc: 'We know how to price and market your property across Kosovo.', btn: 'List Property', icon: <Key className="text-amber-500" /> },
-            { title: 'Rent', desc: 'Whether searching for apartments or commercial spaces, we make it easy.', btn: 'Explore Rentals', icon: <MapPin className="text-emerald-500" /> }
+            { title: 'Buy', desc: 'Find your dream home with the most experienced local agents.', btn: 'Browse Homes', icon: <Heart className="text-red-500" />, view: 'properties' },
+            { title: 'Agents', desc: 'Connect with our elite real estate professionals across Kosovo.', btn: 'Meet Our Agents', icon: <Users className="text-blue-600" />, view: 'agents' },
+            { title: 'Neighbourhoods', desc: 'Explore the best neighbourhoods and find where you belong.', icon: <MapPin className="text-amber-500" />, btn: 'Explore Areas', view: 'neighborhoods' },
+            { title: 'Rent', desc: 'Whether searching for apartments or commercial spaces, we make it easy.', btn: 'Explore Rentals', icon: <Key className="text-emerald-500" />, view: 'properties' }
           ].map((item) => (
             <div key={item.title} className="bg-[#fcfcfc] p-12 rounded-[50px] flex flex-col items-center text-center space-y-8 hover:shadow-2xl transition-all border border-black/[0.03]">
               <div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-md">{item.icon}</div>
               <h3 className="text-3xl font-black uppercase italic tracking-tighter">{item.title}</h3>
-              <button onClick={() => onNavigate('properties')} className="px-10 py-4 border-2 border-black rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all">{item.btn}</button>
+              <button onClick={() => onNavigate(item.view)} className="px-10 py-4 border-2 border-black rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all">{item.btn}</button>
             </div>
           ))}
         </div>

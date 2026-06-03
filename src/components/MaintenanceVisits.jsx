@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck, ShieldX, Clock, Eye, Trash2, Loader,
   RefreshCw, X, CheckCircle, XCircle, User, Calendar,
   FileCheck, AlertCircle, FileText,
 } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
-// ── Status style map (matches AgentCertifications.jsx exactly) ───────────────
+// â"€â"€ Status style map (matches AgentCertifications.jsx exactly) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const STATUS_STYLE = {
   Pending:  'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
   Verified: 'bg-green-500/10  text-green-400  border-green-500/30',
@@ -27,7 +28,7 @@ const inputCls =
   'w-full bg-[#0a0a0a] border border-white/10 text-white rounded-xl px-4 py-3 text-sm ' +
   'focus:outline-none focus:border-white/30 placeholder:text-white/20';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function CertThumb({ url }) {
   const [failed, setFailed] = React.useState(false);
   if (!url || failed) {
@@ -72,7 +73,7 @@ export default function MaintenanceVisits() {
 
   const [deletingId, setDeletingId] = useState(null);
 
-  // ── Load all certifications ─────────────────────────────────────────────────
+  // â"€â"€ Load all certifications â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -88,7 +89,7 @@ export default function MaintenanceVisits() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Filtered list & counts ──────────────────────────────────────────────────
+  // â"€â"€ Filtered list & counts â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const filtered = filter === 'All' ? certs : certs.filter((c) => c.status === filter);
   const counts = {
     Pending:  certs.filter((c) => c.status === 'Pending').length,
@@ -96,7 +97,7 @@ export default function MaintenanceVisits() {
     Rejected: certs.filter((c) => c.status === 'Rejected').length,
   };
 
-  // ── Open action modal ───────────────────────────────────────────────────────
+  // â"€â"€ Open action modal â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const openVerify = (cert) => {
     setExpiresAt(cert.expires_at ? cert.expires_at.split('T')[0] : '');
     setRejectReason('');
@@ -118,7 +119,7 @@ export default function MaintenanceVisits() {
     setActionError('');
   };
 
-  // ── Submit verify / reject ──────────────────────────────────────────────────
+  // â"€â"€ Submit verify / reject â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleAction = async () => {
     const { cert, action } = actionModal;
 
@@ -147,9 +148,9 @@ export default function MaintenanceVisits() {
     }
   };
 
-  // ── Delete ──────────────────────────────────────────────────────────────────
+  // â"€â"€ Delete â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this certification? This cannot be undone.')) return;
+    if (!await showConfirm('Delete this certification? This cannot be undone.')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/certifications/${id}`, {
@@ -158,17 +159,17 @@ export default function MaintenanceVisits() {
       });
       setCerts((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete.');
+      await showAlert(err.message || 'Failed to delete.', 'error');
     } finally {
       setDeletingId(null);
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // â"€â"€ Render â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   return (
     <div className="space-y-8">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* â"€â"€ Header â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-5xl font-bold">DOCUMENT REVIEW</h1>
@@ -184,7 +185,7 @@ export default function MaintenanceVisits() {
         </button>
       </div>
 
-      {/* ── Stats pills ────────────────────────────────────────────────────── */}
+      {/* â"€â"€ Stats pills â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <div className="flex flex-wrap gap-3">
         <span className="px-4 py-2 rounded-full text-[10px] font-black tracking-widest uppercase border bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
           {counts.Pending} Pending
@@ -197,7 +198,7 @@ export default function MaintenanceVisits() {
         </span>
       </div>
 
-      {/* ── Filter tabs ────────────────────────────────────────────────────── */}
+      {/* â"€â"€ Filter tabs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <div className="flex gap-2 flex-wrap border-b border-white/5 pb-4">
         {['Pending', 'Verified', 'Rejected', 'All'].map((tab) => (
           <button
@@ -214,14 +215,14 @@ export default function MaintenanceVisits() {
         ))}
       </div>
 
-      {/* ── Error ──────────────────────────────────────────────────────────── */}
+      {/* â"€â"€ Error â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {loadError && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-4 text-red-400 text-sm">
           {loadError}
         </div>
       )}
 
-      {/* ── Loading ────────────────────────────────────────────────────────── */}
+      {/* â"€â"€ Loading â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {loading ? (
         <div className="flex items-center justify-center h-48 gap-3 text-white/30">
           <Loader size={18} className="animate-spin" />
@@ -243,10 +244,10 @@ export default function MaintenanceVisits() {
               key={cert.id}
               className="bg-[#111] border border-white/10 rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-5 hover:border-white/20 transition"
             >
-              {/* ── Thumbnail ──────────────────────────────────────────────── */}
+              {/* â"€â"€ Thumbnail â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
               <CertThumb url={cert.document_url ? `${API_BASE}${cert.document_url}` : null} />
 
-              {/* ── Info ───────────────────────────────────────────────────── */}
+              {/* â"€â"€ Info â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
               <div className="flex-1 space-y-2 min-w-0">
 
                 {/* Status + type badges */}
@@ -266,7 +267,7 @@ export default function MaintenanceVisits() {
                     <span className="font-semibold text-white/70">
                       {cert.agent_name || `Agent #${cert.agent_id}`}
                     </span>
-                    {cert.agent_email && `— ${cert.agent_email}`}
+                    {cert.agent_email && ` -  ${cert.agent_email}`}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Calendar size={11} />
@@ -274,7 +275,7 @@ export default function MaintenanceVisits() {
                       ? new Date(cert.created_at).toLocaleDateString('en-GB', {
                           day: '2-digit', month: 'short', year: 'numeric',
                         })
-                      : '—'}
+                      : ' - '}
                   </span>
                   {cert.expires_at && (
                     <span className="flex items-center gap-1.5 text-green-400/60">
@@ -298,7 +299,7 @@ export default function MaintenanceVisits() {
                 )}
               </div>
 
-              {/* ── Actions ────────────────────────────────────────────────── */}
+              {/* â"€â"€ Actions â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
               <div className="flex items-center gap-2 shrink-0">
 
                 {/* View document */}
@@ -310,7 +311,7 @@ export default function MaintenanceVisits() {
                   <Eye size={15} />
                 </button>
 
-                {/* Verify — show for Pending and Rejected */}
+                {/* Verify  -  show for Pending and Rejected */}
                 {cert.status !== 'Verified' && (
                   <button
                     onClick={() => openVerify(cert)}
@@ -320,7 +321,7 @@ export default function MaintenanceVisits() {
                   </button>
                 )}
 
-                {/* Reject — show for Pending and Verified */}
+                {/* Reject  -  show for Pending and Verified */}
                 {cert.status !== 'Rejected' && (
                   <button
                     onClick={() => openReject(cert)}
@@ -347,9 +348,9 @@ export default function MaintenanceVisits() {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           DOCUMENT PREVIEW MODAL
-      ════════════════════════════════════════════════════════════════════ */}
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {viewModal && (
         <div
           className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4"
@@ -366,7 +367,7 @@ export default function MaintenanceVisits() {
                 <h3 className="text-lg font-black text-white">{viewModal.type}</h3>
                 <p className="text-xs text-white/40 mt-0.5">
                   {viewModal.agent_name || `Agent #${viewModal.agent_id}`}
-                  {viewModal.agent_email && ` — ${viewModal.agent_email}`}
+                  {viewModal.agent_email && `  -  ${viewModal.agent_email}`}
                 </p>
               </div>
               <button onClick={() => setViewModal(null)} className="text-white/30 hover:text-white transition">
@@ -392,7 +393,7 @@ export default function MaintenanceVisits() {
                 className="w-full rounded-2xl border border-white/10 object-contain max-h-72 hover:border-white/30 transition"
               />
               <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 mt-2 text-center">
-                Click image to open full size →
+                Click image to open full size â†'
               </p>
             </a>
 
@@ -405,7 +406,7 @@ export default function MaintenanceVisits() {
                     ? new Date(viewModal.created_at).toLocaleDateString('en-GB', {
                         day: '2-digit', month: 'long', year: 'numeric',
                       })
-                    : '—'}
+                    : ' - '}
                 </p>
               </div>
               {viewModal.expires_at && (
@@ -459,9 +460,9 @@ export default function MaintenanceVisits() {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════
-          ACTION MODAL — Verify / Reject
-      ════════════════════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          ACTION MODAL  -  Verify / Reject
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {actionModal && (
         <div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4">
           <div className="bg-[#111] border border-white/10 rounded-3xl p-8 w-full max-w-md space-y-5">
@@ -470,7 +471,7 @@ export default function MaintenanceVisits() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[9px] font-black tracking-widest uppercase text-white/30 mb-1">
-                  {actionModal.cert.agent_name || `Agent #${actionModal.cert.agent_id}`} — {actionModal.cert.type}
+                  {actionModal.cert.agent_name || `Agent #${actionModal.cert.agent_id}`}  -  {actionModal.cert.type}
                 </p>
                 <h3 className={`text-lg font-black ${actionModal.action === 'verify' ? 'text-green-400' : 'text-red-400'}`}>
                   {actionModal.action === 'verify' ? 'Verify Document' : 'Reject Document'}
@@ -478,7 +479,7 @@ export default function MaintenanceVisits() {
                 <p className="text-xs text-white/30 mt-1">
                   {actionModal.action === 'verify'
                     ? 'Mark this document as verified. Optionally set an expiry date.'
-                    : 'Provide a reason — the agent will see this on their dashboard.'}
+                    : 'Provide a reason  -  the agent will see this on their dashboard.'}
                 </p>
               </div>
               <button onClick={closeAction} className="text-white/30 hover:text-white transition">
@@ -486,7 +487,7 @@ export default function MaintenanceVisits() {
               </button>
             </div>
 
-            {/* Expiry date — verify only */}
+            {/* Expiry date  -  verify only */}
             {actionModal.action === 'verify' && (
               <div>
                 <Label>Expiry Date <span className="text-white/20 normal-case font-normal tracking-normal">(optional)</span></Label>
@@ -499,7 +500,7 @@ export default function MaintenanceVisits() {
               </div>
             )}
 
-            {/* Rejection reason — reject only */}
+            {/* Rejection reason  -  reject only */}
             {actionModal.action === 'reject' && (
               <div>
                 <Label>Rejection Reason *</Label>
@@ -554,3 +555,4 @@ export default function MaintenanceVisits() {
     </div>
   );
 }
+

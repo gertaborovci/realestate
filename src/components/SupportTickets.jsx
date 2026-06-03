@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   LifeBuoy, Search, ChevronDown, ChevronUp,
   Trash2, Send, Circle, Loader2, CheckCircle2, AlertCircle,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const STATUSES   = ['All', 'Open', 'In Progress', 'Resolved', 'Closed'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
@@ -112,12 +113,12 @@ export default function SupportTickets() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this ticket permanently?')) return;
+    if (!await showConfirm('Delete this ticket permanently?')) return;
     try {
       await apiFetch(`/api/tickets/${id}`, { method: 'DELETE' });
       setTickets((prev) => prev.filter((t) => t.id !== id));
       if (expanded === id) setExpanded(null);
-    } catch (err) { alert(err.message); }
+    } catch (err) { await showAlert(err.message, 'error'); }
   };
 
   // Stats
@@ -364,3 +365,4 @@ export default function SupportTickets() {
     </div>
   );
 }
+

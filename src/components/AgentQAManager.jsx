@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Check, X, Loader, HelpCircle, ChevronDown, Eye } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showConfirm } from '../lib/modal';
 
 const inputCls = 'w-full bg-[#1a1a1a] border border-gray-800 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-gray-600 placeholder:text-white/20 transition';
 const EMPTY    = { question: '', answer: '' };
@@ -116,7 +117,7 @@ export default function AgentQAManager({ agentId, properties = [] }) {
   };
 
   const deleteGlobal = async (id) => {
-    if (!window.confirm('Remove this question from your global Q&A?')) return;
+    if (!await showConfirm('Remove this question from your global Q&A?')) return;
     await apiFetch(`/api/qa/global/${id}`, { method:'DELETE' });
     load();
   };
@@ -134,14 +135,14 @@ export default function AgentQAManager({ agentId, properties = [] }) {
   };
 
   const deletePropSpecific = async (id) => {
-    if (!window.confirm('Remove this Q&A?')) return;
+    if (!await showConfirm('Remove this Q&A?')) return;
     await apiFetch(`/api/qa/specific/${id}`, { method:'DELETE' });
     const data = await apiFetch(`/api/qa/property/${selPropId}/specific`);
     setPropItems(Array.isArray(data) ? data : []);
   };
 
   const clearPropQA = async () => {
-    if (!window.confirm('Remove all custom Q&A for this property? It will revert to your global Q&A.')) return;
+    if (!await showConfirm('Remove all custom Q&A for this property? It will revert to your global Q&A.')) return;
     await apiFetch(`/api/qa/property/${selPropId}/clear`, { method:'DELETE' });
     setPropItems([]);
   };

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Pencil, Trash2, Check, X, Loader, Search } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const EMPTY = {
   qyteti: '',
@@ -122,14 +123,14 @@ export default function UserSearchAlerts({ onNavigate }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Remove this alert?')) return;
+    if (!await showConfirm('Remove this alert?')) return;
     setDeletingId(id);
     try {
       await apiFetch(`/api/search-alerts/${id}`, { method: 'DELETE' });
       setAlerts(prev => prev.filter(a => a.id !== id));
       flash('Alert removed.');
     } catch (err) {
-      alert(err.message || 'Failed to delete.');
+      await showAlert(err.message || 'Failed to delete.', 'error');
     } finally {
       setDeletingId(null);
     }
@@ -165,7 +166,7 @@ export default function UserSearchAlerts({ onNavigate }) {
               className="flex items-start justify-between gap-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl px-5 py-4">
               <div className="flex-1">
                 <p className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-1">
-                  🏠 New Match Found
+                  ðŸ  New Match Found
                 </p>
                 <p className="text-white/80 text-sm">{n.message}</p>
               </div>
@@ -174,7 +175,7 @@ export default function UserSearchAlerts({ onNavigate }) {
                   onClick={() => { dismissNotif(n.id); if (onNavigate) onNavigate('properties'); }}
                   className="px-4 py-2 rounded-xl bg-white text-black text-xs font-black uppercase tracking-wider hover:bg-zinc-200 transition"
                 >
-                  View →
+                  View â†'
                 </button>
                 <button onClick={() => dismissNotif(n.id)}
                   className="text-white/30 hover:text-white transition p-1">
@@ -193,7 +194,7 @@ export default function UserSearchAlerts({ onNavigate }) {
         </div>
       )}
 
-      {/* ── Form ── */}
+      {/* â"€â"€ Form â"€â"€ */}
       <div className="bg-zinc-900/60 border border-white/8 rounded-2xl p-8 space-y-6">
         <h3 className="text-sm font-black uppercase tracking-widest text-white/60 flex items-center gap-2">
           {editingId ? <><Pencil size={14} /> Edit Alert</> : <><Plus size={14} /> New Alert</>}
@@ -252,7 +253,7 @@ export default function UserSearchAlerts({ onNavigate }) {
             {/* Warning note */}
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 mb-3">
               <p className="text-yellow-400 text-xs font-bold leading-relaxed">
-                ⚠️ Feature names must be written <strong>exactly</strong> as they appear on the property listing
+                âš ï¸ Feature names must be written <strong>exactly</strong> as they appear on the property listing
                 (e.g. <em>"Elevator"</em>, <em>"Pool"</em>, <em>"Emergency Stairs"</em>).
                 If the spelling doesn't match, the alert won't trigger.
               </p>
@@ -315,7 +316,7 @@ export default function UserSearchAlerts({ onNavigate }) {
         </form>
       </div>
 
-      {/* ── Alerts list ── */}
+      {/* â"€â"€ Alerts list â"€â"€ */}
       {loading ? (
         <div className="flex items-center justify-center py-12 gap-2 text-white/30">
           <Loader size={16} className="animate-spin" />
@@ -325,7 +326,7 @@ export default function UserSearchAlerts({ onNavigate }) {
         <div className="py-16 text-center space-y-4">
           <Search size={36} className="mx-auto text-white/15" />
           <p className="text-white/30 text-sm font-bold uppercase tracking-widest">No alerts yet</p>
-          <p className="text-white/20 text-xs">Create one above — we'll ping you when a match is found.</p>
+          <p className="text-white/20 text-xs">Create one above  -  we'll ping you when a match is found.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -352,12 +353,12 @@ export default function UserSearchAlerts({ onNavigate }) {
                     <div className="flex flex-wrap gap-2">
                       {a.qyteti && (
                         <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-white/60">
-                          📍 {a.qyteti}
+                          ðŸ" {a.qyteti}
                         </span>
                       )}
                       {a.cmimi_max && (
                         <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-white/60">
-                          ≤ €{Number(a.cmimi_max).toLocaleString()}
+                          â‰¤ €{Number(a.cmimi_max).toLocaleString()}
                         </span>
                       )}
                       {a.dhomat && (
@@ -380,7 +381,7 @@ export default function UserSearchAlerts({ onNavigate }) {
                       <div className="flex flex-wrap gap-1.5">
                         {features.map(f => (
                           <span key={f} className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                            ✓ {f}
+                            âœ" {f}
                           </span>
                         ))}
                       </div>
@@ -411,3 +412,4 @@ export default function UserSearchAlerts({ onNavigate }) {
     </div>
   );
 }
+

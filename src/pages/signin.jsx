@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '../lib/api';
-import { setCurrentUser, normalizeRole, DASHBOARD_VIEWS } from '../lib/auth';
+import { setCurrentUser, setAuthToken, setRefreshToken, normalizeRole, DASHBOARD_VIEWS } from '../lib/auth';
 
 const SignIn = ({ onNavigate, onSignIn }) => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
@@ -19,6 +19,9 @@ const SignIn = ({ onNavigate, onSignIn }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
       });
+      // Store access + refresh tokens
+      if (data.token)        setAuthToken(data.token);
+      if (data.refreshToken) setRefreshToken(data.refreshToken);
       const user = { ...data.user, role: normalizeRole(data.user.role) };
       setCurrentUser(user);
       if (onSignIn) onSignIn(user);

@@ -172,13 +172,13 @@ export default function AdminAnalytics({ onBack }) {
 
   useEffect(() => {
     Promise.all([
-      apiFetch('/api/properties').catch(() => []),
+      apiFetch('/api/properties?limit=100').catch(() => ({ data: [] })),
       apiFetch('/api/contracts').catch(() => []),
       apiFetch('/api/visits').catch(() => []),
       apiFetch('/api/users').catch(() => []),
       apiFetch('/api/expenses').catch(() => []),
     ]).then(([p, c, v, u, e]) => {
-      setProperties(Array.isArray(p) ? p : []);
+      setProperties(Array.isArray(p) ? p : (p?.data ?? []));
       setContracts(Array.isArray(c)  ? c : []);
       setVisits(Array.isArray(v)     ? v : []);
       setUsers(Array.isArray(u)      ? u : []);

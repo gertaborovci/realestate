@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileText, Building2, User, Loader, Trash2, RefreshCw,
   PenLine, CheckCircle2, Plus, X, Pencil, AlertTriangle,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// â"€â"€â"€ helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const STATUS_STYLE = {
   'Pending Signature': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
   'Active':            'bg-blue-500/10   text-blue-400   border-blue-500/30',
@@ -24,7 +25,7 @@ const inputCls =
   'w-full bg-[#0a0a0a] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 disabled:opacity-50';
 const labelCls = 'block text-[9px] font-black tracking-widest uppercase text-white/40 mb-1.5';
 
-// ─── Modal shell ─────────────────────────────────────────────────────────────
+// â"€â"€â"€ Modal shell â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
@@ -40,7 +41,7 @@ const Modal = ({ title, onClose, children }) => (
   </div>
 );
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// â"€â"€â"€ Main component â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const ContractsPage = () => {
   const [contracts,   setContracts]   = useState([]);
   const [properties,  setProperties]  = useState([]);
@@ -62,7 +63,7 @@ const ContractsPage = () => {
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   const [editForm,   setEditForm]   = useState({});
 
-  // ── loaders ────────────────────────────────────────────────────────────────
+  // â"€â"€ loaders â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const loadContracts = useCallback(async () => {
     setLoading(true);
     try {
@@ -77,14 +78,14 @@ const ContractsPage = () => {
 
   const loadSupport = useCallback(async () => {
     try {
-      const [propsData, usersData, agentsData] = await Promise.all([
-        apiFetch('/api/properties'),
+      const [propsRaw, usersData, agentsRaw] = await Promise.all([
+        apiFetch('/api/properties?limit=100'),
         apiFetch('/api/users'),
-        apiFetch('/api/agents'),
+        apiFetch('/api/agents?limit=100'),
       ]);
-      setProperties(Array.isArray(propsData)  ? propsData  : []);
-      setUsers(Array.isArray(usersData)        ? usersData.filter((u) => u.role === 'user') : []);
-      setAgents(Array.isArray(agentsData)      ? agentsData : []);
+      setProperties(Array.isArray(propsRaw)  ? propsRaw  : (propsRaw?.data  ?? []));
+      setUsers(Array.isArray(usersData)       ? usersData.filter((u) => u.role === 'user') : []);
+      setAgents(Array.isArray(agentsRaw)      ? agentsRaw : (agentsRaw?.data ?? []));
     } catch (err) {
       console.error('Failed to load support data:', err);
     }
@@ -104,7 +105,7 @@ const ContractsPage = () => {
     }));
   };
 
-  // ── CREATE ─────────────────────────────────────────────────────────────────
+  // â"€â"€ CREATE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.property_id || !createForm.user_id) {
@@ -136,7 +137,7 @@ const ContractsPage = () => {
     }
   };
 
-  // ── EDIT (open modal) ──────────────────────────────────────────────────────
+  // â"€â"€ EDIT (open modal) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const openEdit = (c) => {
     setEditingContract(c);
     setEditForm({
@@ -148,7 +149,7 @@ const ContractsPage = () => {
     setError('');
   };
 
-  // ── UPDATE ─────────────────────────────────────────────────────────────────
+  // â"€â"€ UPDATE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleUpdate = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -173,7 +174,7 @@ const ContractsPage = () => {
     }
   };
 
-  // ── STATUS ─────────────────────────────────────────────────────────────────
+  // â"€â"€ STATUS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleStatus = async (id, status) => {
     setUpdating(id);
     try {
@@ -184,13 +185,13 @@ const ContractsPage = () => {
       });
       loadContracts();
     } catch (err) {
-      alert(err.message || 'Failed to update status.');
+      await showAlert(err.message || 'Failed to update status.', 'error');
     } finally {
       setUpdating(null);
     }
   };
 
-  // ── SIGN ───────────────────────────────────────────────────────────────────
+  // â"€â"€ SIGN â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleSign = async (id, party) => {
     setSigning(`${id}-${party}`);
     try {
@@ -199,24 +200,24 @@ const ContractsPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ party }),
       });
-      if (res.finalized) alert('Both parties signed — contract is now Finalized!');
+      if (res.finalized) await showAlert('Both parties signed  -  contract is now Finalized!');
       loadContracts();
     } catch (err) {
-      alert(err.message || 'Failed to record signature.');
+      await showAlert(err.message || 'Failed to record signature.', 'error');
     } finally {
       setSigning(null);
     }
   };
 
-  // ── DELETE ─────────────────────────────────────────────────────────────────
+  // â"€â"€ DELETE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this contract and all its linked payments?')) return;
+    if (!await showConfirm('Delete this contract and all its linked payments?')) return;
     setDeleting(id);
     try {
       await apiFetch(`/api/contracts/${id}`, { method: 'DELETE' });
       loadContracts();
     } catch (err) {
-      alert(err.message || 'Failed to delete.');
+      await showAlert(err.message || 'Failed to delete.', 'error');
     } finally {
       setDeleting(null);
     }
@@ -229,7 +230,7 @@ const ContractsPage = () => {
     cancelled: contracts.filter((c) => c.status === 'Cancelled').length,
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // â"€â"€ Render â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   return (
     <div className="space-y-10">
 
@@ -353,7 +354,7 @@ const ContractsPage = () => {
                     <Building2 size={13} className="text-white/30 mt-0.5 shrink-0" />
                     <div>
                       <p className="text-[9px] font-black tracking-widest text-white/30 uppercase mb-0.5">Property</p>
-                      <p className="text-sm font-semibold text-white">{c.property_title || '—'}</p>
+                      <p className="text-sm font-semibold text-white">{c.property_title || ' - '}</p>
                       <p className="text-[10px] text-white/40">{c.property_location || ''}</p>
                     </div>
                   </div>
@@ -361,13 +362,13 @@ const ContractsPage = () => {
                     <User size={13} className="text-white/30 mt-0.5 shrink-0" />
                     <div>
                       <p className="text-[9px] font-black tracking-widest text-white/30 uppercase mb-0.5">Buyer</p>
-                      <p className="text-sm text-white">{c.client_name || '—'}</p>
+                      <p className="text-sm text-white">{c.client_name || ' - '}</p>
                       <p className="text-[10px] text-white/40">{c.client_email || ''}</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-[9px] font-black tracking-widest text-white/30 uppercase mb-0.5">Agent / Type</p>
-                    <p className="text-sm text-white">{c.agent_name || '—'}</p>
+                    <p className="text-sm text-white">{c.agent_name || ' - '}</p>
                     <p className="text-[10px] text-white/40 uppercase">{c.type}</p>
                   </div>
                 </div>
@@ -389,7 +390,7 @@ const ContractsPage = () => {
                   <div>
                     <p className="text-[9px] font-black tracking-widest text-white/30 uppercase mb-1">Total Paid</p>
                     <p className={`text-sm font-bold ${depositMet ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {fmt(paid)}{depositMet ? ' ✓' : ''}
+                      {fmt(paid)}{depositMet ? ' âœ"' : ''}
                     </p>
                   </div>
                 </div>
@@ -437,7 +438,7 @@ const ContractsPage = () => {
         </div>
       )}
 
-      {/* ── CREATE MODAL ─────────────────────────────────────────────────── */}
+      {/* â"€â"€ CREATE MODAL â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {showCreate && (
         <Modal title="New Contract" onClose={() => setShowCreate(false)}>
           {error && (
@@ -456,10 +457,10 @@ const ContractsPage = () => {
                 onChange={(e) => handlePropertySelect(e.target.value)}
                 className={inputCls}
               >
-                <option value="">— Select a property —</option>
+                <option value=""> -  Select a property  - </option>
                 {properties.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.title} — {p.location} (€{Number(p.price).toLocaleString('en')})
+                    {p.title}  -  {p.location} (€{Number(p.price).toLocaleString('en')})
                   </option>
                 ))}
               </select>
@@ -474,10 +475,10 @@ const ContractsPage = () => {
                 onChange={(e) => setCreateForm((p) => ({ ...p, user_id: e.target.value }))}
                 className={inputCls}
               >
-                <option value="">— Select a buyer —</option>
+                <option value=""> -  Select a buyer  - </option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.username} — {u.email}
+                    {u.username}  -  {u.email}
                   </option>
                 ))}
               </select>
@@ -491,10 +492,10 @@ const ContractsPage = () => {
                 onChange={(e) => setCreateForm((p) => ({ ...p, agent_id: e.target.value }))}
                 className={inputCls}
               >
-                <option value="">— No agent —</option>
+                <option value=""> -  No agent  - </option>
                 {agents.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.username} — {a.email}
+                    {a.username}  -  {a.email}
                   </option>
                 ))}
               </select>
@@ -576,9 +577,9 @@ const ContractsPage = () => {
         </Modal>
       )}
 
-      {/* ── EDIT MODAL ───────────────────────────────────────────────────── */}
+      {/* â"€â"€ EDIT MODAL â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {editingContract && (
-        <Modal title={`Edit — ${editingContract.contract_number || `#${editingContract.id}`}`} onClose={() => setEditingContract(null)}>
+        <Modal title={`Edit  -  ${editingContract.contract_number || `#${editingContract.id}`}`} onClose={() => setEditingContract(null)}>
           {error && (
             <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-6 text-red-400 text-sm">
               <AlertTriangle size={15} /> {error}
@@ -589,11 +590,11 @@ const ContractsPage = () => {
           <div className="grid grid-cols-2 gap-4 bg-[#0a0a0a] rounded-2xl p-4 mb-6">
             <div>
               <p className="text-[9px] font-black tracking-widest text-white/30 uppercase mb-1">Property</p>
-              <p className="text-sm text-white">{editingContract.property_title || '—'}</p>
+              <p className="text-sm text-white">{editingContract.property_title || ' - '}</p>
             </div>
             <div>
               <p className="text-[9px] font-black tracking-widest text-white/30 uppercase mb-1">Buyer</p>
-              <p className="text-sm text-white">{editingContract.client_name || '—'}</p>
+              <p className="text-sm text-white">{editingContract.client_name || ' - '}</p>
             </div>
           </div>
 
@@ -614,7 +615,7 @@ const ContractsPage = () => {
 
             {/* Price */}
             <div>
-              <label className={labelCls}>Property Price (€) — deposit &amp; remaining auto-recalculate</label>
+              <label className={labelCls}>Property Price (€)  -  deposit &amp; remaining auto-recalculate</label>
               <input
                 type="number" min="1" step="0.01"
                 value={editForm.property_price}
@@ -649,10 +650,10 @@ const ContractsPage = () => {
                 onChange={(e) => setEditForm((p) => ({ ...p, agent_id: e.target.value }))}
                 className={inputCls}
               >
-                <option value="">— No agent —</option>
+                <option value=""> -  No agent  - </option>
                 {agents.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.username} — {a.email}
+                    {a.username}  -  {a.email}
                   </option>
                 ))}
               </select>
@@ -696,3 +697,4 @@ const ContractsPage = () => {
 };
 
 export default ContractsPage;
+

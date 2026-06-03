@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Star, X, Pencil, Trash2, Check, Loader, ShieldCheck, MessageSquare } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
+import { showAlert, showConfirm } from '../lib/modal';
 
-// ─── Half-star display ────────────────────────────────────────────────────────
+// â"€â"€â"€ Half-star display â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function Stars({ rating, size = 14 }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -25,7 +26,7 @@ function Stars({ rating, size = 14 }) {
   );
 }
 
-// ─── Clickable star input ─────────────────────────────────────────────────────
+// â"€â"€â"€ Clickable star input â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function StarInput({ value, onChange }) {
   const [hovered, setHovered] = useState(null);
   return (
@@ -44,7 +45,7 @@ function StarInput({ value, onChange }) {
   );
 }
 
-// ─── User avatar ──────────────────────────────────────────────────────────────
+// â"€â"€â"€ User avatar â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function Avatar({ name, photoUrl, size = 36 }) {
   const initials = (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
   if (photoUrl) {
@@ -60,7 +61,7 @@ function Avatar({ name, photoUrl, size = 36 }) {
   );
 }
 
-// ─── Star distribution bar ────────────────────────────────────────────────────
+// â"€â"€â"€ Star distribution bar â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function RatingBreakdown({ reviews }) {
   const total = reviews.length;
   if (!total) return null;
@@ -93,7 +94,7 @@ function RatingBreakdown({ reviews }) {
   );
 }
 
-// ─── Inline edit form for a review ───────────────────────────────────────────
+// â"€â"€â"€ Inline edit form for a review â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function InlineEditReview({ review, onSave, onCancel }) {
   const [rating,  setRating]  = useState(Number(review.rating));
   const [comment, setComment] = useState(review.comment || '');
@@ -124,7 +125,7 @@ function InlineEditReview({ review, onSave, onCancel }) {
   );
 }
 
-// ─── Single review card ───────────────────────────────────────────────────────
+// â"€â"€â"€ Single review card â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function ReviewCard({ review, currentUserId, onEdit, onDelete, isAdmin, onAdminEdit, onAdminDelete }) {
   const isOwn = review.user_id === currentUserId;
   const [adminEditing, setAdminEditing] = useState(false);
@@ -191,7 +192,7 @@ function ReviewCard({ review, currentUserId, onEdit, onDelete, isAdmin, onAdminE
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// â"€â"€â"€ Main component â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 export default function PropertyReviews({ propertyId, propertyTitle, showModal = false, onClose, defaultOpen = false, isAdmin = false }) {
   const [reviews,    setReviews]    = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -255,7 +256,7 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
     } catch (err) {
       // Friendly message for the rare case of a race condition
       const msg = err.message || '';
-      setError(msg.includes('Duplicate') ? 'You already reviewed this property — your existing review has been updated.' : msg || 'Failed to submit.');
+      setError(msg.includes('Duplicate') ? 'You already reviewed this property  -  your existing review has been updated.' : msg || 'Failed to submit.');
       if (msg.includes('Duplicate')) { load(); } // reload to show the existing review
     } finally {
       setSubmitting(false);
@@ -263,7 +264,7 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Remove your review?')) return;
+    if (!await showConfirm('Remove your review?')) return;
     await apiFetch(`/api/property-reviews/${id}`, { method: 'DELETE' });
     setMyRating(0); setMyComment('');
     load();
@@ -280,7 +281,7 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
     ? (reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length).toFixed(1)
     : null;
 
-  // ── Inline summary (shown on property page, click to expand) ──
+  // â"€â"€ Inline summary (shown on property page, click to expand) â"€â"€
   if (!showAll) {
     return (
       <button
@@ -290,7 +291,7 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
         <MessageSquare size={16} className="text-white/40 shrink-0" />
         <div className="flex-1">
           <span className="text-white/60 text-sm font-bold">
-            {reviews.length === 0 ? 'No reviews yet — be the first' : `${reviews.length} review${reviews.length !== 1 ? 's' : ''}`}
+            {reviews.length === 0 ? 'No reviews yet  -  be the first' : `${reviews.length} review${reviews.length !== 1 ? 's' : ''}`}
           </span>
           {avg && (
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -299,12 +300,12 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
             </div>
           )}
         </div>
-        <span className="text-white/30 text-xs font-bold group-hover:text-white transition">View all →</span>
+        <span className="text-white/30 text-xs font-bold group-hover:text-white transition">View all â†'</span>
       </button>
     );
   }
 
-  // ── Full panel ──
+  // â"€â"€ Full panel â"€â"€
   const panel = (
     <div className={showModal ? 'w-full' : 'space-y-6'}>
 
@@ -316,18 +317,18 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
         </div>
         {showModal
           ? <button onClick={onClose} className="text-white/30 hover:text-white transition p-1"><X size={18} /></button>
-          : <button onClick={() => setShowAll(false)} className="text-white/30 hover:text-white text-xs font-bold transition">← Back</button>
+          : <button onClick={() => setShowAll(false)} className="text-white/30 hover:text-white text-xs font-bold transition">â† Back</button>
         }
       </div>
 
       {/* Rating breakdown */}
       {reviews.length > 0 && <RatingBreakdown reviews={reviews} />}
 
-      {/* Write / edit review — only shown when no review yet OR actively editing */}
+      {/* Write / edit review  -  only shown when no review yet OR actively editing */}
       {!isAdmin && user && (!myExistingReview || editingId) ? (
         <form onSubmit={handleSubmit} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
-            {editingId || myExistingReview ? 'Your review — click Submit to update' : 'Leave a review'}
+            {editingId || myExistingReview ? 'Your review  -  click Submit to update' : 'Leave a review'}
           </p>
           <StarInput value={myRating} onChange={setMyRating} />
           <textarea value={myComment} onChange={e => setMyComment(e.target.value)} rows={3}
@@ -373,7 +374,7 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
                 load();
               }}
               onAdminDelete={async (id) => {
-                if (!window.confirm('Delete this review?')) return;
+                if (!await showConfirm('Delete this review?')) return;
                 await apiFetch(`/api/property-reviews/${id}`, { method: 'DELETE' });
                 load();
               }}
@@ -395,3 +396,4 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
   }
   return <div>{panel}</div>;
 }
+

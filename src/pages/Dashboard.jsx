@@ -14,9 +14,10 @@ const Dashboard = () => {
 
   // 3. Fetch real data from your Node.js Backend
   const fetchProperties = () => {
-    fetch(`${API_BASE}/api/properties`)
+    fetch(`${API_BASE}/api/properties?limit=100`)
       .then(res => res.json())
-      .then(data => setProperties(data))
+      // API now returns { data, total, page, pages } — extract array
+      .then(raw => setProperties(Array.isArray(raw) ? raw : (raw?.data ?? [])))
       .catch(err => console.error("Error fetching properties:", err));
   };
 

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   CreditCard, Plus, Loader, CheckCircle, AlertTriangle,
   Trash2, RefreshCw,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { showAlert, showConfirm } from '../lib/modal';
 
 const PAYMENT_METHODS  = ['Bank Transfer', 'Cash', 'Credit Card', 'Crypto', 'Other'];
 const PAYMENT_TYPES    = ['Deposit', 'Installment', 'Final Payment', 'Other'];
@@ -98,20 +99,20 @@ const ContractTransactionsPage = () => {
       });
       refresh();
     } catch (err) {
-      alert(err.message || 'Failed to update.');
+      await showAlert(err.message || 'Failed to update.', 'error');
     } finally {
       setUpdatingTx(null);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this payment record?')) return;
+    if (!await showConfirm('Delete this payment record?')) return;
     setDeletingTx(id);
     try {
       await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' });
       loadTransactions();
     } catch (err) {
-      alert(err.message || 'Failed to delete.');
+      await showAlert(err.message || 'Failed to delete.', 'error');
     } finally {
       setDeletingTx(null);
     }
@@ -180,10 +181,10 @@ const ContractTransactionsPage = () => {
               required disabled={loadingC}
               className="w-full bg-[#0a0a0a] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 disabled:opacity-50"
             >
-              <option value="">— Select a contract —</option>
+              <option value="">-- Select a contract --</option>
               {contracts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.contract_number || `#${c.id}`} · {c.property_title} — {c.client_name} ({c.status})
+                  {c.contract_number || `#${c.id}`} · {c.property_title}  -  {c.client_name} ({c.status})
                 </option>
               ))}
             </select>
@@ -319,7 +320,7 @@ const ContractTransactionsPage = () => {
               <span className="text-sm text-white/60">
                 {tx.payment_date
                   ? new Date(tx.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                  : '—'}
+                  : ' - '}
               </span>
 
               <span className="text-xs text-white/50">{tx.method}</span>
@@ -356,3 +357,4 @@ const ContractTransactionsPage = () => {
 };
 
 export default ContractTransactionsPage;
+
