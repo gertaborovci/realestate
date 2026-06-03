@@ -166,7 +166,7 @@ export default function UserSearchAlerts({ onNavigate }) {
               className="flex items-start justify-between gap-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl px-5 py-4">
               <div className="flex-1">
                 <p className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-1">
-                  ðŸ  New Match Found
+                  🏠  New Match Found
                 </p>
                 <p className="text-white/80 text-sm">{n.message}</p>
               </div>
@@ -175,7 +175,7 @@ export default function UserSearchAlerts({ onNavigate }) {
                   onClick={() => { dismissNotif(n.id); if (onNavigate) onNavigate('properties'); }}
                   className="px-4 py-2 rounded-xl bg-white text-black text-xs font-black uppercase tracking-wider hover:bg-zinc-200 transition"
                 >
-                  View â†'
+                  View →'
                 </button>
                 <button onClick={() => dismissNotif(n.id)}
                   className="text-white/30 hover:text-white transition p-1">
@@ -194,7 +194,7 @@ export default function UserSearchAlerts({ onNavigate }) {
         </div>
       )}
 
-      {/* â"€â"€ Form â"€â"€ */}
+      {/* ── Form ── */}
       <div className="bg-zinc-900/60 border border-white/8 rounded-2xl p-8 space-y-6">
         <h3 className="text-sm font-black uppercase tracking-widest text-white/60 flex items-center gap-2">
           {editingId ? <><Pencil size={14} /> Edit Alert</> : <><Plus size={14} /> New Alert</>}
@@ -253,7 +253,7 @@ export default function UserSearchAlerts({ onNavigate }) {
             {/* Warning note */}
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 mb-3">
               <p className="text-yellow-400 text-xs font-bold leading-relaxed">
-                âš ï¸ Feature names must be written <strong>exactly</strong> as they appear on the property listing
+                ⚠️ Feature names must be written <strong>exactly</strong> as they appear on the property listing
                 (e.g. <em>"Elevator"</em>, <em>"Pool"</em>, <em>"Emergency Stairs"</em>).
                 If the spelling doesn't match, the alert won't trigger.
               </p>
@@ -316,7 +316,7 @@ export default function UserSearchAlerts({ onNavigate }) {
         </form>
       </div>
 
-      {/* â"€â"€ Alerts list â"€â"€ */}
+      {/* ── Alerts list ── */}
       {loading ? (
         <div className="flex items-center justify-center py-12 gap-2 text-white/30">
           <Loader size={16} className="animate-spin" />
@@ -353,12 +353,12 @@ export default function UserSearchAlerts({ onNavigate }) {
                     <div className="flex flex-wrap gap-2">
                       {a.qyteti && (
                         <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-white/60">
-                          ðŸ" {a.qyteti}
+                          📍 {a.qyteti}
                         </span>
                       )}
                       {a.cmimi_max && (
                         <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-white/60">
-                          â‰¤ €{Number(a.cmimi_max).toLocaleString()}
+                          ≤ €{Number(a.cmimi_max).toLocaleString()}
                         </span>
                       )}
                       {a.dhomat && (
@@ -381,7 +381,7 @@ export default function UserSearchAlerts({ onNavigate }) {
                       <div className="flex flex-wrap gap-1.5">
                         {features.map(f => (
                           <span key={f} className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                            âœ" {f}
+                            ✓ {f}
                           </span>
                         ))}
                       </div>

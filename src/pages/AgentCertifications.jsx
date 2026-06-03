@@ -95,11 +95,7 @@ const AgentCertifications = () => {
       fd.append('type',     form.type);
       fd.append('agent_id', agentId);
 
-      const res = await fetch(`${API_BASE}/api/certifications`, { method: 'POST', body: fd });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Server error ${res.status}`);
-      }
+      await apiFetch('/api/certifications', { method: 'POST', body: fd });
       closeModal();
       loadCertifications();
     } catch (err) {
@@ -118,14 +114,7 @@ const AgentCertifications = () => {
       fd.append('type', form.type);
       if (form.file) fd.append('image', form.file);
 
-      const res = await fetch(`${API_BASE}/api/certifications/${modal.cert.id}`, {
-        method: 'PUT',
-        body: fd,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Server error ${res.status}`);
-      }
+      await apiFetch(`/api/certifications/${modal.cert.id}`, { method: 'PUT', body: fd });
       closeModal();
       loadCertifications();
     } catch (err) {

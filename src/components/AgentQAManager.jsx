@@ -9,7 +9,7 @@ const EMPTY    = { question: '', answer: '' };
 
 // ── Single Q&A item form row ──────────────────────────────────────────────────
 function QARow({ item, onSave, onDelete }) {
-  const [editing, setEditing] = useState(!item.id); // new items start in edit mode
+  const [editing, setEditing] = useState(item.id == null); // new items (no id) start in edit mode
   const [form,    setForm]    = useState({ question: item.question || '', answer: item.answer || '' });
   const [saving,  setSaving]  = useState(false);
 
@@ -28,7 +28,7 @@ function QARow({ item, onSave, onDelete }) {
           <p className="text-white text-sm font-semibold">{item.question}</p>
           <p className="text-gray-500 text-xs mt-1 line-clamp-2">{item.answer}</p>
         </div>
-        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition shrink-0">
+        <div className="flex gap-1.5 shrink-0">
           <button onClick={() => setEditing(true)}
             className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition">
             <Pencil size={12} />
@@ -60,12 +60,12 @@ function QARow({ item, onSave, onDelete }) {
           className="flex items-center gap-1.5 bg-white hover:bg-zinc-200 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition disabled:opacity-50">
           {saving ? <Loader size={11} className="animate-spin" /> : <Check size={11} />} Save
         </button>
-        {item.id && (
+        {item.id ? (
           <button onClick={() => setEditing(false)}
             className="px-4 py-2 rounded-xl border border-gray-800 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-wider transition">
             Cancel
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -107,38 +107,44 @@ export default function AgentQAManager({ agentId, properties = [] }) {
 
   // ── Global save/delete ────────────────────────────────────────────────────
   const saveGlobal = async (id, form) => {
-    if (id) {
+    // id may be 0 before DB fix — treat 0 as "no id" (new item)
+    const isExisting = id != null && id !== 0;
+    if (isExisting) {
       await apiFetch(`/api/qa/global/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
+      // Update in-place — no reload so no duplicates flash
+      setGlobalItems(prev => prev.map(item => item.id === id ? { ...item, ...form } : item));
     } else {
       await apiFetch('/api/qa/global', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ agent_id: agentId, ...form }) });
+      // Reload to get the server-assigned id
+      load();
     }
     setShowNew(false);
-    load();
   };
 
   const deleteGlobal = async (id) => {
     if (!await showConfirm('Remove this question from your global Q&A?')) return;
     await apiFetch(`/api/qa/global/${id}`, { method:'DELETE' });
-    load();
+    setGlobalItems(prev => prev.filter(item => item.id !== id));
   };
 
   // ── Property-specific save/delete ─────────────────────────────────────────
   const savePropSpecific = async (id, form) => {
-    if (id) {
+    const isExisting = id != null && id !== 0;
+    if (isExisting) {
       await apiFetch(`/api/qa/specific/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
+      setPropItems(prev => prev.map(item => item.id === id ? { ...item, ...form } : item));
     } else {
       await apiFetch('/api/qa/specific', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ agent_id: agentId, property_id: selPropId, ...form }) });
+      const data = await apiFetch(`/api/qa/property/${selPropId}/specific`);
+      setPropItems(Array.isArray(data) ? data : []);
     }
     setShowPropNew(false);
-    const data = await apiFetch(`/api/qa/property/${selPropId}/specific`);
-    setPropItems(Array.isArray(data) ? data : []);
   };
 
   const deletePropSpecific = async (id) => {
     if (!await showConfirm('Remove this Q&A?')) return;
     await apiFetch(`/api/qa/specific/${id}`, { method:'DELETE' });
-    const data = await apiFetch(`/api/qa/property/${selPropId}/specific`);
-    setPropItems(Array.isArray(data) ? data : []);
+    setPropItems(prev => prev.filter(item => item.id !== id));
   };
 
   const clearPropQA = async () => {

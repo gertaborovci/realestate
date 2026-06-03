@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Tag, List } from 'lucide-react';
-import { API_BASE } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 const PropertyFeatures = ({ propertyId, onBack }) => {
   const [features, setFeatures] = useState([]);
@@ -10,49 +10,36 @@ const PropertyFeatures = ({ propertyId, onBack }) => {
   // 1. Fetch features from the database
   const fetchFeatures = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/properties/${propertyId}/features`);
-      if (res.ok) {
-        const data = await res.json();
-        setFeatures(data);
-      }
+      const data = await apiFetch(`/api/properties/${propertyId}/features`);
+      setFeatures(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching features:", error);
     }
   };
 
-  useEffect(() => {
-    fetchFeatures();
-  }, [propertyId]);
+  useEffect(() => { fetchFeatures(); }, [propertyId]);
 
-  // 2. Add a new feature
   const handleAddFeature = async (e) => {
     e.preventDefault();
     if (!emertimi || !vlera) return;
-
     try {
-      const res = await fetch(`${API_BASE}/api/properties/${propertyId}/features`, {
+      await apiFetch(`/api/properties/${propertyId}/features`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emertimi, vlera })
+        body: JSON.stringify({ emertimi, vlera }),
       });
-
-      if (res.ok) {
-        setEmertimi('');
-        setVlera('');
-        fetchFeatures(); // Refresh the list automatically
-      }
+      setEmertimi('');
+      setVlera('');
+      fetchFeatures();
     } catch (error) {
       console.error("Error adding feature:", error);
     }
   };
 
-  // 3. Delete a feature
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/properties/features/${id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) fetchFeatures();
+      await apiFetch(`/api/properties/features/${id}`, { method: 'DELETE' });
+      fetchFeatures();
     } catch (error) {
       console.error("Error deleting feature:", error);
     }

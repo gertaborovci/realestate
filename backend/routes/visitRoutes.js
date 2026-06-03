@@ -89,7 +89,7 @@ router.get('/agent/:agent_id',                      asyncHandler(visitController
 router.get('/agent/:agent_id/consultations',        asyncHandler(visitController.getConsultationsByAgent));
 router.get('/property/:property_id',                asyncHandler(visitController.getByProperty));
 router.get('/:id',                                  asyncHandler(visitController.getById));
-router.post('/',                                    asyncHandler(visitController.create));
+router.post('/',      requireRole('admin', 'agent', 'user'), asyncHandler(visitController.create));
 router.put('/:id',    requireRole('admin', 'agent', 'user'), asyncHandler(visitController.update));
 router.delete('/:id', requireRole('admin', 'agent', 'user'), asyncHandler(visitController.remove));
 

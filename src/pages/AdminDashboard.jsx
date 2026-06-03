@@ -342,7 +342,10 @@ function BroadcastPanel() {
 }
 
 const AdminDashboard = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('kn_admin_tab') || 'dashboard');
+
+  // Persist admin panel tab across refreshes
+  React.useEffect(() => { sessionStorage.setItem('kn_admin_tab', activeTab); }, [activeTab]);
   const [editingProperty, setEditingProperty] = useState(null);
   const [properties, setProperties] = useState([]);
   const [visits, setVisits] = useState([]);
@@ -353,8 +356,7 @@ const AdminDashboard = ({ onBack }) => {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/properties?limit=100`);
-      const raw = await response.json();
+      const raw = await apiFetch('/api/properties?limit=100');
       // API now returns { data, total, page, pages }
       setProperties(Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []));
     } catch (error) {
@@ -391,10 +393,10 @@ const AdminDashboard = ({ onBack }) => {
 
   const deleteProperty = async (id) => {
     if (await showConfirm('⚠️ Are you sure?')) {
-      const response = await fetch(`${API_BASE}/api/properties/${id}`, { method: 'DELETE' });
-      if (response.ok) {
+      try {
+        await apiFetch(`/api/properties/${id}`, { method: 'DELETE' });
         setProperties((prev) => prev.filter((p) => p.id !== id));
-      }
+      } catch (err) { /* silent */ }
     }
   };
 

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users, Trash2, Pencil, X, Check,
-  ChevronDown, ChevronUp, Heart, Star, MapPin, Trash, User,
+  ChevronDown, ChevronUp, Heart, Star, MapPin, Trash, User, Camera,
 } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
 import { showAlert, showConfirm } from '../lib/modal';
@@ -152,9 +152,26 @@ const ManageUsers = () => {
     finally { setRatsLoading(false); }
   };
 
-  /* ── admin delete agent photo ── */
+  const photoInputRef = useRef(null);
+
+  /* ── admin upload/change user photo ── */
+  const handleUploadPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('photo', file);
+    try {
+      const data = await apiFetch(`/api/users/${editingUser.id}/photo`, { method: 'POST', body: fd });
+      const updated = { ...editingUser, photo_url: data.photo_url };
+      setEditingUser(updated);
+      setUsers((prev) => prev.map((u) => u.id === editingUser.id ? { ...u, photo_url: data.photo_url } : u));
+    } catch (e) { await showAlert(e.message, 'error'); }
+    e.target.value = '';
+  };
+
+  /* ── admin delete user photo ── */
   const handleDeletePhoto = async () => {
-    if (!await showConfirm("Remove this agent's profile photo?")) return;
+    if (!await showConfirm("Remove this user's profile photo?")) return;
     try {
       await apiFetch(`/api/users/${editingUser.id}/photo`, { method: 'DELETE' });
       const updated = { ...editingUser, photo_url: null };
@@ -214,20 +231,17 @@ const ManageUsers = () => {
                   >
                     <td className="p-5">
                       <div className="flex items-center gap-3">
-                        {/* Show photo only for agents */}
-                        {u.role === 'agent' ? (
-                          u.photo_url ? (
-                            <img
-                              src={u.photo_url.startsWith('http') ? u.photo_url : `${API_BASE}${u.photo_url}`}
-                              alt={u.username}
-                              className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                              <User size={16} className="text-white/30" />
-                            </div>
-                          )
-                        ) : null}
+                        {u.photo_url ? (
+                          <img
+                            src={u.photo_url.startsWith('http') ? u.photo_url : `${API_BASE}${u.photo_url}`}
+                            alt={u.username}
+                            className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                            <User size={16} className="text-white/30" />
+                          </div>
+                        )}
                         <span className="font-semibold text-white">{u.username}</span>
                       </div>
                     </td>
@@ -270,30 +284,40 @@ const ManageUsers = () => {
             {/* Header */}
             <div className="flex items-center justify-between px-8 py-6 border-b border-white/10 sticky top-0 bg-[#0d0d0d] z-10">
               <div className="flex items-center gap-4">
-                {editingUser.role === 'agent' && (
-                  <div className="relative group">
+                {/* Photo — shown for all roles */}
+                <div className="relative group shrink-0">
+                  <div className="w-14 h-14 rounded-full overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
                     {editingUser.photo_url ? (
                       <img
                         src={editingUser.photo_url.startsWith('http') ? editingUser.photo_url : `${API_BASE}${editingUser.photo_url}`}
                         alt={editingUser.username}
-                        className="w-12 h-12 rounded-full object-cover border border-white/10"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                        <User size={20} className="text-white/30" />
-                      </div>
-                    )}
-                    {editingUser.photo_url && (
-                      <button
-                        onClick={handleDeletePhoto}
-                        title="Remove photo"
-                        className="absolute -bottom-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center transition"
-                      >
-                        <Trash2 size={10} />
-                      </button>
+                      <User size={22} className="text-white/30" />
                     )}
                   </div>
-                )}
+                  {/* Upload overlay */}
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    title="Change photo"
+                    className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition"
+                  >
+                    <Camera size={16} className="text-white" />
+                  </button>
+                  <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleUploadPhoto} />
+                  {/* Delete badge */}
+                  {editingUser.photo_url && (
+                    <button
+                      onClick={handleDeletePhoto}
+                      title="Remove photo"
+                      className="absolute -bottom-0.5 -right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center transition z-10"
+                    >
+                      <Trash2 size={9} />
+                    </button>
+                  )}
+                </div>
                 <div>
                   <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/30">Editing</p>
                   <h2 className="text-xl font-black text-white tracking-tight mt-0.5">{editingUser.username}</h2>

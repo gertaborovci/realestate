@@ -16,15 +16,13 @@ router.post('/',
   asyncHandler(testimonialController.create)
 );
 
-// Admin can edit any; users only see the update route but the controller
-// should enforce ownership — admin role required here for simplicity
+// Owner or admin can edit/delete
 router.put('/:id',
-  requireRole('admin'),
+  requireRole('admin', 'agent', 'user'),
   upload.single('photo'),
   asyncHandler(testimonialController.update)
 );
 
-// Admin deletes
-router.delete('/:id', requireRole('admin'), asyncHandler(testimonialController.remove));
+router.delete('/:id', requireRole('admin', 'agent', 'user'), asyncHandler(testimonialController.remove));
 
 module.exports = router;

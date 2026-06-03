@@ -55,10 +55,11 @@ async function update(req, res) {
   );
   if (!current) return res.status(404).json({ error: 'Certification not found.' });
 
-  const type             = req.body.type             ?? current.type;
-  const status           = req.body.status           ?? current.status;
-  const expires_at       = 'expires_at'       in req.body ? (req.body.expires_at       || null) : current.expires_at;
-  const rejection_reason = 'rejection_reason' in req.body ? (req.body.rejection_reason || null) : current.rejection_reason;
+  const isAdmin = req.authUser?.role === 'admin';
+  const type             = req.body.type ?? current.type;
+  const status           = isAdmin && req.body.status           ? req.body.status           : current.status;
+  const expires_at       = isAdmin && 'expires_at'       in req.body ? (req.body.expires_at       || null) : current.expires_at;
+  const rejection_reason = isAdmin && 'rejection_reason' in req.body ? (req.body.rejection_reason || null) : current.rejection_reason;
 
   // If a new file was uploaded replace the url; otherwise keep existing
   const documentUrl = req.file ? `/uploads/${req.file.filename}` : current.document_url;

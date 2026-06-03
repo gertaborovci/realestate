@@ -67,53 +67,38 @@ const AddProperty = ({ onBack, onAdd, editData, agentId: agentIdProp }) => {
       const method = isEditing ? 'PUT' : 'POST';
 
       // 1. Save base property data
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          image: '',
-          // Only attach agent_id on create — don't overwrite it on edit
-          ...(agentId && !isEditing ? { agent_id: agentId } : {}),
-        }),
-      });
-
-      if (!response.ok) {
-        console.error('Error saving to server.');
-        return;
-      }
+      const responseData = await apiFetch(
+        isEditing ? `/api/properties/${editData.id}` : '/api/properties',
+        {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            image: '',
+            ...(agentId && !isEditing ? { agent_id: agentId } : {}),
+          }),
+        }
+      );
 
       // 2. Get the property ID
-      const responseData = await response.json();
-      const propertyId   = isEditing ? editData.id : responseData.id;
+      const propertyId = isEditing ? editData.id : responseData.id;
 
       // 3. Upload photos
       if (selectedFiles.length > 0) {
         for (let i = 0; i < selectedFiles.length; i++) {
           const fileObj       = selectedFiles[i];
           const imageFormData = new FormData();
-          imageFormData.append('image',         fileObj.file);
+          imageFormData.append('image',          fileObj.file);
           imageFormData.append('eshte_kryesore', fileObj.isMain);
           imageFormData.append('renditja',       i);
-
           try {
-            const imgUploadRes = await fetch(
-              `${API_BASE}/api/properties/${propertyId}/images`,
-              { method: 'POST', body: imageFormData }
-            );
-            if (!imgUploadRes.ok) {
-              const errorText = await imgUploadRes.text();
-              console.error(`Failed to upload image ${i}:`, errorText);
-            } else {
-              console.log(`Image ${i} uploaded successfully!`);
-            }
+            await apiFetch(`/api/properties/${propertyId}/images`, { method: 'POST', body: imageFormData });
           } catch (err) {
-            console.error(`Network error uploading image ${i}:`, err);
+            console.error(`Failed to upload image ${i}:`, err.message);
           }
         }
       }
 
-      console.log(`Property successfully ${isEditing ? 'modified' : 'saved'}!`);
       setSavedId(propertyId);
       setStep(2);
     } catch (error) {
@@ -122,16 +107,20 @@ const AddProperty = ({ onBack, onAdd, editData, agentId: agentIdProp }) => {
   };
 
   // ── File handlers ───────────────────────────────────────────────────────────
+  const MAX_PHOTOS = 25;
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      const newFiles = files.map((file, index) => ({
-        file,
-        preview: URL.createObjectURL(file),
-        isMain:  selectedFiles.length === 0 && index === 0,
-      }));
-      setSelectedFiles([...selectedFiles, ...newFiles]);
-    }
+    if (!files.length) return;
+    const available = MAX_PHOTOS - selectedFiles.length;
+    if (available <= 0) return; // already at limit
+    const allowed = files.slice(0, available);
+    const newFiles = allowed.map((file, index) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      isMain:  selectedFiles.length === 0 && index === 0,
+    }));
+    setSelectedFiles([...selectedFiles, ...newFiles]);
   };
 
   const removeFile = (indexToRemove) => {
@@ -200,8 +189,8 @@ const AddProperty = ({ onBack, onAdd, editData, agentId: agentIdProp }) => {
               placeholder="Start typing an address…"
             />
             {/* Hidden inputs so lat/lng are submitted with the form */}
-            <input type="hidden" value={formData.latitude}  onChange={() => {}} />
-            <input type="hidden" value={formData.longitude} onChange={() => {}} />
+            <input type="hidden" value={formData.latitude  ?? ''} readOnly />
+            <input type="hidden" value={formData.longitude ?? ''} readOnly />
           </div>
 
           {/* Price */}
@@ -346,19 +335,36 @@ const AddProperty = ({ onBack, onAdd, editData, agentId: agentIdProp }) => {
           <div className="md:col-span-2 pt-6 border-t border-white/5">
             <h3 className="text-white text-lg font-bold tracking-tight mb-6">Property Photos</h3>
 
-            <div className="relative border-2 border-dashed border-white/10 hover:border-white/30 rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all bg-white/5">
+            {/* Photo counter */}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/40">
+                Photos {selectedFiles.length} / {MAX_PHOTOS}
+              </p>
+              {selectedFiles.length >= MAX_PHOTOS && (
+                <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-amber-400">
+                  Maximum reached
+                </p>
+              )}
+            </div>
+
+            <div className={`relative border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all bg-white/5 ${
+              selectedFiles.length >= MAX_PHOTOS
+                ? 'border-white/5 opacity-40 pointer-events-none'
+                : 'border-white/10 hover:border-white/30'
+            }`}>
               <input
                 type="file"
                 multiple
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 accept="image/*"
+                disabled={selectedFiles.length >= MAX_PHOTOS}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
               <UploadCloud size={32} className="text-white/40 mb-4" />
               <p className="text-sm font-bold text-white uppercase tracking-widest mb-1">Drag photos here</p>
               <p className="text-[10px] text-white/40 font-bold tracking-[0.2em] uppercase">
-                or click to select from computer
+                or click to select · up to {MAX_PHOTOS} photos
               </p>
             </div>
 

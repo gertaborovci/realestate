@@ -22,7 +22,7 @@ const Navbar = ({ onNavigate, isScrolled, currentView, onSignOut, currentUser })
 
   const handleSignOut = () => {
     if (onSignOut) onSignOut();
-    onNavigate('hero');
+    // do NOT navigate — user stays on current page after signing out
   };
 
   return (

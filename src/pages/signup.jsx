@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '../lib/api';
-import { setCurrentUser, setAuthToken, setRefreshToken, normalizeRole, DASHBOARD_VIEWS } from '../lib/auth';
+import { setCurrentUser, setAuthToken, setRefreshToken, normalizeRole } from '../lib/auth';
 
 const SignUp = ({ onNavigate, onSignIn }) => {
   const [formData, setFormData] = useState({
@@ -11,7 +11,8 @@ const SignUp = ({ onNavigate, onSignIn }) => {
     confirmPassword: '',
     role: 'buyer',
   });
-  const [error, setError] = useState('');
+  const [error,        setError]        = useState('');
+  const [success,      setSuccess]      = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -46,10 +47,8 @@ const SignUp = ({ onNavigate, onSignIn }) => {
         const user = { ...data.user, role: normalizeRole(data.user.role) };
         setCurrentUser(user);
         if (onSignIn) onSignIn(user);
-        // Navigate to appropriate dashboard
-        if (user.role === 'admin') onNavigate(DASHBOARD_VIEWS.admin);
-        else if (user.role === 'agent') onNavigate(DASHBOARD_VIEWS.agent);
-        else onNavigate('user-dashboard');
+        setSuccess(`Account created! Welcome to KosovaNest, ${user.username || 'there'}!`);
+        setTimeout(() => onNavigate('hero'), 1400);
       } else {
         onNavigate('signin');
       }
@@ -64,6 +63,11 @@ const SignUp = ({ onNavigate, onSignIn }) => {
         <h2 className="text-3xl font-black text-center text-white mb-2 tracking-wide">KOSOVANEST</h2>
         <p className="text-gray-400 text-sm text-center mb-6">Create a new account</p>
 
+        {success && (
+          <div className="flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm font-semibold px-4 py-3 rounded-xl mb-4">
+            <span className="text-base">✓</span> {success}
+          </div>
+        )}
         {error && <p className="text-red-400 text-xs text-center mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">

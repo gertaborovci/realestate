@@ -51,6 +51,15 @@ async function updateRole(req, res) {
   if (!role) return res.status(400).json({ error: 'Role is required.' });
   const [result] = await db.query('UPDATE users SET role = ? WHERE id = ?', [role, req.params.id]);
   if (!result.affectedRows) return res.status(404).json({ error: 'User not found.' });
+
+  if (role === 'agent') {
+    const [[existing]] = await db.query('SELECT id FROM agents WHERE user_id = ?', [req.params.id]);
+    if (!existing) {
+      const joinYear = new Date().getFullYear();
+      await db.query('INSERT INTO agents (user_id, status, joined_year) VALUES (?, ?, ?)', [req.params.id, 'Active', joinYear]);
+    }
+  }
+
   res.json({ message: 'Role updated successfully.' });
 }
 
@@ -79,9 +88,10 @@ async function register(req, res) {
 
     // Automatically create the agents profile row for agent accounts
     if (mappedRole === 'agent') {
+      const joinYear = new Date().getFullYear();
       await db.query(
-        'INSERT INTO agents (user_id, status) VALUES (?, ?)',
-        [newUserId, 'Active']
+        'INSERT INTO agents (user_id, status, joined_year) VALUES (?, ?, ?)',
+        [newUserId, 'Active', joinYear]
       );
     }
 

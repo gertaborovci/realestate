@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { X, Globe, Mail, Phone } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Globe, Mail, Phone, Camera, User } from 'lucide-react';
+import { apiFetch, API_BASE } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 
 import Navbar from '../components/Navbar';
@@ -17,7 +17,42 @@ import { showAlert, showConfirm } from '../lib/modal';
 
 export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUser, onUserChange, favorites = [], onRemoveFavorite, onViewProperty }) {
   const user = currentUser || getCurrentUser();
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection, setActiveSection] = useState(() => {
+    // If a notification click pre-selected a section, honour it
+    const pending = sessionStorage.getItem('kn_dashboard_section');
+    if (pending) { sessionStorage.removeItem('kn_dashboard_section'); return pending; }
+    return 'profile';
+  });
+  const [uploadingPhoto,   setUploadingPhoto]   = useState(false);
+  const [photoError,       setPhotoError]       = useState('');
+  const photoInputRef = useRef(null);
+
+  const photoSrc = user?.photo_url
+    ? (user.photo_url.startsWith('http') ? user.photo_url : `${API_BASE}${user.photo_url}`)
+    : null;
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError('');
+    if (file.size > 5 * 1024 * 1024) { setPhotoError('Image must be smaller than 5 MB.'); e.target.value = ''; return; }
+    const fd = new FormData();
+    fd.append('photo', file);
+    setUploadingPhoto(true);
+    try {
+      const data = await apiFetch(`/api/users/${user.id}/photo`, { method: 'POST', body: fd });
+      if (onUserChange) onUserChange({ ...user, photo_url: data.photo_url });
+    } catch (err) { setPhotoError(err.message || 'Upload failed.'); }
+    finally { setUploadingPhoto(false); e.target.value = ''; }
+  };
+
+  const handlePhotoDelete = async () => {
+    setPhotoError('');
+    try {
+      await apiFetch(`/api/users/${user.id}/photo`, { method: 'DELETE' });
+      if (onUserChange) onUserChange({ ...user, photo_url: null });
+    } catch (err) { setPhotoError(err.message || 'Failed to remove photo.'); }
+  };
 
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [removedNotification, setRemovedNotification] = useState(false);
@@ -25,6 +60,18 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
   const [testimonials,      setTestimonials]      = useState([]);
   const [ratings,           setRatings]           = useState([]);
   const [alertUnreadCount,  setAlertUnreadCount]  = useState(0);
+  const [sectionBadges,     setSectionBadges]     = useState({});
+
+  // Re-fetch the logged-in user's profile from the API so any changes
+  // made by an admin (e.g. photo update) are reflected immediately.
+  useEffect(() => {
+    if (!user?.id) return;
+    apiFetch(`/api/users/${user.id}`)
+      .then(fresh => {
+        if (fresh && onUserChange) onUserChange(fresh);
+      })
+      .catch(() => {}); // non-fatal — shows cached data if server unreachable
+  }, [user?.id]);
 
   // Redirect to sign-in if not logged in
   useEffect(() => {
@@ -58,20 +105,33 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
       .catch(console.error);
   }, []);
 
-  // Poll unread alert-type notifications for the Alerts tab badge
+  // Map notification link/type → dashboard section key
+  const notifToSection = (n) => {
+    if (n.type === 'ticket' || n.link === 'support')       return 'support';
+    if (n.type === 'visit_update' || n.link === 'visits')  return 'requests';
+    if (n.type === 'alert')                                return 'alerts';
+    return null;
+  };
+
+  // Poll unread notifications and spread badges across sections
   useEffect(() => {
     if (!user?.id) return;
     const check = () => {
       apiFetch(`/api/notifications/user/${user.id}`)
         .then(data => {
-          const count = (Array.isArray(data) ? data : [])
-            .filter(n => n.type === 'alert' && !n.is_read).length;
-          setAlertUnreadCount(count);
+          const list = Array.isArray(data) ? data : [];
+          const counts = {};
+          list.filter(n => !n.is_read).forEach(n => {
+            const sec = notifToSection(n);
+            if (sec) counts[sec] = (counts[sec] || 0) + 1;
+          });
+          setSectionBadges(counts);
+          setAlertUnreadCount(counts['alerts'] || 0);
         })
         .catch(() => {});
     };
     check();
-    const interval = setInterval(check, 30000); // re-check every 30s
+    const interval = setInterval(check, 30000);
     return () => clearInterval(interval);
   }, [user?.id]);
 
@@ -146,14 +206,50 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-24 md:pt-36 pb-12 md:pb-24">
 
-        {/* Header */}
-        <div className="mb-10 text-center">
-          <h1 className="text-2xl md:text-4xl font-black text-white mb-3">
-            {user.emri || user.username || 'My Profile'}
-          </h1>
-          <p className="text-zinc-500 uppercase tracking-widest text-xs font-bold">
-            {user.role === 'agent' ? 'Real Estate Agent' : user.role === 'admin' ? 'Administrator' : 'Member'}
-          </p>
+        {/* Profile header — photo + name */}
+        <div className="mb-10 flex flex-col items-center gap-4">
+          {/* Avatar with click-to-change overlay */}
+          <div className="relative group">
+            <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center">
+              {photoSrc ? (
+                <img src={photoSrc} alt={user.username} className="w-full h-full object-cover" />
+              ) : (
+                <User size={36} className="text-zinc-500" />
+              )}
+            </div>
+            {/* Hover overlay to upload */}
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="absolute inset-0 rounded-full bg-black/55 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+              title="Change photo"
+            >
+              {uploadingPhoto
+                ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <Camera size={20} className="text-white" />}
+            </button>
+            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+            {/* Remove badge */}
+            {photoSrc && !uploadingPhoto && (
+              <button
+                onClick={handlePhotoDelete}
+                title="Remove photo"
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition z-10"
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+          {photoError && <p className="text-red-400 text-xs font-semibold">{photoError}</p>}
+          <div className="text-center">
+            <h1 className="text-2xl md:text-3xl font-black text-white">
+              {user.emri || user.username || 'My Profile'}
+            </h1>
+            <p className="text-zinc-500 uppercase tracking-widest text-xs font-bold mt-1">
+              {user.role === 'agent' ? 'Real Estate Agent' : user.role === 'admin' ? 'Administrator' : 'Member'}
+            </p>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -165,24 +261,30 @@ export default function UserDashboard({ onNavigate, onBack, onSignOut, currentUs
             { key: 'contracts', label: 'My Contracts' },
             { key: 'stories',   label: 'Stories' },
             { key: 'rating',    label: 'Ratings' },
-            { key: 'alerts',    label: 'Alerts', badge: alertUnreadCount },
+            { key: 'alerts',    label: 'Alerts' },
             { key: 'support',   label: 'Support' },
-          ].map(({ key, label, badge }) => (
-            <button
-              key={key}
-              onClick={() => setActiveSection(key)}
-              className={`relative px-3 md:px-5 py-2 md:py-3 rounded-xl font-bold text-xs md:text-sm transition ${
-                activeSection === key ? 'bg-white text-black' : 'bg-zinc-900 text-white border border-zinc-800'
-              }`}
-            >
-              {label}
-              {badge > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black">
-                  {badge}
-                </span>
-              )}
-            </button>
-          ))}
+          ].map(({ key, label }) => {
+            const badge = sectionBadges[key] || 0;
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setActiveSection(key);
+                  if (badge > 0) setSectionBadges(prev => ({ ...prev, [key]: 0 }));
+                }}
+                className={`relative px-3 md:px-5 py-2 md:py-3 rounded-xl font-bold text-xs md:text-sm transition ${
+                  activeSection === key ? 'bg-white text-black' : 'bg-zinc-900 text-white border border-zinc-800'
+                }`}
+              >
+                {label}
+                {badge > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black">
+                    {badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Sections */}

@@ -393,7 +393,7 @@ export default function MaintenanceVisits() {
                 className="w-full rounded-2xl border border-white/10 object-contain max-h-72 hover:border-white/30 transition"
               />
               <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 mt-2 text-center">
-                Click image to open full size â†'
+                Click image to open full size →'
               </p>
             </a>
 

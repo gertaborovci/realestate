@@ -80,20 +80,30 @@ async function create(req, res) {
   });
 }
 
-// PUT /api/tickets/:id  — admin updates status / writes reply
+// PUT /api/tickets/:id  — admin updates status/reply; user edits their own open ticket
 async function update(req, res) {
   const [[current]] = await db.query('SELECT * FROM tickets WHERE id = ?', [req.params.id]);
   if (!current) return res.status(404).json({ error: 'Ticket not found.' });
 
-  const status      = req.body.status      ?? current.status;
-  const priority    = req.body.priority    ?? current.priority;
-  const admin_reply = 'admin_reply' in req.body
+  const isAdmin = req.authUser?.role === 'admin';
+
+  // Non-admins can only edit their own open/in-progress tickets
+  if (!isAdmin) {
+    if (current.user_id !== req.authUser?.id) return res.status(403).json({ error: 'Insufficient permissions.' });
+    if (current.status === 'Resolved' || current.status === 'Closed') return res.status(400).json({ error: 'Cannot edit a resolved or closed ticket.' });
+  }
+
+  const subject     = (!isAdmin && req.body.subject)     ? req.body.subject.trim()  : current.subject;
+  const message     = (!isAdmin && req.body.message)     ? req.body.message.trim()  : current.message;
+  const status      = isAdmin ? (req.body.status   ?? current.status)   : current.status;
+  const priority    = req.body.priority ?? current.priority;
+  const admin_reply = isAdmin && 'admin_reply' in req.body
     ? (req.body.admin_reply || null)
     : current.admin_reply;
 
   await db.query(
-    `UPDATE tickets SET status=?, priority=?, admin_reply=? WHERE id=?`,
-    [status, priority, admin_reply, req.params.id]
+    `UPDATE tickets SET subject=?, message=?, status=?, priority=?, admin_reply=? WHERE id=?`,
+    [subject, message, status, priority, admin_reply, req.params.id]
   );
 
   // Notify the user when admin replies or changes status
