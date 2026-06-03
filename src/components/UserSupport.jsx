@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { LifeBuoy, Send, ChevronDown, ChevronUp, Trash2, Clock, CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { LifeBuoy, Send, ChevronDown, ChevronUp, Trash2, Clock, CheckCircle2, Circle, Loader2, Pencil, X } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 import { showAlert, showConfirm } from '../lib/modal';
@@ -40,12 +40,14 @@ function timeAgo(dateStr) {
 export default function UserSupport() {
   const user = getCurrentUser();
 
-  const [tickets, setTickets]     = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [expanded, setExpanded]   = useState(null);
+  const [tickets, setTickets]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [expanded, setExpanded]     = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess]     = useState('');
-  const [error, setError]         = useState('');
+  const [success, setSuccess]       = useState('');
+  const [error, setError]           = useState('');
+  const [editingId, setEditingId]   = useState(null);
+  const [editForm, setEditForm]     = useState({ subject: '', message: '', priority: 'Medium' });
 
   const [form, setForm] = useState({ subject: '', message: '', priority: 'Medium' });
 
@@ -90,6 +92,23 @@ export default function UserSupport() {
     try {
       await apiFetch(`/api/tickets/${id}`, { method: 'DELETE' });
       setTickets((prev) => prev.filter((t) => t.id !== id));
+    } catch (err) { await showAlert(err.message, 'error'); }
+  };
+
+  const startEdit = (t) => {
+    setEditingId(t.id);
+    setEditForm({ subject: t.subject, message: t.message, priority: t.priority });
+  };
+
+  const handleEditSave = async (id) => {
+    try {
+      const updated = await apiFetch(`/api/tickets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, ...editForm } : t));
+      setEditingId(null);
     } catch (err) { await showAlert(err.message, 'error'); }
   };
 
@@ -232,15 +251,24 @@ export default function UserSupport() {
                   <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border ${STATUS_STYLE[t.status]}`}>
                     {t.status}
                   </span>
-                  {/* Delete (only unresolved) */}
+                  {/* Edit + Delete (only unresolved) */}
                   {t.status !== 'Resolved' && t.status !== 'Closed' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
-                      className="p-1.5 text-zinc-700 hover:text-red-400 transition"
-                      title="Delete ticket"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); startEdit(t); setExpanded(t.id); }}
+                        className="p-1.5 text-zinc-700 hover:text-blue-400 transition"
+                        title="Edit ticket"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
+                        className="p-1.5 text-zinc-700 hover:text-red-400 transition"
+                        title="Delete ticket"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </>
                   )}
                   {expanded === t.id ? <ChevronUp size={14} className="text-zinc-600" /> : <ChevronDown size={14} className="text-zinc-600" />}
                 </div>
@@ -249,6 +277,33 @@ export default function UserSupport() {
               {/* Expanded content */}
               {expanded === t.id && (
                 <div className="px-6 pb-6 space-y-4 border-t border-zinc-800 pt-5">
+
+                  {/* Inline edit form */}
+                  {editingId === t.id ? (
+                    <div className="space-y-3">
+                      <input value={editForm.subject} onChange={e => setEditForm(f => ({...f, subject: e.target.value}))}
+                        className="w-full bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-xl text-sm outline-none focus:border-zinc-500"
+                        placeholder="Subject" />
+                      <textarea value={editForm.message} onChange={e => setEditForm(f => ({...f, message: e.target.value}))}
+                        rows={3} className="w-full bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-xl text-sm outline-none focus:border-zinc-500 resize-none"
+                        placeholder="Message" />
+                      <select value={editForm.priority} onChange={e => setEditForm(f => ({...f, priority: e.target.value}))}
+                        className="bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-xl text-sm outline-none">
+                        {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEditSave(t.id)}
+                          className="flex items-center gap-1.5 bg-white text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition">
+                          Save
+                        </button>
+                        <button onClick={() => setEditingId(null)}
+                          className="px-4 py-2 rounded-xl border border-zinc-700 text-zinc-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                  <>
                   {/* User message */}
                   <div>
                     <p className="text-[9px] font-black tracking-widest uppercase text-zinc-600 mb-2">Your Message</p>
@@ -268,6 +323,8 @@ export default function UserSupport() {
                       <Clock size={12} />
                       <p className="text-xs">Waiting for admin response…</p>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               )}

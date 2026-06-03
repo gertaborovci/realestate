@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { apiFetch, API_BASE } from '../lib/api';
 import { getCurrentUser, setCurrentUser } from '../lib/auth';
+import OfficeLocations from '../components/OfficeLocations';
+import NotificationBell from '../components/NotificationBell';
 
 // ─── Fuzzy helpers (mirrored from PublicProperties) ──────────────────────────
 function levenshtein(a, b) {
@@ -78,7 +80,7 @@ function PropertyMiniCard({ property, mainImages, onClick }) {
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
-export default function PublicNeighborhoods({ onNavigate, onViewPropertiesInCity }) {
+export default function PublicNeighborhoods({ onNavigate, onSignOut, onViewPropertiesInCity }) {
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [properties,    setProperties]    = useState([]);
   const [mainImages,    setMainImages]    = useState({});
@@ -179,12 +181,13 @@ export default function PublicNeighborhoods({ onNavigate, onViewPropertiesInCity
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          {getCurrentUser() && <NotificationBell userId={getCurrentUser().id} onNavigate={onNavigate} />}
           <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition" onClick={handleUserClick}>
             <User size={20} className="text-white" />
           </div>
           {getCurrentUser() ? (
-            <button onClick={() => { setCurrentUser(null); onNavigate('hero'); }}
+            <button onClick={() => onSignOut ? onSignOut() : setCurrentUser(null)}
               className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">
               Sign Out
             </button>
@@ -312,6 +315,8 @@ export default function PublicNeighborhoods({ onNavigate, onViewPropertiesInCity
           )}
         </section>
       </div>
+
+      <OfficeLocations />
 
       {/* Footer */}
       <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between mt-auto">

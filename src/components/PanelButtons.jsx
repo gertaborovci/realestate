@@ -89,7 +89,7 @@ const BTN =
   'px-6 py-3 rounded-full hover:bg-white/20 transition-all shadow-2xl';
 
 // ── PanelButtons ─────────────────────────────────────────────────────────────
-const PanelButtons = ({ onNavigate, currentView }) => {
+const PanelButtons = ({ onNavigate, onBack, currentView }) => {
   const isAgent = canAccessAgentDashboard();
   const isAdmin = canAccessAdminDashboard();
 
@@ -110,7 +110,7 @@ const PanelButtons = ({ onNavigate, currentView }) => {
         <DraggableCornerButton corner={agentCorner} onCornerChange={setAgentCorner}>
           <button
             type="button"
-            onClick={() => onNavigate(onAgentDash ? 'hero' : 'agent-dashboard')}
+            onClick={() => onAgentDash ? (onBack ? onBack() : onNavigate('hero')) : onNavigate('agent-dashboard')}
             className={BTN}
           >
             <div className="bg-white p-2 rounded-full text-black">
@@ -128,7 +128,7 @@ const PanelButtons = ({ onNavigate, currentView }) => {
         <DraggableCornerButton corner={adminCorner} onCornerChange={setAdminCorner}>
           <button
             type="button"
-            onClick={() => onNavigate(onAdminDash ? 'hero' : 'dashboard')}
+            onClick={() => onAdminDash ? (onBack ? onBack() : onNavigate('hero')) : onNavigate('dashboard')}
             className={BTN}
           >
             <div className="bg-white p-2 rounded-full text-black">

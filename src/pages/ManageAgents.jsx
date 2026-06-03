@@ -45,7 +45,7 @@ const ManageAgents = ({ onViewProfile }) => {
     e.preventDefault();
     try {
       if (isEditing) {
-        await fetch(`${API_BASE}/api/agents/${currentAgentId}`, {
+        await apiFetch(`/api/agents/${currentAgentId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
@@ -82,7 +82,7 @@ const ManageAgents = ({ onViewProfile }) => {
   const handleDelete = async (id) => {
     if (!await showConfirm('⚠️ Are you sure you want to delete this agent?')) return;
     try {
-      await fetch(`${API_BASE}/api/agents/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/agents/${id}`, { method: 'DELETE' });
       await loadData();
     } catch (error) {
       await showAlert(error.message || 'Failed to delete agent.');

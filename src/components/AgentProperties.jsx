@@ -1,18 +1,18 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   Building2, MapPin, Euro, Pencil, Plus, Loader, Home,
-  DoorOpen, Maximize, Trash2, AlertTriangle,
+  DoorOpen, Maximize, Trash2, AlertTriangle, Search,
 } from 'lucide-react';
-import { apiFetch, API_BASE } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 import AddProperty from '../pages/AddProperty';
 import { showAlert, showConfirm } from '../lib/modal';
 
 // â"€â"€ Status display helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const STATUS_META = {
-  'E LirÃ«':          { label: 'Available', cls: 'bg-green-500/10 text-green-400 border-green-500/30' },
+  'E Lirë':          { label: 'Available', cls: 'bg-green-500/10 text-green-400 border-green-500/30' },
   'E Shitur':        { label: 'Sold',      cls: 'bg-red-500/10   text-red-400   border-red-500/30'   },
-  'E DhÃ«nÃ« me Qira': { label: 'Rented',    cls: 'bg-blue-500/10  text-blue-400  border-blue-500/30'  },
+  'E Dhënë me Qira': { label: 'Rented',    cls: 'bg-blue-500/10  text-blue-400  border-blue-500/30'  },
 };
 
 const TYPE_LABELS = {
@@ -59,6 +59,9 @@ const AgentProperties = () => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [deleteTarget,     setDeleteTarget]     = useState(null);
   const [deleting,         setDeleting]         = useState(false);
+  const [searchTerm,       setSearchTerm]       = useState('');
+  const [filterType,       setFilterType]       = useState('ALL'); // ALL | Shitje | Qira
+  const [filterStatus,     setFilterStatus]     = useState('ALL'); // ALL | E Lirë | E Shitur | E Dhënë me Qira
 
   // â"€â"€ Data fetching â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const loadProperties = useCallback(async () => {
@@ -97,7 +100,7 @@ const AgentProperties = () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await fetch(`${API_BASE}/api/properties/${deleteTarget.id}`, { method: 'DELETE' });
+      await apiFetch(`/api/properties/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       loadProperties();
     } catch (err) {
@@ -139,7 +142,19 @@ const AgentProperties = () => {
     );
   }
 
-  // â"€â"€ List view â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+  // ── Filtering ──────────────────────────────────────────────────────────────
+  const isFiltering = searchTerm !== '' || filterType !== 'ALL' || filterStatus !== 'ALL';
+  const filtered = properties.filter((p) => {
+    if (searchTerm && !p.title?.toLowerCase().includes(searchTerm.toLowerCase()) && !p.location?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (filterType !== 'ALL' && p.type !== filterType) return false;
+    if (filterStatus !== 'ALL' && p.status !== filterStatus) return false;
+    return true;
+  });
+  const forSale   = properties.filter((p) => p.type === 'Shitje');
+  const forRent   = properties.filter((p) => p.type === 'Qira');
+  const available = properties.filter((p) => p.status === 'E Lirë');
+
+  // ── List view ──────────────────────────────────────────────────────────────
   return (
     <div className="p-10 space-y-8">
 
@@ -169,6 +184,42 @@ const AgentProperties = () => {
         </button>
       </div>
 
+      {/* Filter bar */}
+      {properties.length > 0 && (
+        <div className="bg-white/5 border border-white/10 rounded-[24px] p-4 space-y-3">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex items-center bg-black/50 px-5 py-3 rounded-full flex-1 border border-white/5 focus-within:border-white/20 transition-colors">
+              <Search size={15} className="text-white/40 mr-3 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search by title or location…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-white/30"
+              />
+            </div>
+            <div className="flex items-center bg-black/50 rounded-full p-1.5 border border-white/5">
+              {['ALL', 'Shitje', 'Qira'].map((t) => (
+                <button key={t} onClick={() => setFilterType(t)}
+                  className={`px-5 py-2 rounded-full text-[10px] font-black tracking-[0.2em] uppercase transition-all ${filterType === t ? 'bg-white text-black shadow-lg' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+                  {t === 'ALL' ? 'All' : t === 'Shitje' ? 'For Sale' : 'For Rent'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1 border-t border-white/5">
+            {['ALL', 'E Lirë', 'E Shitur', 'E Dhënë me Qira'].map((s) => (
+              <button key={s} onClick={() => setFilterStatus(s)}
+                className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.15em] uppercase transition-all border ${
+                  filterStatus === s ? 'bg-white text-black border-white' : 'bg-transparent text-white/50 border-white/10 hover:border-white/30 hover:text-white'
+                }`}>
+                {s === 'ALL' ? 'All Statuses' : s === 'E Lirë' ? 'Available' : s === 'E Shitur' ? 'Sold' : 'Rented'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Empty state */}
       {properties.length === 0 && (
         <div className="border border-dashed border-white/10 rounded-3xl p-20 text-center space-y-4">
@@ -187,96 +238,75 @@ const AgentProperties = () => {
         </div>
       )}
 
-      {/* Properties table */}
-      {properties.length > 0 && (
-        <div className="bg-[#111] border border-white/10 rounded-3xl overflow-hidden">
-
-          {/* Column headers */}
-          <div className="hidden md:grid grid-cols-[2fr_1.4fr_0.9fr_0.8fr_0.9fr_0.6fr_auto] gap-4 px-6 py-4 border-b border-white/10 text-[9px] font-black tracking-widest uppercase text-white/25">
-            <span>Property</span>
-            <span>Location</span>
-            <span>Price</span>
-            <span>Specs</span>
-            <span>Type</span>
-            <span>Status</span>
-            <span className="sr-only">Actions</span>
-          </div>
-
-          {/* Rows */}
-          {properties.map((property) => {
-            const statusMeta = STATUS_META[property.status] || { label: property.status, cls: 'bg-white/5 text-white/40 border-white/10' };
-
-            return (
-              <div
-                key={property.id}
-                className="flex flex-col md:grid md:grid-cols-[2fr_1.4fr_0.9fr_0.8fr_0.9fr_0.6fr_auto] gap-4 px-6 py-5 border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition items-center"
-              >
-                {/* Property title */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 bg-white/5 rounded-lg flex items-center justify-center shrink-0">
-                    <Building2 size={14} className="text-white/40" />
-                  </div>
-                  <p className="font-semibold text-sm text-white truncate">{property.title}</p>
-                </div>
-
-                {/* Location */}
-                <div className="flex items-center gap-1.5 text-sm text-white/50 min-w-0">
-                  <MapPin size={11} className="shrink-0 text-white/30" />
-                  <span className="truncate">{property.location || ' - '}</span>
-                </div>
-
-                {/* Price */}
-                <div className="flex items-center gap-1 text-sm font-bold text-white">
-                  <Euro size={11} className="text-white/30" />
-                  {property.price ? Number(property.price).toLocaleString('en') : ' - '}
-                </div>
-
-                {/* Specs (rooms / area) */}
-                <div className="flex flex-col gap-0.5 text-[11px] text-white/40">
-                  {property.rooms && (
-                    <span className="flex items-center gap-1">
-                      <DoorOpen size={10} /> {property.rooms} rooms
-                    </span>
-                  )}
-                  {property.area && (
-                    <span className="flex items-center gap-1">
-                      <Maximize size={10} /> {property.area} mÂ²
-                    </span>
-                  )}
-                </div>
-
-                {/* Type */}
-                <span className="text-xs text-white/50">
-                  {TYPE_LABELS[property.type] || property.type || ' - '}
-                </span>
-
-                {/* Status badge */}
-                <span className={`inline-flex px-2.5 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border whitespace-nowrap ${statusMeta.cls}`}>
-                  {statusMeta.label}
-                </span>
-
-                {/* Action buttons */}
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => goEdit(property)}
-                    title="Edit property"
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-[9px] font-black tracking-widest uppercase text-white/60 hover:text-white transition"
-                  >
-                    <Pencil size={11} /> Edit
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(property)}
-                    title="Delete property"
-                    className="flex items-center px-2.5 py-2 rounded-xl bg-red-500/5 hover:bg-red-500/15 border border-red-500/20 text-red-500/60 hover:text-red-400 transition"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
+      {/* Properties — filtered OR 3 category groups */}
+      {properties.length > 0 && (() => {
+        const renderTable = (list, emptyMsg) => {
+          if (!list.length) return <p className="text-white/30 text-xs font-bold uppercase tracking-widest py-4">{emptyMsg}</p>;
+          return (
+            <div className="bg-[#111] border border-white/10 rounded-3xl overflow-hidden">
+              <div className="hidden md:grid grid-cols-[2fr_1.4fr_0.9fr_0.8fr_0.9fr_0.6fr_auto] gap-4 px-6 py-4 border-b border-white/10 text-[9px] font-black tracking-widest uppercase text-white/25">
+                <span>Property</span><span>Location</span><span>Price</span>
+                <span>Specs</span><span>Type</span><span>Status</span>
+                <span className="sr-only">Actions</span>
               </div>
-            );
-          })}
-        </div>
-      )}
+              {list.map((property) => {
+                const statusMeta = STATUS_META[property.status] || { label: property.status, cls: 'bg-white/5 text-white/40 border-white/10' };
+                return (
+                  <div key={property.id} className="flex flex-col md:grid md:grid-cols-[2fr_1.4fr_0.9fr_0.8fr_0.9fr_0.6fr_auto] gap-4 px-6 py-5 border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition items-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 bg-white/5 rounded-lg flex items-center justify-center shrink-0"><Building2 size={14} className="text-white/40" /></div>
+                      <p className="font-semibold text-sm text-white truncate">{property.title}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-white/50 min-w-0">
+                      <MapPin size={11} className="shrink-0 text-white/30" /><span className="truncate">{property.location || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-sm font-bold text-white">
+                      <Euro size={11} className="text-white/30" />{property.price ? Number(property.price).toLocaleString('en') : '—'}
+                    </div>
+                    <div className="flex flex-col gap-0.5 text-[11px] text-white/40">
+                      {property.rooms && <span className="flex items-center gap-1"><DoorOpen size={10} /> {property.rooms} rooms</span>}
+                      {property.area  && <span className="flex items-center gap-1"><Maximize size={10} /> {property.area} m²</span>}
+                    </div>
+                    <span className="text-xs text-white/50">{TYPE_LABELS[property.type] || property.type || '—'}</span>
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border whitespace-nowrap ${statusMeta.cls}`}>{statusMeta.label}</span>
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => goEdit(property)} title="Edit" className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-[9px] font-black tracking-widest uppercase text-white/60 hover:text-white transition"><Pencil size={11} /> Edit</button>
+                      <button onClick={() => setDeleteTarget(property)} title="Delete" className="flex items-center px-2.5 py-2 rounded-xl bg-red-500/5 hover:bg-red-500/15 border border-red-500/20 text-red-500/60 hover:text-red-400 transition"><Trash2 size={11} /></button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        };
+
+        if (isFiltering) return (
+          <div className="space-y-4">
+            <p className="text-white/40 text-[10px] font-black tracking-[0.3em] uppercase border-b border-white/10 pb-4">{filtered.length} result{filtered.length !== 1 ? 's' : ''} found</p>
+            {filtered.length === 0 ? <p className="text-white/30 text-sm italic py-8 text-center">No properties match your filters.</p> : renderTable(filtered, '')}
+          </div>
+        );
+
+        return (
+          <div className="space-y-12">
+            {[
+              { label: 'For Sale',  sub: `${forSale.length} listings`,   list: forSale },
+              { label: 'For Rent',  sub: `${forRent.length} listings`,   list: forRent },
+              { label: 'Available', sub: `${available.length} listings`, list: available },
+            ].map(({ label, sub, list }) => (
+              <div key={label}>
+                <div className="flex items-end justify-between mb-4 border-b border-white/10 pb-4">
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">{label}</h3>
+                    <p className="text-[10px] font-bold tracking-widest text-white/30 uppercase mt-1">{sub}</p>
+                  </div>
+                </div>
+                {renderTable(list, `No ${label.toLowerCase()} properties yet.`)}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 };

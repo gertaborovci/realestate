@@ -99,7 +99,7 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
           </div>
           {user ? (
             <button
-              onClick={() => { if (onSignOut) onSignOut(); onNavigate('hero'); }}
+              onClick={() => { if (onSignOut) onSignOut(); }}
               className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase"
             >
               Sign Out
@@ -165,13 +165,17 @@ const RealEstateHero = ({ onNavigate, onSignOut, currentUser, onSearch, onProper
            <h2 className="text-7xl font-black tracking-tighter uppercase italic mb-20">Popular Cities</h2>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {popularCities.map((city) => (
-              <div key={city.name} className="group relative h-[500px] rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+              <button
+                key={city.name}
+                onClick={() => onPropertySearch({ searchQuery: city.name })}
+                className="group relative h-[500px] rounded-[40px] overflow-hidden border border-white/5 shadow-2xl text-left w-full cursor-pointer"
+              >
                 <img src={city.img} onError={(e) => e.target.src = city.fallback} className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110 opacity-70" alt={city.name} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-12">
                   <h4 className="text-5xl font-black tracking-tight uppercase italic mb-2">{city.name}</h4>
                   <p className="text-[11px] font-bold text-white/40 tracking-[0.5em] uppercase">{city.homes} Properties</p>
                 </div>
-              </div>
+              </button>
             ))}
            </div>
         </div>

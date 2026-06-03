@@ -41,7 +41,7 @@ KosovaNest is a premium real estate platform that connects buyers, renters, agen
 - Search Alerts — get notified when a matching property is listed
 
 ### Agent
-- Agent Dashboard: Profile, Properties, Contracts, Payments, Visits, Certifications, Contact Inquiries, Rental Requests, Property Q&A
+- Agent Dashboard: Properties, Contracts, Payments, Visits, Certifications, Contact Inquiries, Rental Requests, Property Q&A, Support
 - Add / edit properties with Nominatim address autocomplete (Kosovo-only), lat/lng, home type, neighbourhood assignment
 - Manage rental requests: calendar showing blocked dates, approve/reject, performance stats per property
 - Customise Property Q&A: global template applies to all listings, per-property overrides, exclusion list
@@ -169,8 +169,8 @@ npm run dev     # starts on http://localhost:5173
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | `alba@ubt-uni.net` | *(see DB)* |
-| Agent | `a21564756@gmail.com` | *(see DB)* |
+| Admin | `arvanita@gmail.com` | *(see DB)* |
+| Agent | `gb72745@ubt-uni.net` | *(see DB)* |
 | User | `Olti@user.com` | *(see DB)* |
 
 ---

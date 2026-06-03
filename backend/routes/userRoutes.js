@@ -117,8 +117,8 @@ router.delete('/:id',   requireRole('admin'),                   asyncHandler(use
 router.get('/:id',      requireRole('admin', 'agent', 'user'), asyncHandler(userController.getById));
 
 // Authenticated users: update own profile / photo
-router.put('/:id/profile',                                asyncHandler(userController.updateProfile));
-router.post('/:id/photo',   uploadProfile.single('photo'), asyncHandler(userController.uploadPhoto));
-router.delete('/:id/photo',                               asyncHandler(userController.deletePhoto));
+router.put('/:id/profile',  requireRole('admin', 'agent', 'user'),                                asyncHandler(userController.updateProfile));
+router.post('/:id/photo',   requireRole('admin', 'agent', 'user'), uploadProfile.single('photo'), asyncHandler(userController.uploadPhoto));
+router.delete('/:id/photo', requireRole('admin', 'agent', 'user'),                               asyncHandler(userController.deletePhoto));
 
 module.exports = router;

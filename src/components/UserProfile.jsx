@@ -162,37 +162,7 @@ export default function UserProfile({ currentUser, onUserChange }) {
   if (!editing) {
     return (
       <div className="max-w-2xl mx-auto">
-        {/* Header card */}
-        <div className="bg-zinc-900/60 border border-white/5 rounded-2xl p-6 mb-6 flex items-center gap-5">
-          {/* Avatar  -  not clickable, just display */}
-          <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center flex-shrink-0">
-            {photoSrc ? (
-              <img
-                src={photoSrc}
-                alt="profile"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
-            <div
-              style={{ display: photoSrc ? 'none' : 'flex' }}
-              className="w-full h-full items-center justify-center"
-            >
-              <User size={28} className="text-white/40" />
-            </div>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-black text-white truncate">{user.username}</h2>
-            <span className="inline-flex items-center gap-1.5 mt-1 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black tracking-widest uppercase text-white/50">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-              {roleBadge(user.role)}
-            </span>
-          </div>
-
+        <div className="flex justify-end mb-4">
           <button
             onClick={() => {
               setForm({
@@ -204,7 +174,7 @@ export default function UserProfile({ currentUser, onUserChange }) {
               });
               setEditing(true);
             }}
-            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition flex-shrink-0"
+            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition"
           >
             <Pencil size={13} /> Edit Profile
           </button>
@@ -248,59 +218,6 @@ export default function UserProfile({ currentUser, onUserChange }) {
         </>
       )}
 
-      {/* Photo section  -  available to ALL authenticated users */}
-      <div className="border-t border-white/5 pt-6">
-        <p className="text-[10px] font-black tracking-[0.25em] uppercase text-white/40 mb-4">
-          Profile Photo
-        </p>
-        <div className="flex items-center gap-4">
-          {/* current photo preview */}
-          <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center flex-shrink-0">
-            {photoSrc ? (
-              <img
-                src={photoSrc}
-                alt="profile"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
-              />
-            ) : null}
-            <div style={{ display: photoSrc ? 'none' : 'flex' }} className="w-full h-full items-center justify-center">
-              <User size={22} className="text-white/30" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex gap-3 flex-wrap">
-              {/* Upload button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition disabled:opacity-40"
-              >
-                <Camera size={13} /> {uploadingPhoto ? 'Uploading...' : photoSrc ? 'Change Photo' : 'Add Photo'}
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-
-              {/* Delete button  -  only if photo exists */}
-              {photoSrc && (
-                <button
-                  type="button"
-                  onClick={handleDeletePhoto}
-                  className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition"
-                >
-                  <Trash2 size={13} /> Remove
-                </button>
-              )}
-            </div>
-            {/* Inline error message */}
-            {photoError && (
-              <p className="text-red-400 text-xs font-semibold">{photoError}</p>
-            )}
-            <p className="text-white/20 text-[10px]">JPG, PNG or WebP · max 5 MB</p>
-          </div>
-        </div>
-      </div>
 
       {/* Email read-only */}
       <div>
@@ -308,6 +225,39 @@ export default function UserProfile({ currentUser, onUserChange }) {
           Email Address <span className="text-white/20 normal-case tracking-normal font-normal">(cannot be changed)</span>
         </label>
         <input type="email" value={user.email} disabled className={`${inputCls} opacity-40 cursor-not-allowed`} />
+      </div>
+
+      {/* Profile Photo */}
+      <div className="border-t border-white/5 pt-6">
+        <p className="text-[10px] font-black tracking-[0.25em] uppercase text-white/40 mb-4">Profile Photo</p>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+            {photoSrc ? (
+              <img src={photoSrc} alt="profile" className="w-full h-full object-cover"
+                onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.nextSibling.style.display='flex'; }} />
+            ) : null}
+            <div style={{ display: photoSrc ? 'none' : 'flex' }} className="w-full h-full items-center justify-center">
+              <User size={22} className="text-white/30" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex gap-3 flex-wrap">
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto}
+                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition disabled:opacity-40">
+                <Camera size={13} /> {uploadingPhoto ? 'Uploading...' : photoSrc ? 'Change Photo' : 'Add Photo'}
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+              {photoSrc && (
+                <button type="button" onClick={handleDeletePhoto}
+                  className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition">
+                  <Trash2 size={13} /> Remove
+                </button>
+              )}
+            </div>
+            {photoError && <p className="text-red-400 text-xs font-semibold">{photoError}</p>}
+            <p className="text-white/20 text-[10px]">JPG, PNG or WebP · max 5 MB</p>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2">

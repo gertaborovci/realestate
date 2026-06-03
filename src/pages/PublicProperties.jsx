@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Bed, Square, Heart, CalendarCheck, CheckCircle, Loader, Banknote, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { Search, User, ArrowLeft, MapPin, DoorOpen, Bath, Maximize, SlidersHorizontal, ChevronDown, Building2, ChevronLeft, ChevronRight, X, Phone, Mail, Globe, Heart, CalendarCheck, CheckCircle, Loader, ShoppingBag } from 'lucide-react';
 import { API_BASE, apiFetch } from '../lib/api';
 import { getCurrentUser, setCurrentUser } from '../lib/auth';
 import RentalCalendar   from '../components/RentalCalendar';
@@ -7,6 +7,8 @@ import PropertyMap      from '../components/PropertyMap';
 import PropertyReviews  from '../components/PropertyReviews';
 import PropertyQA       from '../components/PropertyQA';
 import { showAlert, showConfirm } from '../lib/modal';
+import OfficeLocations from '../components/OfficeLocations';
+import NotificationBell from '../components/NotificationBell';
 
 // ─── Fuzzy search helpers ─────────────────────────────────────────────────────
 
@@ -47,7 +49,7 @@ function cityMatch(location, nbCity) {
 
 const TIME_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
-const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened, initialCityFilter = '', onCityFilterConsumed, initialHomeType = '', initialFilterType = '' }) => {
+const PublicProperties = ({ onNavigate, onBack, onSignOut, onOpenDetail, favorites = [], onToggleFavorite, initialPropertyId, onPropertyOpened, initialCityFilter = '', onCityFilterConsumed, initialHomeType = '', initialFilterType = '' }) => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -72,8 +74,9 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [contractData,     setContractData]     = useState(null);
 
   const [isScrolled, setIsScrolled] = useState(false);
-  const scrollRef = useRef(null);
-  const pageTopRef = useRef(null);
+  const scrollRef   = useRef(null);
+  const pageTopRef  = useRef(null);
+  const detailImgRef = useRef(null); // ref on the image in the detail view
 
   // Resolve current user once so the whole component reacts to it
   const [currentUser] = useState(() => getCurrentUser());
@@ -89,10 +92,14 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   const [purchaseResult,     setPurchaseResult]      = useState(null);
   const [rentalError,        setRentalError]         = useState('');
 
-  const [searchQuery,    setSearchQuery]    = useState(initialCityFilter  || '');
-  const [sortConfig,     setSortConfig]     = useState('newest');
-  const [filterType,     setFilterType]     = useState(initialFilterType  || 'ALL');
-  const [filterHomeType, setFilterHomeType] = useState(initialHomeType    || 'ALL');
+  // Restore filters from sessionStorage so navigating to a panel and back
+  // preserves whatever the user had set
+  const _sf = (() => { try { return JSON.parse(sessionStorage.getItem('kn_props_filters') || '{}'); } catch { return {}; } })();
+
+  const [searchQuery,    setSearchQuery]    = useState(initialCityFilter  || _sf.searchQuery    || '');
+  const [sortConfig,     setSortConfig]     = useState(_sf.sortConfig     || 'newest');
+  const [filterType,     setFilterType]     = useState(initialFilterType  || _sf.filterType     || 'ALL');
+  const [filterHomeType, setFilterHomeType] = useState(initialHomeType    || _sf.homeType       || 'ALL');
   const [agentInfo,          setAgentInfo]          = useState(null);
   const [neighborhoods,      setNeighborhoods]      = useState([]);
   const [showSuggestions,    setShowSuggestions]    = useState(false);
@@ -122,12 +129,20 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   }, []);
 
   const MAX_SLIDER_PRICE = 2500000;
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(MAX_SLIDER_PRICE);
+  const [minPrice, setMinPrice] = useState(Number(_sf.minPrice) || 0);
+  const [maxPrice, setMaxPrice] = useState(_sf.maxPrice != null ? Number(_sf.maxPrice) : MAX_SLIDER_PRICE);
+
+  // Persist filters to sessionStorage so they survive panel navigation
+  // (must be after minPrice/maxPrice declarations to avoid TDZ errors)
+  useEffect(() => {
+    sessionStorage.setItem('kn_props_filters', JSON.stringify({
+      searchQuery, sortConfig, filterType, homeType: filterHomeType, minPrice, maxPrice,
+    }));
+  }, [searchQuery, sortConfig, filterType, filterHomeType, minPrice, maxPrice]);
 
   useEffect(() => {
-    if (selectedProperty && pageTopRef.current) {
-      setTimeout(() => pageTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    if (selectedProperty && detailImgRef.current) {
+      detailImgRef.current.scrollIntoView({ block: 'start', behavior: 'instant' });
     }
   }, [selectedProperty]);
 
@@ -144,8 +159,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/properties?limit=100`);
-        const raw  = await response.json();
+        const raw = await apiFetch('/api/properties?limit=100');
         // API now returns { data, total, page, pages } — fall back to plain array for safety
         const data = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
         setProperties(data);
@@ -154,8 +168,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
         await Promise.all(
           data.map(async (property) => {
             try {
-              const imgRes = await fetch(`${API_BASE}/api/properties/${property.id}/images`);
-              const imgs = await imgRes.json();
+              const imgs = await apiFetch(`/api/properties/${property.id}/images`);
               if (imgs && imgs.length > 0) {
                 const mainImg = imgs.find((img) => img.eshte_kryesore) || imgs[0];
                 imageMap[property.id] = `${API_BASE}${mainImg.image_url}`;
@@ -258,6 +271,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
   };
 
   const openPropertyDetails = async (property) => {
+    if (onOpenDetail) onOpenDetail(); // push history entry so "back" closes card
     setSelectedProperty(property);
     setCurrentImageIndex(0);
     // Reset per-property form/result state
@@ -267,24 +281,15 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
     setVisitResult(null); setVisitSubmitting(false); setRentalError('');
     setPurchaseResult(null); setPurchaseSubmitting(false); setPurchaseError('');
     try {
-      const fetches = [
-        fetch(`${API_BASE}/api/properties/${property.id}/images`),
-        fetch(`${API_BASE}/api/properties/${property.id}/features`),
-        fetch(`${API_BASE}/api/visits/property/${property.id}`),
-      ];
-      if (property.agent_id) {
-        fetches.push(fetch(`${API_BASE}/api/agents/${property.agent_id}`));
-      }
-      const [imagesRes, featuresRes, visitsRes, agentRes] = await Promise.all(fetches);
-      const images   = await imagesRes.json();
-      const features = await featuresRes.json();
-      const visitsData = await visitsRes.json();
-      setGallery(images);
-      setPropertyFeatures(features);
-      if (agentRes) {
-        const agentData = await agentRes.json().catch(() => null);
-        if (agentData && !agentData.error) setAgentInfo(agentData);
-      }
+      const [images, features, visitsData, agentData] = await Promise.all([
+        apiFetch(`/api/properties/${property.id}/images`).catch(() => []),
+        apiFetch(`/api/properties/${property.id}/features`).catch(() => []),
+        apiFetch(`/api/visits/property/${property.id}`).catch(() => []),
+        property.agent_id ? apiFetch(`/api/agents/${property.agent_id}`).catch(() => null) : Promise.resolve(null),
+      ]);
+      setGallery(Array.isArray(images) ? images : []);
+      setPropertyFeatures(Array.isArray(features) ? features : []);
+      if (agentData && !agentData.error) setAgentInfo(agentData);
       // Extract blocked ranges from APPROVED rental visits
       const blocked = (Array.isArray(visitsData) ? visitsData : [])
         .filter(v => v.status === 'APPROVED' && v.notes?.startsWith('Rental request'))
@@ -310,6 +315,13 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
       }
     }
   }, [initialPropertyId, properties]);
+
+  // Close property detail when browser back button is pressed
+  useEffect(() => {
+    const handlePop = () => { if (selectedProperty) setSelectedProperty(null); };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, [selectedProperty]);
 
   const isActivelyFiltering = searchQuery !== "" || filterType !== "ALL" || filterHomeType !== "ALL" || minPrice > 0 || maxPrice < MAX_SLIDER_PRICE;
 
@@ -603,13 +615,14 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
             )
           })}
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          {currentUser && <NotificationBell userId={currentUser.id} onNavigate={handleNavigation} />}
           <div className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition" onClick={() => {
             if (!currentUser) { handleNavigation('signin'); return; }
             handleNavigation('user-dashboard');
           }}><User size={20} className="text-white" /></div>
           {currentUser ? (
-            <button onClick={() => { setCurrentUser(null); handleNavigation('hero'); }}
+            <button onClick={() => onSignOut ? onSignOut() : setCurrentUser(null)}
               className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">
               Sign Out
             </button>
@@ -627,12 +640,13 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
           <div className="max-w-6xl mx-auto px-12 animate-in fade-in slide-in-from-bottom-10 duration-500">
             <button onClick={() => setSelectedProperty(null)} className="flex items-center gap-3 text-[10px] font-black tracking-[0.3em] uppercase text-white/50 hover:text-white transition-colors mb-8"><ArrowLeft size={16} /> Back to Listings</button>
             
-            <div className="h-[500px] w-full rounded-[50px] overflow-hidden border border-white/10 relative shadow-2xl mb-12 bg-black group">
-              <img src={gallery.length > 0 ? `${API_BASE}${gallery[currentImageIndex].image_url}` : (mainImages[selectedProperty.id] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')} alt={selectedProperty.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80" />
+            <div ref={detailImgRef} className="h-[500px] w-full rounded-[50px] overflow-hidden border border-white/10 relative shadow-2xl mb-12 bg-black group">
+              {/* pointer-events-none on image so clicks reach the buttons cleanly */}
+              <img src={gallery.length > 0 ? `${API_BASE}${gallery[currentImageIndex].image_url}` : (mainImages[selectedProperty.id] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920')} alt={selectedProperty.title} className="w-full h-full object-cover opacity-80 pointer-events-none" />
               {gallery.length > 1 && (
                 <>
-                  <button onClick={() => setCurrentImageIndex((prev) => prev === 0 ? gallery.length - 1 : prev - 1)} className="absolute left-8 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-md p-4 rounded-full hover:bg-black text-white z-30 transition-all hover:scale-110"><ChevronLeft size={24} /></button>
-                  <button onClick={() => setCurrentImageIndex((prev) => prev === gallery.length - 1 ? 0 : prev + 1)} className="absolute right-8 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-md p-4 rounded-full hover:bg-black text-white z-30 transition-all hover:scale-110"><ChevronRight size={24} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => prev === 0 ? gallery.length - 1 : prev - 1); }} className="absolute left-8 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-md p-4 rounded-full hover:bg-black text-white z-30 transition-colors"><ChevronLeft size={24} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => prev === gallery.length - 1 ? 0 : prev + 1); }} className="absolute right-8 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-md p-4 rounded-full hover:bg-black text-white z-30 transition-colors"><ChevronRight size={24} /></button>
                   <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-6 py-2 rounded-full text-[10px] text-white tracking-widest font-bold z-30 border border-white/10">PHOTO {currentImageIndex + 1} OF {gallery.length}</div>
                 </>
               )}
@@ -914,12 +928,6 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                       Sign in or reach out directly to schedule a viewing or learn more.
                     </p>
                     <div className="space-y-4">
-                      <a
-                        href="tel:+38344000000"
-                        className="w-full bg-white text-black py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-gray-200 transition flex items-center justify-center gap-2"
-                      >
-                        <Phone size={14} /> Call Now
-                      </a>
                       <button
                         onClick={() => handleNavigation('signin')}
                         className="w-full bg-white/10 border border-white/20 text-white py-4 rounded-full font-black text-[11px] tracking-[0.3em] uppercase hover:bg-white/20 transition flex items-center justify-center gap-2"
@@ -1098,7 +1106,7 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
                           const icons = { neighbourhood: '🏘', city: '🏙', area: '📍' };
                           return (
                             <button
-                              key={i}
+                              key={`${s.type}-${s.label}`}
                               type="button"
                               onMouseDown={e => {
                                 e.preventDefault(); // prevent blur before click
@@ -1183,6 +1191,8 @@ const PublicProperties = ({ onNavigate, onBack, favorites = [], onToggleFavorite
           </div>
         )}
       </div>
+
+      <OfficeLocations />
 
       <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between mt-auto">
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-20 py-10">

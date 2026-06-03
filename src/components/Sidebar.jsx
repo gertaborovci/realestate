@@ -40,10 +40,12 @@ const Sidebar = ({ onTabChange, activeTab }) => {
   const navContent = (
     <>
       <div className="p-6 md:p-8 flex items-center justify-between">
-        <h1 className="text-white font-black text-xl tracking-tighter flex items-center gap-2">
-          FIND HOME
-          <span className="text-white/30">|</span>
-        </h1>
+        <div className="flex items-center gap-2">
+          <Building2 size={22} className="text-white" />
+          <h1 className="text-white font-black text-xl tracking-tighter uppercase italic leading-none">
+            KosovaNest
+          </h1>
+        </div>
         {/* Close button inside drawer on mobile */}
         <button
           onClick={() => setMobileOpen(false)}

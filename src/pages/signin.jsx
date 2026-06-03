@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '../lib/api';
-import { setCurrentUser, setAuthToken, setRefreshToken, normalizeRole, DASHBOARD_VIEWS } from '../lib/auth';
+import { setCurrentUser, setAuthToken, setRefreshToken, normalizeRole } from '../lib/auth';
 
 const SignIn = ({ onNavigate, onSignIn }) => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const [error,        setError]        = useState('');
+  const [success,      setSuccess]      = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
@@ -25,9 +26,8 @@ const SignIn = ({ onNavigate, onSignIn }) => {
       const user = { ...data.user, role: normalizeRole(data.user.role) };
       setCurrentUser(user);
       if (onSignIn) onSignIn(user);
-      if (user.role === 'admin') onNavigate(DASHBOARD_VIEWS.admin);
-      else if (user.role === 'agent') onNavigate(DASHBOARD_VIEWS.agent);
-      else onNavigate('user-dashboard');
+      setSuccess(`Welcome back, ${user.username || 'there'}! Redirecting…`);
+      setTimeout(() => onNavigate('hero'), 1200);
     } catch (err) {
       setError(err.message);
     }
@@ -39,6 +39,11 @@ const SignIn = ({ onNavigate, onSignIn }) => {
         <h2 className="text-3xl font-black text-center text-white mb-2 tracking-wide">KOSOVANEST</h2>
         <p className="text-gray-400 text-sm text-center mb-6">Welcome back</p>
 
+        {success && (
+          <div className="flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm font-semibold px-4 py-3 rounded-xl mb-4">
+            <span className="text-base">✓</span> {success}
+          </div>
+        )}
         {error && <p className="text-red-400 text-xs text-center mb-2">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">

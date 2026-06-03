@@ -117,12 +117,68 @@ const NotificationBell = ({ userId, onNavigate, onUnreadChange }) => {
     setLoading(false);
   };
 
-  /* ── click notification ── */
+  /* ── smart routing: map notification type + link to the exact destination ── */
   const handleClick = (n) => {
     if (!n.is_read) markRead(n.id);
-    if (n.link && onNavigate) {
-      setOpen(false);
-      onNavigate(n.link);
+    if (!onNavigate) return;
+    setOpen(false);
+
+    switch (n.type) {
+      // New property added → properties listing
+      case 'broadcast':
+      case 'info':
+        onNavigate('properties');
+        break;
+
+      // Search alert matched a property → properties page
+      case 'alert':
+        onNavigate('properties');
+        break;
+
+      // Support ticket (new ticket for admin / reply for user)
+      case 'ticket': {
+        const link = n.link || '';
+        if (link === 'agent-dashboard') {
+          // Agent's own support ticket
+          sessionStorage.setItem('kn_agent_view', 'support');
+          onNavigate('agent-dashboard');
+        } else if (link === 'support' || link === 'user-dashboard') {
+          // User received admin reply → open Support tab in user dashboard
+          sessionStorage.setItem('kn_dashboard_section', 'support');
+          onNavigate('user-dashboard');
+        } else {
+          // Admin panel support tab
+          sessionStorage.setItem('kn_admin_tab', 'support');
+          onNavigate('dashboard');
+        }
+        break;
+      }
+
+      // Visit approved / cancelled → My Requests tab
+      case 'visit_update':
+        sessionStorage.setItem('kn_dashboard_section', 'requests');
+        onNavigate('user-dashboard');
+        break;
+
+      // Certification verified / rejected → Agent certifications
+      case 'cert_update':
+        sessionStorage.setItem('kn_agent_view', 'certifications');
+        onNavigate('agent-dashboard');
+        break;
+
+      default: {
+        // Fallback: use the link field directly
+        const fallbackMap = {
+          'support':         'user-dashboard',
+          'user-dashboard':  'user-dashboard',
+          'agent-dashboard': 'agent-dashboard',
+          'properties':      'properties',
+          'agents':          'agents',
+          'neighborhoods':   'neighborhoods',
+        };
+        const target = (n.link && fallbackMap[n.link]) || n.link || 'hero';
+        onNavigate(target);
+      }
     }
   };
 

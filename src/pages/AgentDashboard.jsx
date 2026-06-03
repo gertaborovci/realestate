@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, X, Building2 } from 'lucide-react';
 import AgentCertifications from './AgentCertifications';
 import ContactInquiries from './ContactInquiries';
 
@@ -10,23 +10,28 @@ import AgentTransactionsView from '../components/AgentTransactionsView';
 import AgentRentalRequests from '../components/AgentRentalRequests';
 import AgentQAManager from '../components/AgentQAManager';
 import UserSupport from '../components/UserSupport';
-import UserProfile from '../components/UserProfile';
 import { getCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
-import { Camera, Trash2, User } from 'lucide-react';
-import { showAlert, showConfirm } from '../lib/modal';
 
 const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
-  const [view,        setView]        = useState('list');
-  const [uploading,   setUploading]   = useState(false);
-  const [agentId,     setAgentId]     = useState(null);
-  const [agentProps,  setAgentProps]  = useState([]);
-  const [mobileOpen,  setMobileOpen]  = useState(false);
-  const fileInputRef = useRef(null);
+  const [view, setView] = useState(() => sessionStorage.getItem('kn_agent_view') || 'list');
+
+  // Persist agent panel section across refreshes
+  React.useEffect(() => { sessionStorage.setItem('kn_agent_view', view); }, [view]);
+  const [agentId,    setAgentId]    = useState(null);
+  const [agentProps, setAgentProps] = useState([]);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const agentUser = currentUser || getCurrentUser();
 
-  // Resolve agents.id + properties for Q&A manager
+  // Sync latest user data (photo, profile) when the panel opens
+  useEffect(() => {
+    if (!agentUser?.id) return;
+    apiFetch(`/api/users/${agentUser.id}`)
+      .then(fresh => { if (fresh && onUserChange) onUserChange(fresh); })
+      .catch(() => {});
+  }, [agentUser?.id]);
+
   useEffect(() => {
     if (!agentUser?.id) return;
     apiFetch(`/api/agents/by-user/${agentUser.id}`)
@@ -38,35 +43,7 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
       .catch(() => {});
   }, [agentUser?.id]);
 
-  const photoSrc = agentUser?.photo_url
-    ? (agentUser.photo_url.startsWith('http') ? agentUser.photo_url : `${API_BASE}${agentUser.photo_url}`)
-    : null;
-
-  const handlePhotoChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('photo', file);
-    setUploading(true);
-    try {
-      const data = await apiFetch(`/api/users/${agentUser.id}/photo`, { method: 'POST', body: formData });
-      const updated = { ...agentUser, photo_url: data.photo_url };
-      if (onUserChange) onUserChange(updated);
-    } catch (err) { await showAlert(err.message, 'error'); }
-    finally { setUploading(false); }
-  };
-
-  const handleDeletePhoto = async () => {
-    if (!await showConfirm('Remove your profile photo?')) return;
-    try {
-      await apiFetch(`/api/users/${agentUser.id}/photo`, { method: 'DELETE' });
-      const updated = { ...agentUser, photo_url: null };
-      if (onUserChange) onUserChange(updated);
-    } catch (err) { await showAlert(err.message, 'error'); }
-  };
-
   const navItems = [
-    { key: 'profile',         label: 'Profile' },
     { key: 'list',            label: 'Properties' },
     { key: 'contracts',       label: 'Contracts' },
     { key: 'payments',        label: 'Payments' },
@@ -107,12 +84,39 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
         transition-transform duration-300 ease-in-out
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <div className="p-8 flex items-center justify-between">
-          <h1 className="text-xl font-extrabold uppercase tracking-tight">FIND HOME</h1>
+        {/* Logo */}
+        <div className="p-6 flex items-center justify-between border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <Building2 size={20} className="text-white shrink-0" />
+            <h1 className="text-lg font-black uppercase italic tracking-tight leading-none">KosovaNest</h1>
+          </div>
           <button onClick={() => setMobileOpen(false)} className="md:hidden text-white/40 hover:text-white">
             <X size={18} />
           </button>
         </div>
+
+        {/* Agent mini-profile */}
+        {agentUser && (
+          <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 overflow-hidden shrink-0 flex items-center justify-center">
+              {agentUser.photo_url ? (
+                <img
+                  src={agentUser.photo_url.startsWith('http') ? agentUser.photo_url : `${API_BASE}${agentUser.photo_url}`}
+                  alt={agentUser.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white/40 text-xs font-black uppercase">
+                  {(agentUser.username || 'A')[0]}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-xs font-black uppercase tracking-tight truncate">{agentUser.username}</p>
+              <p className="text-white/30 text-[10px] font-bold tracking-widest uppercase">Agent</p>
+            </div>
+          </div>
+        )}
         <nav className="flex-1 px-4 pb-8 overflow-y-auto">
           <div className="space-y-1 text-[12px] font-bold uppercase tracking-widest text-white/50">
             {navItems.map(({ key, label }) => (
@@ -133,11 +137,6 @@ const AgentDashboard = ({ onBack, onNavigate, currentUser, onUserChange }) => {
       {/* ── Main panel ───────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto relative pt-14 md:pt-0">
 
-        {view === 'profile' && (
-          <div className="p-10">
-            <UserProfile currentUser={agentUser} onUserChange={onUserChange} />
-          </div>
-        )}
         {view === 'list' && <AgentProperties />}
         {view === 'contracts' && <AgentContractsView />}
         {view === 'payments' && <AgentTransactionsView />}

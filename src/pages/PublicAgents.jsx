@@ -7,6 +7,8 @@ import { getCurrentUser, setCurrentUser } from '../lib/auth';
 import { apiFetch, API_BASE } from '../lib/api';
 import ConsultationModal from '../components/ConsultationModal';
 import { showAlert, showConfirm } from '../lib/modal';
+import OfficeLocations from '../components/OfficeLocations';
+import NotificationBell from '../components/NotificationBell';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,7 +155,7 @@ function AgentCard({ agent, onSelect }) {
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
                 <span className="text-[9px] font-black tracking-widest uppercase text-emerald-400">
-                  {Math.round((agent.approvedCerts / agent.certCount) * 100)}% Trusted
+                  {Math.min(Math.round((agent.approvedCerts / Math.max(agent.certCount, 3)) * 100), 100)}% Trusted
                 </span>
               </div>
             ) : (
@@ -173,14 +175,16 @@ function AgentCard({ agent, onSelect }) {
 
 // ─── main component ───────────────────────────────────────────────────────────
 
-const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
+const PublicAgents = ({ onNavigate, onSignOut, onOpenDetail, initialFilters, onFiltersConsumed }) => {
   const [agents, setAgents]               = useState([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState('');
-  const [searchTerm,    setSearchTerm]    = useState('');
-  const [selectedCity,  setSelectedCity]  = useState(initialFilters?.city      || 'All');
-  const [minRating,     setMinRating]     = useState(initialFilters?.minRating || 0);
-  const [trustFilter,   setTrustFilter]   = useState(initialFilters?.trust     || 'all');
+  const _af = (() => { try { return JSON.parse(sessionStorage.getItem('kn_agents_filters') || '{}'); } catch { return {}; } })();
+
+  const [searchTerm,   setSearchTerm]   = useState(_af.searchTerm  || '');
+  const [selectedCity, setSelectedCity] = useState(initialFilters?.city      || _af.city      || 'All');
+  const [minRating,    setMinRating]    = useState(initialFilters?.minRating  || _af.minRating || 0);
+  const [trustFilter,  setTrustFilter]  = useState(initialFilters?.trust      || _af.trust     || 'all');
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showModal, setShowModal]         = useState(false);
   const [isScrolled, setIsScrolled]       = useState(false);
@@ -191,8 +195,16 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
   const [ratingSubmitted,   setRatingSubmitted]   = useState(false);
   const [existingRatingId, setExistingRatingId] = useState(null);
 
-  const scrollRef  = useRef(null);
-  const pageTopRef = useRef(null);
+  const scrollRef    = useRef(null);
+  const pageTopRef   = useRef(null);
+  const detailImgRef = useRef(null);
+
+  // Persist agent filters so panel navigation doesn't reset them
+  useEffect(() => {
+    sessionStorage.setItem('kn_agents_filters', JSON.stringify({
+      searchTerm, city: selectedCity, minRating, trust: trustFilter,
+    }));
+  }, [searchTerm, selectedCity, minRating, trustFilter]);
 
   // Consume initial filters once so back-navigation doesn't reapply them
   useEffect(() => {
@@ -217,10 +229,22 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
   }, []);
 
   useEffect(() => {
-    if (selectedAgent && pageTopRef.current) {
-      setTimeout(() => pageTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    if (selectedAgent && detailImgRef.current) {
+      detailImgRef.current.scrollIntoView({ block: 'start', behavior: 'instant' });
     }
   }, [selectedAgent]);
+
+  // Close agent detail when browser back button is pressed
+  useEffect(() => {
+    const handlePop = () => { if (selectedAgent) setSelectedAgent(null); };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, [selectedAgent]);
+
+  const openAgent = (agent) => {
+    if (onOpenDetail) onOpenDetail(); // push history entry so "back" closes detail
+    setSelectedAgent(agent);
+  };
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -279,10 +303,8 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
     }
   };
 
-  const cities      = ['All', ...Array.from(new Set(agents.map((a) => a.city).filter(Boolean))).sort()];
-  const categories  = [...new Set(agents.map((a) => a.category).filter(Boolean))];
+  const cities = ['All', ...Array.from(new Set(agents.map((a) => a.city).filter(Boolean))).sort()];
 
-  // Derive trust level from cert_count / approved_certs returned by API
   const getTrust = (a) => {
     const approved = Number(a.approved_certs || 0);
     const total    = Number(a.cert_count    || 0);
@@ -299,6 +321,11 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
     if (trustFilter !== 'all' && getTrust(a) !== trustFilter) return false;
     return true;
   });
+
+  // 3 dynamic categories shown when no filter is active — mirrors the rent page style
+  const newlyJoined  = [...agents].sort((a, b) => b.id - a.id).slice(0, 6);
+  const topRated     = [...agents].sort((a, b) => b.rating - a.rating).slice(0, 6);
+  const certified    = agents.filter((a) => getTrust(a) === 'verified').slice(0, 6);
 
   const loggedIn = !!getCurrentUser();
 
@@ -351,7 +378,10 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
           ))}
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          {getCurrentUser() && (
+            <NotificationBell userId={getCurrentUser().id} onNavigate={onNavigate} />
+          )}
           <div
             className="p-2 cursor-pointer hover:bg-white/10 rounded-full transition"
             onClick={() => {
@@ -363,7 +393,7 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
             <User size={20} className="text-white" />
           </div>
           {getCurrentUser() ? (
-            <button onClick={() => { setCurrentUser(null); onNavigate('hero'); }}
+            <button onClick={() => onSignOut ? onSignOut() : (setCurrentUser(null))}
               className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs px-6 py-2.5 rounded-full transition font-bold uppercase">
               Sign Out
             </button>
@@ -391,7 +421,7 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
               {/* Left: photo */}
-              <div className="h-[600px] w-full rounded-[50px] overflow-hidden border border-white/10 relative shadow-2xl">
+              <div ref={detailImgRef} className="h-[600px] w-full rounded-[50px] overflow-hidden border border-white/10 relative shadow-2xl">
                 <img
                   src={selectedAgent.image}
                   alt={selectedAgent.name}
@@ -554,63 +584,60 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
             </section>
 
             <section className="px-12 md:px-24 max-w-7xl mx-auto mb-20">
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-[30px] flex flex-col md:flex-row gap-6 items-center justify-between">
-                <div className="flex items-center bg-black/50 px-6 py-4 rounded-full flex-1 w-full border border-white/5 focus-within:border-white/20 transition-colors">
+              <div className="bg-white/[0.04] backdrop-blur-xl border border-white/10 p-6 rounded-[30px] space-y-4">
+
+                {/* Row 1: Full-width search bar */}
+                <div className="flex items-center bg-black/60 px-6 py-4 rounded-full w-full border border-white/8 focus-within:border-white/25 transition-colors">
                   <Search size={18} className="text-white/40 mr-3 shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search agent by name…"
+                    placeholder="Search agents by name…"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-white/30 tracking-wide"
                   />
+                  {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} className="text-white/30 hover:text-white ml-2 transition shrink-0">×</button>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                  <MapPin size={18} className="text-white/40 shrink-0" />
-                  <select
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                    className="bg-black border border-white/10 text-white text-xs font-bold uppercase tracking-widest
-                               px-6 py-4 rounded-full outline-none focus:border-white/30 cursor-pointer"
-                  >
-                    {cities.map((c) => (
-                      <option key={c} value={c}>{c === 'All' ? 'All Cities' : c}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2 bg-black/50 p-2 rounded-full border border-white/5">
-                  <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-3 hidden md:block">Rating:</span>
-                  {[0, 3, 4, 5].map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setMinRating(r)}
-                      className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                        minRating === r ? 'bg-white text-black' : 'hover:bg-white/10 text-white/60'
-                      }`}
+                {/* Row 2: city + rating + trust */}
+                <div className="flex flex-col md:flex-row gap-3 pt-1 border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    <MapPin size={16} className="text-white/40 shrink-0" />
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      className="bg-black/60 border border-white/10 text-white text-xs font-bold uppercase tracking-widest px-5 py-3 rounded-full outline-none focus:border-white/30 cursor-pointer"
                     >
-                      {r === 0 ? 'All' : <>{r}+ <Star size={12} className={minRating === r ? 'fill-black' : 'fill-white/40'} /></>}
-                    </button>
-                  ))}
+                      {cities.map((c) => (
+                        <option key={c} value={c}>{c === 'All' ? 'All Cities' : c}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-black/50 p-1.5 rounded-full border border-white/5">
+                    <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-3 hidden md:block">Rating:</span>
+                    {[0, 3, 4, 5].map((r) => (
+                      <button key={r} onClick={() => setMinRating(r)}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs font-bold transition-all ${minRating === r ? 'bg-white text-black' : 'hover:bg-white/10 text-white/60'}`}>
+                        {r === 0 ? 'All' : <>{r}+ <Star size={12} className={minRating === r ? 'fill-black' : 'fill-white/40'} /></>}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-black/50 p-1.5 rounded-full border border-white/5">
+                    <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-3 hidden md:block">Trust:</span>
+                    {[{value:'all',label:'All'},{value:'verified',label:'✓ Verified'},{value:'building',label:'⏳ Building'}].map(opt => (
+                      <button key={opt.value} onClick={() => setTrustFilter(opt.value)}
+                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${trustFilter === opt.value ? 'bg-white text-black' : 'hover:bg-white/10 text-white/60'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Trust / Certification filter */}
-                <div className="flex items-center gap-2 bg-black/50 p-2 rounded-full border border-white/5 flex-wrap">
-                  <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-3 hidden md:block">Trust:</span>
-                  {[
-                    { value: 'all',      label: 'All' },
-                    { value: 'verified', label: '✓ Verified' },
-                    { value: 'building', label: '⏳ Building' },
-                  ].map(opt => (
-                    <button key={opt.value} onClick={() => setTrustFilter(opt.value)}
-                      className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                        trustFilter === opt.value ? 'bg-white text-black' : 'hover:bg-white/10 text-white/60'
-                      }`}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+
               </div>
             </section>
 
@@ -638,38 +665,54 @@ const PublicAgents = ({ onNavigate, initialFilters, onFiltersConsumed }) => {
               {!loading && !error && filtered.length > 0 && isFiltering && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                   {filtered.map((a) => (
-                    <AgentCard key={a.id} agent={a} onSelect={setSelectedAgent} />
+                    <AgentCard key={a.id} agent={a} onSelect={openAgent} />
                   ))}
                 </div>
               )}
 
-              {!loading && !error && agents.length > 0 && !isFiltering && (
-                <div className="space-y-24">
-                  {categories.map((cat) => {
-                    const group = agents.filter((a) => a.category === cat);
-                    if (!group.length) return null;
-                    return (
-                      <div key={cat}>
-                        <div className="flex items-end justify-between mb-10 border-b border-white/10 pb-6">
-                          <h2 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter">{cat}</h2>
-                          <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/40">
-                            {group.length} {group.length === 1 ? 'Agent' : 'Agents'}
-                          </span>
+              {!loading && !error && agents.length > 0 && !isFiltering && (() => {
+                const categories = [
+                  { title: 'Newly Joined Agents',       data: newlyJoined },
+                  { title: 'Top Rated Agents',           data: topRated    },
+                  { title: 'Certified Professionals',    data: certified   },
+                ];
+                return (
+                  <div className="space-y-24">
+                    {categories.map((cat, idx) => {
+                      if (!cat.data.length) return null;
+                      return (
+                        <div key={idx}>
+                          <div className="flex items-end justify-between mb-10 border-b border-white/10 pb-6">
+                            <h2 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter">{cat.title}</h2>
+                            <span
+                              className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/40 cursor-pointer hover:text-white transition-colors"
+                              onClick={() => {
+                                // "View All" applies the relevant filter
+                                if (idx === 0) { /* newest — no special filter, just show all */ }
+                                if (idx === 1) setMinRating(4);
+                                if (idx === 2) setTrustFilter('verified');
+                              }}
+                            >
+                              View All →
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                            {cat.data.map((a) => (
+                              <AgentCard key={a.id} agent={a} onSelect={openAgent} />
+                            ))}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-                          {group.map((a) => (
-                            <AgentCard key={a.id} agent={a} onSelect={setSelectedAgent} />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </section>
           </div>
         )}
       </div>
+
+      <OfficeLocations />
 
       {/* Footer */}
       <section className="w-full bg-[#050505] text-white p-16 md:p-24 flex flex-col justify-between mt-auto">

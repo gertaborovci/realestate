@@ -300,7 +300,7 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
             </div>
           )}
         </div>
-        <span className="text-white/30 text-xs font-bold group-hover:text-white transition">View all â†'</span>
+        <span className="text-white/30 text-xs font-bold group-hover:text-white transition">View all →</span>
       </button>
     );
   }
@@ -317,7 +317,7 @@ export default function PropertyReviews({ propertyId, propertyTitle, showModal =
         </div>
         {showModal
           ? <button onClick={onClose} className="text-white/30 hover:text-white transition p-1"><X size={18} /></button>
-          : <button onClick={() => setShowAll(false)} className="text-white/30 hover:text-white text-xs font-bold transition">â† Back</button>
+          : <button onClick={() => setShowAll(false)} className="text-white/30 hover:text-white text-xs font-bold transition">← Back</button>
         }
       </div>
 

@@ -17,6 +17,12 @@ async function create(req, res) {
 }
 
 async function update(req, res) {
+  const [[existing]] = await db.query('SELECT user_id FROM testimonials WHERE id = ?', [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Testimonial not found.' });
+  if (req.authUser?.role !== 'admin' && existing.user_id !== req.authUser?.id) {
+    return res.status(403).json({ error: 'Insufficient permissions.' });
+  }
+
   // req.body can be undefined when multer processes multipart/form-data — guard against it
   const body = req.body || {};
   const klienti_emri = body.klienti_emri;
@@ -56,8 +62,12 @@ async function update(req, res) {
 }
 
 async function remove(req, res) {
-  const [result] = await db.query('DELETE FROM testimonials WHERE id = ?', [req.params.id]);
-  if (!result.affectedRows) return res.status(404).json({ error: 'Testimonial not found.' });
+  const [[existing]] = await db.query('SELECT user_id FROM testimonials WHERE id = ?', [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Testimonial not found.' });
+  if (req.authUser?.role !== 'admin' && existing.user_id !== req.authUser?.id) {
+    return res.status(403).json({ error: 'Insufficient permissions.' });
+  }
+  await db.query('DELETE FROM testimonials WHERE id = ?', [req.params.id]);
   res.json({ message: 'Testimonial deleted.' });
 }
 

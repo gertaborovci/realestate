@@ -49,7 +49,10 @@ const VIEWS_WITHOUT_NAVBAR = [
 ];
 
 function App() {
-  const [view, setView] = useState('hero');
+  const [view, setView] = useState(() => sessionStorage.getItem('kn_view') || 'hero');
+  const [viewHistory, setViewHistory] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('kn_history') || '[]'); } catch { return []; }
+  });
   const [selectedAgentId, setSelectedAgentId] = useState(null);
 
   // ── currentUser as React state so Navbar/components always re-render ──
@@ -115,9 +118,18 @@ function App() {
     favLoadedForUser.current = null;
     setFavorites([]);
     localStorage.removeItem('kn_favorites');
-    setAuthToken(null);      // clear access token
-    setRefreshToken(null);   // clear refresh token
+    sessionStorage.removeItem('kn_view');
+    sessionStorage.removeItem('kn_history');
+    setViewHistory([]);
+    setAuthToken(null);
+    setRefreshToken(null);
     updateUser(null);
+    // Redirect to hero if on a protected page (agent/admin dashboard)
+    // or any page that would render blank without a user
+    setView((current) => {
+      const protectedViews = [DASHBOARD_VIEWS.admin, DASHBOARD_VIEWS.agent, 'user-dashboard', 'user-profile'];
+      return protectedViews.includes(current) ? 'hero' : current;
+    });
   };
 
   const viewPropertyDetail = (propertyId) => {
@@ -144,6 +156,17 @@ function App() {
     navigateTo('properties');
   };
 
+  useEffect(() => { sessionStorage.setItem('kn_view', view); }, [view]);
+  useEffect(() => { sessionStorage.setItem('kn_history', JSON.stringify(viewHistory)); }, [viewHistory]);
+
+  // Called by property/agent cards when they open a detail overlay.
+  // Pushes the current view onto history so "back" closes the overlay
+  // instead of navigating away from the page.
+  const pushDetailEntry = () => {
+    setViewHistory(prev => [...prev, view]);
+    window.history.pushState({ view }, '', '');
+  };
+
   const navigateTo = (newView, options = {}) => {
     if (options.agentId != null) setSelectedAgentId(options.agentId);
     if (options.city != null || options.minRating != null || options.trust != null) {
@@ -153,14 +176,25 @@ function App() {
         trust:     options.trust     || 'all',
       });
     }
+    setViewHistory(prev => [...prev, view]);
     setView(newView);
     window.history.pushState({ view: newView }, '', '');
   };
 
+  const navigateBack = () => {
+    setViewHistory(prev => {
+      const history = [...prev];
+      const previous = history.pop() || 'hero';
+      setView(previous);
+      window.history.pushState({ view: previous }, '', '');
+      return history;
+    });
+  };
+
   useEffect(() => {
-    const handlePopState = (e) => setView(e.state?.view || 'hero');
+    const handlePopState = () => navigateBack();
     window.addEventListener('popstate', handlePopState);
-    if (!window.history.state) window.history.replaceState({ view: 'hero' }, '', '');
+    window.history.replaceState({ view }, '', '');
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
@@ -186,7 +220,7 @@ function App() {
         </div>
       )}
 
-      <PanelButtons onNavigate={navigateTo} currentView={view} />
+      <PanelButtons onNavigate={navigateTo} onBack={navigateBack} currentView={view} />
 
       <div className="h-full w-full overflow-y-auto">
         <Suspense fallback={<PageLoader />}>
@@ -204,7 +238,9 @@ function App() {
         {view === 'properties' && (
           <PublicProperties
             onNavigate={navigateTo}
-            onBack={() => navigateTo('hero')}
+            onBack={navigateBack}
+            onSignOut={handleSignOut}
+            onOpenDetail={pushDetailEntry}
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
             initialPropertyId={initialPropertyId}
@@ -219,6 +255,7 @@ function App() {
         {view === 'neighborhoods' && (
           <PublicNeighborhoods
             onNavigate={navigateTo}
+            onSignOut={handleSignOut}
             onViewPropertiesInCity={viewPropertiesInCity}
           />
         )}
@@ -226,7 +263,9 @@ function App() {
         {view === 'agents' && (
           <PublicAgents
             onNavigate={navigateTo}
-            onBack={() => navigateTo('hero')}
+            onBack={navigateBack}
+            onSignOut={handleSignOut}
+            onOpenDetail={pushDetailEntry}
             initialFilters={initialAgentFilters}
             onFiltersConsumed={() => setInitialAgentFilters(null)}
           />
@@ -239,7 +278,7 @@ function App() {
         {(view === 'user-dashboard' || view === 'user-profile') && (
           <UserDashboard
             onNavigate={navigateTo}
-            onBack={() => navigateTo('hero')}
+            onBack={navigateBack}
             currentUser={currentUser}
             onUserChange={updateUser}
             onSignOut={handleSignOut}
@@ -251,7 +290,7 @@ function App() {
 
         {view === DASHBOARD_VIEWS.agent && canAccessAgentDashboard() && (
           <AgentDashboard
-            onBack={() => navigateTo('hero')}
+            onBack={navigateBack}
             onNavigate={navigateTo}
             currentUser={currentUser}
             onUserChange={updateUser}
@@ -259,7 +298,7 @@ function App() {
         )}
 
         {view === DASHBOARD_VIEWS.admin && canAccessAdminDashboard() && (
-          <AdminDashboard onBack={() => navigateTo('hero')} />
+          <AdminDashboard onBack={navigateBack} />
         )}
 
         {view === 'signin' && <Signin onNavigate={navigateTo} onSignIn={handleSignIn} />}
